@@ -1,0 +1,39 @@
+.section {
+    padding: 128px 0;
+    background: rgba(255, 255, 255, 0.01);
+}
+
+.content {
+    display: flex;
+    flex-direction: row;
+    gap: 64px;
+}
+
+.left,
+.right {
+    width: calc((100% - 64px) / 2);
+}
+
+.title {
+    font-weight: 700;
+    font-size: 48px;
+    line-height: 60px;
+    letter-spacing: -0.5px;
+    margin-bottom: 54px;
+}
+
+.description {
+    font-weight: 400;
+    font-size: 18px;
+    line-height: 30px;
+    letter-spacing: -0.5px;
+    color: rgba(242, 254, 255, 0.7);
+    margin-bottom: 54px;
+}
+
+.insightsWrapper {
+    background-color: #0A1A2A;
+    border: 1px solid #1E4658;
+    border-radius: 16px;
+    padding: 0 32px;
+}

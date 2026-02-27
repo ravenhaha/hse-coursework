@@ -1,0 +1,36 @@
+.item {
+    display: flex;
+    flex-direction: row;
+    gap: 24px;
+    padding: 32px 0;
+}
+
+.line {
+    width: 4px;
+    border-radius: 2px;
+    background: #3AD7D3;
+    flex-shrink: 0;
+}
+
+.textBlock {
+    display: flex;
+    flex-direction: column;
+    gap: 17px;
+}
+
+.text {
+    font-style: italic;
+    font-weight: 400;
+    font-size: 18px;
+    line-height: 30px;
+    letter-spacing: -0.5px;
+    color: rgba(242, 254, 255, 0.8);
+}
+
+.signature {
+    font-weight: 600;
+    font-size: 15px;
+    line-height: 23px;
+    letter-spacing: -0.5px;
+    color: #3AD7D3;
+}

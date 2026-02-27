@@ -1,0 +1,31 @@
+.section {
+    padding: 150px 0;
+    background: rgba(10, 26, 42, 0.3);
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 80px;
+}
+
+.title {
+    font-weight: 700;
+    font-size: 48px;
+    line-height: 60px;
+    letter-spacing: -0.5px;
+    margin-bottom: 20px;
+}
+
+.subtitle {
+    font-weight: 400;
+    font-size: 18px;
+    line-height: 30px;
+    letter-spacing: -0.5px;
+    color: rgba(242, 254, 255, 0.7);
+}
+
+.cards {
+    display: flex;
+    flex-direction: row;
+    gap: 32px;
+}
