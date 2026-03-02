@@ -1,11 +1,8 @@
-import Header from "../components/Header/Header.jsx";
+import AuthPage from './pages/AuthPage/AuthPage.jsx';
 
 function App() {
-
   return (
-    <div>
-        <Header />
-    </div>
+    <AuthPage />
   )
 }
 
