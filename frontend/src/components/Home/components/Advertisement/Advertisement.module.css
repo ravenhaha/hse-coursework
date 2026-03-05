@@ -1,0 +1,25 @@
+.advertisement {
+    background: #080f18;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 50px;
+}
+
+.title {
+    font-size: 56px;
+    color: #F2FEFF;
+    margin-bottom: 25px;
+}
+
+.text {
+    font-size: 20px;
+    color: #c4ced1;
+    margin-bottom: 50px;
+}
+
+.subtext {
+    font-size: 14px;
+    color: #c4ced1;
+    margin-top: 15px;
+}

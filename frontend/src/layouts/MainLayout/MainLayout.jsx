@@ -1,11 +1,12 @@
-import styles from './MainLayout.module.css';
+import { Outlet } from 'react-router-dom'
+import styles from './MainLayout.module.css'
+import Footer from "../../components/Home/components/Footer/Footer.jsx";
 
-function MainLayout({ children }) {
+export default function MainLayout() {
     return (
         <div className={styles.container}>
-            {children}
+            <Outlet />
+            <Footer />
         </div>
-    );
+    )
 }
-
-export default MainLayout;

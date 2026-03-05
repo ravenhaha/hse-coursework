@@ -1,0 +1,45 @@
+.footer {
+    border-top: 2px solid #1E4658;
+    background-color: #070a10;
+    padding: 50px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.content {
+    display: flex;
+    border-bottom: 1px solid #1E4658;
+    color: #F2FEFF;
+    gap: 50px;
+    max-width: 1280px;
+    width: 100%;
+    padding-bottom: 40px;
+    margin-bottom: 40px;
+}
+
+.titledescr {
+    color: #3AD7D3;
+}
+
+.descr {
+    max-width: 270px;
+}
+
+
+
+.contentdown {
+    display: flex;
+    color: #F2FEFF;
+    justify-content: space-between;
+    max-width: 1280px;
+    width: 100%;
+}
+
+.sociallink {
+    display: flex;
+}
+
+.link:not(:last-child) {
+    margin-right: 30px;
+}

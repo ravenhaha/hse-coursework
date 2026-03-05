@@ -1,16 +1,21 @@
-import Header from "./components/Header/Header.jsx";
-import MainLayout from './layouts/MainLayout/MainLayout';
-import Hero from "./components/Hero/Hero.jsx";
-import About from "./components/About/About.jsx";
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import MainLayout from './layouts/MainLayout/MainLayout'
+import HomePage from './pages/HomePage/HomePage.jsx'
+import WorkspaceLayout from "./layouts/WorkspaceLayout/WorkspaceLayout.jsx";
+import WorkspacePage from "./pages/WorkspacePage/WorkspacePage.jsx";
 
-function App() {
+export default function App() {
+    return (
+        <BrowserRouter>
+            <Routes>
+                <Route element={<MainLayout />}>
+                    <Route path="/" element={<HomePage />} />
+                </Route>
 
-  return (
-    <MainLayout>
-        <Hero />
-        <About />
-    </MainLayout>
-  )
+                <Route element={<WorkspaceLayout />}>
+                    <Route path="/workspace" element={<WorkspacePage />} />
+                </Route>
+            </Routes>
+        </BrowserRouter>
+    )
 }
-
-export default App

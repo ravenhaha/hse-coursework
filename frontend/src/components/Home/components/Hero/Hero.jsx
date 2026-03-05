@@ -1,13 +1,12 @@
 import styles from './Hero.module.css';
-import ButtonMain from "../Ui/ButtonMain/ButtonMain.jsx";
-
+import ButtonMain from "../../../Ui/ButtonMain/ButtonMain.jsx";
+import VortexBackground from './VortexBackground.jsx';
 
 function Hero() {
     return (
         <section id="hero" className={styles.hero}>
-            <h1 className={styles.title}>
-                Омут памяти
-            </h1>
+            <VortexBackground />
+            <h1 className={styles.title}>Омут памяти</h1>
             <p className={styles.text}>
                 Погрузитесь в&nbsp;глубины своих воспоминаний и&nbsp;извлеките
                 смысл из&nbsp;прошлого

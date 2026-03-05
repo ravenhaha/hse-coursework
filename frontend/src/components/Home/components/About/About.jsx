@@ -1,6 +1,6 @@
 import styles from './About.module.css';
-import ButtonMain from "../Ui/ButtonMain/ButtonMain.jsx";
-import AboutCard from "../Ui/AboutCard/AboutCard.jsx";
+import ButtonMain from "../../../Ui/ButtonMain/ButtonMain.jsx";
+import AboutCard from "./AboutCard/AboutCard.jsx";
 
 
 function About() {
