@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage/HomePage.jsx'
 import WorkspaceLayout from "./layouts/WorkspaceLayout/WorkspaceLayout.jsx";
 import WorkspacePage from "./pages/WorkspacePage/WorkspacePage.jsx";
 import DevNav from "./components/DevNav/DevNav.jsx";
+import AuthPage from './pages/AuthPage/AuthPage.jsx';
 
 export default function App() {
     return (
@@ -20,6 +21,10 @@ export default function App() {
             </Routes>
         </BrowserRouter>
     )
+function App() {
+  return (
+    <AuthPage />
+  )
 }
 
 export default App
