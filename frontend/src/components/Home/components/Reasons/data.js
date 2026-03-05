@@ -1,6 +1,6 @@
-import icon_brain from "../../assets/icons/reasons-brain.svg";
-import icon_chart from "../../assets/icons/reasons-chart.svg";
-import icon_compass from "../../assets/icons/reasons-compass.svg";
+import icon_brain from "../../../../assets/icons/reasons-brain.svg";
+import icon_chart from "../../../../assets/icons/reasons-chart.svg";
+import icon_compass from "../../../../assets/icons/reasons-compass.svg";
 
 export const titleData = {
     title: "Почему стоит начать сейчас",

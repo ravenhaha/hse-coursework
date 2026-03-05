@@ -1,5 +1,5 @@
 import styles from "./FeatureCard.module.css";
-import checkIcon from "../../../assets/icons/features-check.svg"
+import checkIcon from "../../../../../assets/icons/features-check.svg"
 
 function FeatureCard(props) {
     const {

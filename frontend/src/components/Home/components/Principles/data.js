@@ -1,7 +1,7 @@
-import icon1 from "../../assets/icons/principles-privacy.svg";
-import icon2 from "../../assets/icons/principles-simplicity.svg";
-import icon3 from "../../assets/icons/principles-respect.svg";
-import icon4 from "../../assets/icons/principles-development.svg";
+import icon1 from "../../../../assets/icons/principles-privacy.svg";
+import icon2 from "../../../../assets/icons/principles-simplicity.svg";
+import icon3 from "../../../../assets/icons/principles-respect.svg";
+import icon4 from "../../../../assets/icons/principles-development.svg";
 
 export const titleData = {
     title: "Наши принципы",

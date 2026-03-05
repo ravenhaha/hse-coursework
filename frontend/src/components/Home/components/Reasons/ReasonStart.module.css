@@ -1,6 +1,7 @@
 .section {
     padding: 128px 0;
     background: rgba(255, 255, 255, 0.01);
+    background-color: #070a10;
 }
 
 .content {

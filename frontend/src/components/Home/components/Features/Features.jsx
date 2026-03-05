@@ -10,7 +10,7 @@ function Features(props) {
 
     return (
         <section className={styles.section}>
-            <div className="container">
+
                 <h2 className={styles.title}>{title}</h2>
                 <p className={styles.description}>{text}</p>
                 <div className={styles.cardsGrid}>
@@ -24,7 +24,7 @@ function Features(props) {
                         />
                     ))}
                 </div>
-            </div> 
+
         </section>
     )
 }

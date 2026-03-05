@@ -1,6 +1,6 @@
-import {titleData, benefitsData, insightsData} from "./data";
-import BenefitItem from "./BenefitItem/BenefitItem";
-import InsightItem from "./InsightCard/InsightCard";
+import {titleData, benefitsData, insightsData} from "./data.js";
+import BenefitItem from "./BenefitItem/BenefitItem.jsx";
+import InsightItem from "./InsightCard/InsightCard.jsx";
 import styles from "./ReasonStart.module.css";
 
 function ReasonsStart() {

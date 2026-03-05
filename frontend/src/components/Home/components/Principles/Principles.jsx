@@ -1,5 +1,5 @@
-import { titleData, principlesData } from "./data";
-import PrincipleCard from "./PrincipleCard/PrincipleCard";
+import { titleData, principlesData } from "./data.js";
+import PrincipleCard from "./PrincipleCard/PrincipleCard.jsx";
 import styles from "./Principles.module.css";
 
 function Principles() {

@@ -1,6 +1,5 @@
 .card {
-    flex: 1 1 calc(50% - 16px);
-    min-width: 280px;
+    max-width: 624px;
     background-color: #0A1A2A;
     border: 1px solid #1E4658;
     border-radius: 16px;

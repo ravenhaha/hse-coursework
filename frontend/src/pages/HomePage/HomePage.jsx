@@ -1,17 +1,10 @@
-import Features from "../../components/Features/Features";
-import ReasonsStart from "../../components/Reasons/ReasonStart";
-import Principles from "../../components/Principles/Principles";
 import styles from "./HomePage.module.css";
+import Home from "../../components/Home/Home.jsx";
 
 function HomePage() {
     return (
         <div className={styles.page}>
-            <Features
-                title="Возможности"
-                text="Откройте для себя инструменты, которые изменят ваш подход к обучению"
-            />
-            <ReasonsStart />
-            <Principles />
+            <Home />
         </div>
     );
 }

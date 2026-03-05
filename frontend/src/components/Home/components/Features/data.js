@@ -1,7 +1,7 @@
-import icon_book from "../../assets/icons/features-diary.svg";
-import icon_node from "../../assets/icons/features-connections.svg";
-import icon_lamp from "../../assets/icons/features-insights.svg";
-import icon_shield from "../../assets/icons/features-security.svg";
+import icon_book from "../../../../assets/icons/features-diary.svg";
+import icon_node from "../../../../assets/icons/features-connections.svg";
+import icon_lamp from "../../../../assets/icons/features-insights.svg";
+import icon_shield from "../../../../assets/icons/features-security.svg";
 
 const featuresData = [ {
     id: 1,
