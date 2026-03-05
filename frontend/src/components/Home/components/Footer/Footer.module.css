@@ -1,6 +1,6 @@
 .footer {
     border-top: 2px solid #1E4658;
-    background-color: #070a10;
+    background: rgba(7, 10, 16, 0.8);
     padding: 50px;
     display: flex;
     flex-direction: column;

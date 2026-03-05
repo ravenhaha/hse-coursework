@@ -47,6 +47,22 @@ const fragmentShader = `
     return value;
   }
 
+  // Круг на воде: кольцо расходится от центра, затухает
+  // rippleTime: 0..1 — фаза жизни (0=начало, 1=исчезло)
+  float ripple(float d, float rippleTime, float maxRadius) {
+    float radius = rippleTime * maxRadius;
+    float ringWidth = 0.03 + rippleTime * 0.06; // кольцо расширяется
+    float ring = exp(-pow((d - radius) / ringWidth, 2.0));
+    float fade = 1.0 - rippleTime; // затухает со временем
+    fade = fade * fade; // быстрее затухает в конце
+    return ring * fade;
+  }
+
+  // Фаза одного ripple с периодом
+  float ripplePhase(float t, float offset, float period) {
+    return fract((t + offset) / period);
+  }
+
   void main(){
     vec2 uv=gl_FragCoord.xy/u_resolution;
     vec2 center=vec2(0.5,0.5);
@@ -69,11 +85,11 @@ const fragmentShader = `
     float vs1=smoothstep(0.8,0.0,dist);
     float vs2=smoothstep(1.2,0.1,dist);
 
-    vec3 deepBlue=vec3(0.05,0.07,0.11);      
-    vec3 midBlue=vec3(0.10,0.18,0.25);       
-    vec3 silverBlue=vec3(0.15,0.30,0.35);    
-    vec3 brightSilver=vec3(0.23,0.84,0.83);  
-    vec3 cyanGlow=vec3(0.55,0.95,0.90); 
+    vec3 deepBlue=vec3(0.05,0.07,0.11);
+    vec3 midBlue=vec3(0.10,0.18,0.25);
+    vec3 silverBlue=vec3(0.15,0.30,0.35);
+    vec3 brightSilver=vec3(0.23,0.84,0.83);
+    vec3 cyanGlow=vec3(0.55,0.95,0.90);
 
     vec3 col=deepBlue;
     col=mix(col,midBlue,vs2*(0.5+combined*0.5));
@@ -86,8 +102,75 @@ const fragmentShader = `
     col+=silverBlue*highlight*vs1*0.3;
     float centerGlow=exp(-dist*3.5)*0.4;
     col+=cyanGlow*centerGlow*(0.7+0.3*sin(t*3.0));
-    float sparkle=pow(max(0.0,snoise(uv*80.0+t*2.0)),12.0);
-    col+=vec3(0.7,0.55,0.85)*sparkle*vs1*1.5;
+
+    // ============================================
+    // КРУГИ НА ВОДЕ — мягкие расходящиеся кольца
+    // ============================================
+    float realTime = u_time;
+
+    // Мягкие цвета (приглушённые, не яркие)
+    vec3 softPurple = vec3(0.35, 0.15, 0.5);
+    vec3 softGold = vec3(0.5, 0.4, 0.15);
+    vec3 softEmerald = vec3(0.1, 0.45, 0.25);
+    vec3 softRose = vec3(0.45, 0.18, 0.3);
+    vec3 softBlue = vec3(0.15, 0.3, 0.55);
+
+    float maxR = 0.5; // максимальный радиус кольца
+
+    // Ripple 1 — фиолетовый, каждые 9 сек
+    float phase1 = ripplePhase(realTime, 0.0, 9.0);
+    vec2 rPos1 = vec2(
+      snoise(vec2(floor((realTime)/9.0)*1.1, 0.0))*0.2,
+      snoise(vec2(0.0, floor((realTime)/9.0)*1.1))*0.15
+    );
+    float rDist1 = length(pos - rPos1);
+    float r1 = ripple(rDist1, phase1, maxR);
+    col += softPurple * r1 * vs1 * 0.25;
+
+    // Ripple 2 — золотой, каждые 12 сек
+    float phase2 = ripplePhase(realTime, 3.5, 12.0);
+    vec2 rPos2 = vec2(
+      snoise(vec2(floor((realTime+3.5)/12.0)*2.3, 5.0))*0.18,
+      snoise(vec2(5.0, floor((realTime+3.5)/12.0)*2.3))*0.18
+    );
+    float rDist2 = length(pos - rPos2);
+    float r2 = ripple(rDist2, phase2, maxR);
+    col += softGold * r2 * vs1 * 0.2;
+
+    // Ripple 3 — изумрудный, каждые 15 сек
+    float phase3 = ripplePhase(realTime, 7.0, 15.0);
+    vec2 rPos3 = vec2(
+      snoise(vec2(floor((realTime+7.0)/15.0)*3.7, 10.0))*0.15,
+      snoise(vec2(10.0, floor((realTime+7.0)/15.0)*3.7))*0.2
+    );
+    float rDist3 = length(pos - rPos3);
+    float r3 = ripple(rDist3, phase3, maxR);
+    col += softEmerald * r3 * vs1 * 0.2;
+
+    // Ripple 4 — розовый, каждые 18 сек
+    float phase4 = ripplePhase(realTime, 11.0, 18.0);
+    vec2 rPos4 = vec2(
+      snoise(vec2(floor((realTime+11.0)/18.0)*4.1, 15.0))*0.22,
+      snoise(vec2(15.0, floor((realTime+11.0)/18.0)*4.1))*0.15
+    );
+    float rDist4 = length(pos - rPos4);
+    float r4 = ripple(rDist4, phase4, maxR * 0.8);
+    col += softRose * r4 * vs1 * 0.18;
+
+    // Ripple 5 — голубой, каждые 7 сек (чаще, но ещё мягче)
+    float phase5 = ripplePhase(realTime, 2.0, 7.0);
+    vec2 rPos5 = vec2(
+      snoise(vec2(floor((realTime+2.0)/7.0)*5.3, 20.0))*0.12,
+      snoise(vec2(20.0, floor((realTime+2.0)/7.0)*5.3))*0.12
+    );
+    float rDist5 = length(pos - rPos5);
+    float r5 = ripple(rDist5, phase5, maxR * 0.6);
+    col += softBlue * r5 * vs1 * 0.15;
+
+    // === Тонкие искры ===
+    float sparkle=pow(max(0.0,snoise(uv*80.0+realTime*0.3)),12.0);
+    col+=vec3(0.5,0.45,0.65)*sparkle*vs1*0.8;
+
     float vignette=smoothstep(0.9,0.25,dist);
     col*=vignette;
     col*=0.9+0.1*sin(t*2.0);
@@ -180,10 +263,12 @@ const VortexBackground = () => {
             ref={canvasRef}
             style={{
                 position: 'absolute',
-                top: 150,
-                left: 0,
-                width: '70%',
-                height: '70%',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '100%',
+                height: '100%',
+                pointerEvents: 'none',
             }}
         />
     );

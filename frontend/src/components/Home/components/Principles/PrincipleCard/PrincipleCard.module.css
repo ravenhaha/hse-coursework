@@ -24,6 +24,7 @@
     line-height: 30px;
     letter-spacing: -0.5px;
     margin-bottom: 12px;
+    color: #F2FEFF;
 }
 
 .text {
@@ -31,4 +32,6 @@
     font-size: 14px;
     line-height: 23px;
     letter-spacing: -0.5px;
+    color: #F2FEFF;
+    white-space: nowrap;
 }

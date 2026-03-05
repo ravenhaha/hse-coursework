@@ -1,5 +1,5 @@
 .advertisement {
-    background: #080f18;
+    background-color: rgba(8, 15, 24, 0.8);
     display: flex;
     flex-direction: column;
     align-items: center;

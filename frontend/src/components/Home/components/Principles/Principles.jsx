@@ -5,7 +5,7 @@ import styles from "./Principles.module.css";
 function Principles() {
     return (
         <section className={styles.section}>
-            <div className="container">
+            
                 <div className={styles.header}>
                     <h2 className={styles.title}>{titleData.title}</h2>
                     <p className={styles.subtitle}>{titleData.text}</p>
@@ -20,7 +20,7 @@ function Principles() {
                         />
                     ))}
                 </div>
-            </div>
+            
         </section>
     )
 }

@@ -22,6 +22,7 @@
     font-size: clamp(18px, 2.5vw, 24px);
     line-height: 1.4;
     letter-spacing: -0.5px;
+    color: #F2FEFF;
     margin-bottom: 20px;
 }
 
@@ -57,4 +58,5 @@
     font-size: 15px;
     line-height: 1.5;
     letter-spacing: -0.5px;
+    color: #F2FEFF;
 }

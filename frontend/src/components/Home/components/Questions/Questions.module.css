@@ -1,5 +1,5 @@
 .questions {
-    background: #070a10;
+    background: rgba(7, 10, 16, 0.8);
     display: flex;
     flex-direction: column;
     align-items: center;

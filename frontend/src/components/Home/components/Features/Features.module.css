@@ -1,6 +1,6 @@
 .section {
     padding: 50px;
-    background-color: #080f18;
+    background-color: rgba(8, 15, 24, 0.8);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -13,6 +13,7 @@
     font-size: clamp(28px, 4vw, 48px);
     line-height: 1.3;
     letter-spacing: -0.5px;
+    color: #F2FEFF;
     text-align: center;
     margin-bottom: 24px;
 }
@@ -22,6 +23,7 @@
     font-size: clamp(15px, 2vw, 18px);
     line-height: 1.7;
     letter-spacing: -0.5px;
+    color: #F2FEFF;
     opacity: 0.7;
     text-align: center;
     margin-bottom: 81px;
@@ -35,11 +37,11 @@
 
 @media (max-width: 768px) {
     .section {
-        padding: 80px 0;
+        padding: 50px 20px;
     }
 
     .cardsGrid {
-        flex-direction: column;
+        grid-template-columns: 1fr;
     }
 
     .description {

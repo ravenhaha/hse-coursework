@@ -1,0 +1,50 @@
+.glow {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9997;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(
+        circle,
+        rgba(58, 215, 211, 0.08) 0%,
+        rgba(58, 215, 211, 0.03) 35%,
+        transparent 70%
+    );
+    transform: translate(-50%, -50%);
+    will-change: left, top;
+}
+
+.tip {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    will-change: left, top;
+    
+    /* Яркое ядро по центру, мягко затухает к краям */
+    background: radial-gradient(
+        circle,
+        rgba(255, 255, 255, 1) 0%,
+        rgba(255, 255, 255, 0.9) 10%,
+        rgba(255, 255, 255, 0.4) 25%,
+        rgba(58, 215, 211, 0.15) 60%,
+        transparent 100%
+    );
+}
+
+.wand {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9998;
+    height: 50px;
+    width: auto;
+    transform-origin: 0% 0%;
+    transform: translate(-30%, 92%) rotate(-75deg);
+    will-change: left, top;
+    filter: brightness(0) invert(1);
+    opacity: 0.85;
+}
