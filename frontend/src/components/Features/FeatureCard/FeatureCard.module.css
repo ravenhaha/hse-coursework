@@ -1,9 +1,10 @@
 .card {
     flex: 1 1 calc(50% - 16px);
+    min-width: 280px;
     background-color: #0A1A2A;
     border: 1px solid #1E4658;
     border-radius: 16px;
-    padding: 47px 49px;
+    padding: clamp(24px, 4vw, 47px) clamp(24px, 4vw, 49px);
 }
 
 .iconWrapper {
@@ -19,16 +20,16 @@
 
 .title {
     font-weight: 600;
-    font-size: 24px;
-    line-height: 36px;
+    font-size: clamp(18px, 2.5vw, 24px);
+    line-height: 1.4;
     letter-spacing: -0.5px;
     margin-bottom: 20px;
 }
 
 .text {
     font-weight: 400;
-    font-size: 16px;
-    line-height: 26px;
+    font-size: clamp(14px, 1.5vw, 16px);
+    line-height: 1.6;
     letter-spacing: -0.5px;
     color: rgba(242, 254, 255, 0.7);
     margin-bottom: 20px;
@@ -55,6 +56,6 @@
 .featureText {
     font-weight: 400;
     font-size: 15px;
-    line-height: 23px;
+    line-height: 1.5;
     letter-spacing: -0.5px;
 }
