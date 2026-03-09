@@ -1,17 +1,20 @@
 .page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 16px;
-  background:
-    radial-gradient(1000px 540px at 50% 25%, rgba(17, 50, 83, 0.6) 0%, rgba(3, 13, 28, 0.2) 46%, rgba(1, 6, 16, 0.95) 100%),
-    #01050f;
+    position: relative;
+    overflow: hidden;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    background:
+        radial-gradient(80% 60% at 50% 30%, rgba(17, 50, 83, 0.6) 0%, rgba(3, 13, 28, 0.2) 46%, rgba(1, 6, 16, 0.95) 100%),
+        #01050f;
 }
 
 .card {
   position: relative;
   width: 100%;
+  z-index: var(--z-content);
   max-width: 460px;
   border-radius: 18px;
   border: 1px solid #164567;

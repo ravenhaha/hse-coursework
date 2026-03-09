@@ -1,38 +1,56 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import MainLayout from './layouts/MainLayout/MainLayout'
-import HomePage from './pages/HomePage/HomePage.jsx'
-import WorkspaceLayout from "./layouts/WorkspaceLayout/WorkspaceLayout.jsx";
-import WorkspacePage from "./pages/WorkspacePage/WorkspacePage.jsx";
-import DevNav from "./components/DevNav/DevNav.jsx";
-import AuthPage from './components/Auth/AuthPage.jsx';
-import AuthLayout from "./layouts/AuthLayout/AuthLayout.jsx";
+import { lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import MainLayout from './layouts/MainLayout/MainLayout';
+import HomePage from './pages/HomePage/HomePage.jsx';
 import LumosCursor from './components/Effects/LumosCursor/LumosCursor.jsx';
-import FloatingParticles from './components/Effects/FloatingParticles/FloatingParticles.jsx';
-import SmoothScroll from './components/Effects/SmoothScroll/SmoothScroll.jsx';
-import AmbientGradient from './components/Effects/AmbientGradient/AmbientGradient.jsx';
+import BlurFade from './components/Effects/BlurFade/BlurFade.jsx';
+import DiveProvider from './context/DiveContext';
+import useDive from './hooks/useDive';
+import DevNav from './components/DevNav/DevNav.jsx';
+import GrainOverlay from './components/Effects/GrainOverlay/GrainOverlay.jsx';
+import AmbientParticles from './components/Effects/AmbientParticles/AmbientParticles.jsx';
+import styles from './App.module.css';
+
+const AuthPage = lazy(() => import('./components/Auth/AuthPage.jsx'));
+const WorkspacePage = lazy(() => import('./pages/WorkspacePage/WorkspacePage.jsx'));
+const WorkspaceLayout = lazy(() => import('./layouts/WorkspaceLayout/WorkspaceLayout.jsx'));
+const AuthLayout = lazy(() => import('./layouts/AuthLayout/AuthLayout.jsx'));
+
+function AppContent() {
+    const { blurActive } = useDive();
+    const location = useLocation();
+    const isAuth = location.pathname === '/auth';
+
+    return (
+        <div className={styles.root}>
+            {!isAuth && <AmbientParticles />}
+            <GrainOverlay />
+            <LumosCursor />
+            <BlurFade active={blurActive} />
+            <DevNav />
+            <Suspense fallback={null}>
+                <Routes>
+                    <Route element={<MainLayout />}>
+                        <Route path="/" element={<HomePage />} />
+                    </Route>
+                    <Route element={<WorkspaceLayout />}>
+                        <Route path="/workspace" element={<WorkspacePage />} />
+                    </Route>
+                    <Route element={<AuthLayout />}>
+                        <Route path="/auth" element={<AuthPage />} />
+                    </Route>
+                </Routes>
+            </Suspense>
+        </div>
+    );
+}
 
 export default function App() {
     return (
         <BrowserRouter>
-            <SmoothScroll>
-                <AmbientGradient />
-                <div style={{ position: 'relative', zIndex: 1 }}>
-                    <LumosCursor />
-                    <FloatingParticles />
-                    <DevNav />
-                    <Routes>
-                        <Route element={<MainLayout />}>
-                            <Route path="/" element={<HomePage />} />
-                        </Route>
-                        <Route element={<WorkspaceLayout />}>
-                            <Route path="/workspace" element={<WorkspacePage />} />
-                        </Route>
-                        <Route element={<AuthLayout />}>
-                            <Route path="/auth" element={<AuthPage />} />
-                        </Route>
-                    </Routes>
-                </div>
-            </SmoothScroll>
+            <DiveProvider>
+                <AppContent />
+            </DiveProvider>
         </BrowserRouter>
-    )
+    );
 }

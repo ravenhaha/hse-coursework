@@ -4,6 +4,8 @@
     align-items: center;
     text-align: center;
     flex: 1;
+    position: relative;
+    z-index: var(--z-content);
 }
 
 .iconWrapper {
@@ -33,5 +35,5 @@
     line-height: 23px;
     letter-spacing: -0.5px;
     color: #F2FEFF;
-    white-space: nowrap;
+    max-width: 280px;
 }

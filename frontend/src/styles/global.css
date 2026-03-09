@@ -1,5 +1,6 @@
 @import './reset.css';
 @import './fonts.css';
+@import './z-index.css';
 
 html {
     scroll-behavior: smooth;
@@ -7,31 +8,43 @@ html {
 
 body {
     font-family: var(--font-main);
-    background: #050510;
+    overscroll-behavior: none;
 }
 
-* {
-    cursor: none !important;
-}
-
-html.lenis, html.lenis body {
-    height: auto;
-}
-
-.lenis.lenis-smooth {
-    scroll-behavior: auto !important;
-}
-
-.lenis.lenis-smooth [data-lenis-prevent] {
-    overscroll-behavior: contain;
-}
-
-.lenis.lenis-stopped {
+body.no-scroll {
     overflow: hidden;
+}
+
+@media (pointer: fine) {
+    body:not(.workspace) * {
+        cursor: none !important;
+    }
 }
 
 .container {
     max-width: 1920px;
     width: 100%;
     margin: 0 auto;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0a0e14;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #3ad7d3;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #4de3df;
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #3ad7d3 #0a0e14;
 }

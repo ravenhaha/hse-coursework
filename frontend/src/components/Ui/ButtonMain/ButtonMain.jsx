@@ -1,12 +1,15 @@
 import styles from './ButtonMain.module.css';
 
-function ButtonMain ({className}) {
-
+function ButtonMain({ className, onClick }) {
     return (
-        <a className={`${styles.link_main} ${className || ''}`}>
+        <button
+            type="button"
+            className={`${styles.link_main} ${className || ''}`}
+            onClick={onClick}
+        >
             Погрузиться
-        </a>
-    )
+        </button>
+    );
 }
 
-export default ButtonMain
+export default ButtonMain;

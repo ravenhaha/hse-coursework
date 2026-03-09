@@ -1,8 +1,10 @@
 import ButtonMain from "../../../Ui/ButtonMain/ButtonMain.jsx";
 import styles from './Advertisement.module.css';
-import questions from "../Questions/index.js";
+import useDive from '../../../../hooks/useDive.js';
 
 function Advertisement() {
+    const { handleDive } = useDive();
+
     return (
         <section className={styles.advertisement}>
             <h2 className={styles.title}>
@@ -13,12 +15,12 @@ function Advertisement() {
                 Каждое воспоминание — это часть вашей истории. Соберите их
                 вместе и откройте новые грани себя.
             </p>
-            <ButtonMain/>
+            <ButtonMain onClick={() => handleDive('/auth')} />
             <p className={styles.subtext}>
                 Регистрация не требуется • Начните прямо сейчас
             </p>
         </section>
-    )
+    );
 }
 
 export default Advertisement;

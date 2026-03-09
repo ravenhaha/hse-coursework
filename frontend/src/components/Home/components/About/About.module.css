@@ -1,64 +1,136 @@
 .about {
-    background: rgba(7, 10, 16, 0.8);
+    background: #070a10;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 50px;
+    padding: clamp(30px, 5vw, 50px) clamp(16px, 4vw, 50px);
 }
 
 .title {
-    font-size: 48px;
+    font-size: clamp(32px, 5vw, 48px);
     color: #F2FEFF;
     margin-bottom: 20px;
+    text-align: center;
 }
 
 .text {
-    font-size: 18px;
+    font-size: clamp(15px, 2vw, 18px);
     color: #ABB5B7;
     margin-bottom: 50px;
+    text-align: center;
+    max-width: 700px;
 }
 
 .subtitle {
-    font-size: 32px;
+    font-size: clamp(24px, 3vw, 32px);
     color: #3AD7D3;
     margin-bottom: 30px;
+    text-align: center;
 }
 
 .cards {
     display: flex;
     gap: 25px;
     margin-bottom: 50px;
+    position: relative;
+    z-index: var(--z-content);
 }
 
 .card {
+    position: relative;
     border-radius: 16px;
     border: 1px solid #1E4658;
-    background-color: #0A1A2A;
+    background: linear-gradient(180deg, #0A1A2A 0%, #071b31 100%);
     color: white;
     padding: 30px;
+    width: 394px;
+    flex: 1 1 0;
     max-width: 394px;
+    overflow: hidden;
+    transition:
+        border-color 0.3s ease,
+        box-shadow 0.3s ease;
+}
+
+.card:hover {
+    border-color: #2a6a7a;
+    box-shadow: 0 16px 48px rgba(58, 215, 211, 0.08);
+}
+
+.card :global(.cardGlow) {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    background: radial-gradient(
+        400px circle at var(--x, 50%) var(--y, 50%),
+        rgba(58, 215, 211, 0.12) 0%,
+        transparent 70%
+    );
+    pointer-events: none;
+}
+
+.card:hover :global(.cardGlow) {
+    opacity: 1;
 }
 
 .card span {
-    display: block;
-    max-width: 80px;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
     font-size: 32px;
     font-weight: bold;
     margin-bottom: 50px;
-    padding: 15px 31px;
-    border-radius: 50px;
+    border-radius: 50%;
     color: #3AD7D3;
     background-color: #0D2B3A;
     border: 1px solid #1E4658;
+    transition: border-color 0.3s ease;
 }
 
-.card p {
-    font-size: 16px;
-    color: #F2FEFF;
+.card:hover span {
+    border-color: #3AD7D3;
 }
 
 .card h4 {
+    position: relative;
+    z-index: 1;
     font-size: 24px;
     color: #F2FEFF;
-    margin-bottom: 50px;
+    margin-bottom: 30px;
+}
+
+.card p {
+    position: relative;
+    z-index: 1;
+    font-size: 16px;
+    color: #F2FEFF;
+    white-space: pre-line;
+}
+
+@media (max-width: 960px) {
+    .cards {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .card {
+        flex: 0 1 394px;
+    }
+}
+
+@media (max-width: 600px) {
+    .cards {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .card {
+        max-width: 100%;
+        width: 100%;
+    }
 }

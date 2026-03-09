@@ -1,42 +1,63 @@
 .questions {
-    background: rgba(7, 10, 16, 0.8);
+    background: #070a10;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 50px;
+    padding: clamp(30px, 5vw, 50px);
 }
 
 .maintitle {
-    font-size: 48px;
+    font-size: clamp(32px, 5vw, 48px);
     color: #F2FEFF;
     margin-bottom: 20px;
+    text-align: center;
 }
 
 .maintext {
-    font-size: 18px;
+    font-size: clamp(15px, 2vw, 18px);
     color: #F2FEFF;
     margin-bottom: 50px;
+    text-align: center;
+    padding: 0 16px;
+}
+
+.list {
+    width: 100%;
+    max-width: 1000px;
 }
 
 .title {
-    font-size: 20px;
+    font-size: clamp(17px, 2vw, 20px);
     color: #F2FEFF;
+    margin-bottom: 8px;
 }
 
 .text {
-    font-size: 16px;
-    color: #F2FEFF;
-    max-width: 826px;
+    font-size: clamp(14px, 1.5vw, 16px);
+    color: #ABB5B7;
+    line-height: 1.6;
 }
 
 .quest-card {
     background: #0A1A2A;
     border-radius: 16px;
-    border: 1px #1E4658 solid;
-    padding: 20px 15px 15px 15px;
-    max-width: 1000px;
+    border: 1px solid #1E4658;
+    padding: 24px 20px;
+    width: 100%;
+    position: relative;
+    z-index: var(--z-content);
 }
 
 .quest-card:not(:last-child) {
     margin-bottom: 15px;
+}
+
+@media (max-width: 768px) {
+    .questions {
+        padding: 40px 16px;
+    }
+
+    .quest-card {
+        padding: 20px 16px;
+    }
 }

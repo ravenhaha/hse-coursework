@@ -1,6 +1,6 @@
 .section {
     padding: 50px;
-    background-color: rgba(8, 15, 24, 0.8);
+    background-color: #080f18;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -32,6 +32,8 @@
     display: flex;
     flex-wrap: wrap;
     gap: 70px;
+    position: relative;
+    z-index: var(--z-content);
 }
 
 @media (max-width: 768px) {

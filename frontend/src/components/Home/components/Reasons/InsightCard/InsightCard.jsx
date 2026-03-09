@@ -5,7 +5,7 @@ function InsightCard(props) {
 
     return (
         <div className={styles.item}>
-            <div className={styles.line}></div>
+            <div className={styles.line} aria-hidden="true" />
             <div className={styles.textBlock}>
                 <p className={styles.text}>{text}</p>
                 <p className={styles.signature}>{signature}</p>

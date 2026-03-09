@@ -3,7 +3,7 @@ import questions from './index.js';
 
 function Questions() {
     return (
-        <section id="about" className={styles.questions}>
+        <section id="questions" className={styles.questions}>
             <h2 className={styles.maintitle}>Частые вопросы</h2>
             <p className={styles.maintext}>Ответы на вопросы о работе с Омутом памяти</p>
             <ul className={styles.list}>

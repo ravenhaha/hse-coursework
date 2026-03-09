@@ -1,7 +1,29 @@
 .link_main {
+    display: inline-block;
     background-color: #3AD7D3;
     color: white;
-    font-size: 18px;
+    font-size: clamp(16px, 2vw, 18px);
+    font-weight: 600;
+    font-family: inherit;
     border-radius: 16px;
     padding: 24px 58px;
+    border: none;
+    outline: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.link_main:hover {
+    box-shadow: 0 0 20px rgba(58, 215, 211, 0.5),
+                0 0 40px rgba(58, 215, 211, 0.2);
+    transform: translateY(-1px);
+}
+
+.link_main:active {
+    transform: translateY(0);
+}
+
+.link_main:focus-visible {
+    box-shadow: 0 0 0 3px rgba(58, 215, 211, 0.4);
 }

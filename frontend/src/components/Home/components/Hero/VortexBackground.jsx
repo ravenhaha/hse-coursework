@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
+import styles from './VortexBackground.module.css';
 
 const vertexShader = `
   attribute vec2 a_position;
@@ -8,7 +9,7 @@ const vertexShader = `
 `;
 
 const fragmentShader = `
-  precision highp float;
+  precision mediump float;
   uniform float u_time;
   uniform vec2 u_resolution;
 
@@ -40,27 +41,11 @@ const fragmentShader = `
 
   float fbm(vec2 p){
     float value=0.0;float amplitude=0.5;float frequency=1.0;
-    for(int i=0;i<6;i++){
+    for(int i=0;i<4;i++){
       value+=amplitude*snoise(p*frequency);
       frequency*=2.0;amplitude*=0.5;
     }
     return value;
-  }
-
-  // Круг на воде: кольцо расходится от центра, затухает
-  // rippleTime: 0..1 — фаза жизни (0=начало, 1=исчезло)
-  float ripple(float d, float rippleTime, float maxRadius) {
-    float radius = rippleTime * maxRadius;
-    float ringWidth = 0.03 + rippleTime * 0.06; // кольцо расширяется
-    float ring = exp(-pow((d - radius) / ringWidth, 2.0));
-    float fade = 1.0 - rippleTime; // затухает со временем
-    fade = fade * fade; // быстрее затухает в конце
-    return ring * fade;
-  }
-
-  // Фаза одного ripple с периодом
-  float ripplePhase(float t, float offset, float period) {
-    return fract((t + offset) / period);
   }
 
   void main(){
@@ -82,8 +67,8 @@ const fragmentShader = `
     float n2=fbm(nc2-t*0.2);
     float n3=fbm(vec2(smoothDist*5.0-t,softAngle*2.0)+n1*0.5);
     float combined=n1*0.4+n2*0.35+n3*0.25;
-    float vs1=smoothstep(0.8,0.0,dist);
-    float vs2=smoothstep(1.2,0.1,dist);
+    float vs1=smoothstep(1.2,0.0,dist);
+    float vs2=smoothstep(1.5,0.1,dist);
 
     vec3 deepBlue=vec3(0.05,0.07,0.11);
     vec3 midBlue=vec3(0.10,0.18,0.25);
@@ -103,76 +88,14 @@ const fragmentShader = `
     float centerGlow=exp(-dist*3.5)*0.4;
     col+=cyanGlow*centerGlow*(0.7+0.3*sin(t*3.0));
 
-    // ============================================
-    // КРУГИ НА ВОДЕ — мягкие расходящиеся кольца
-    // ============================================
-    float realTime = u_time;
-
-    // Мягкие цвета (приглушённые, не яркие)
-    vec3 softPurple = vec3(0.35, 0.15, 0.5);
-    vec3 softGold = vec3(0.5, 0.4, 0.15);
-    vec3 softEmerald = vec3(0.1, 0.45, 0.25);
-    vec3 softRose = vec3(0.45, 0.18, 0.3);
-    vec3 softBlue = vec3(0.15, 0.3, 0.55);
-
-    float maxR = 0.5; // максимальный радиус кольца
-
-    // Ripple 1 — фиолетовый, каждые 9 сек
-    float phase1 = ripplePhase(realTime, 0.0, 9.0);
-    vec2 rPos1 = vec2(
-      snoise(vec2(floor((realTime)/9.0)*1.1, 0.0))*0.2,
-      snoise(vec2(0.0, floor((realTime)/9.0)*1.1))*0.15
+    float swirlAngle=angle-t*0.8+dist*3.0;
+    vec2 sparkleUV=vec2(
+      cos(swirlAngle)*dist+0.5,
+      sin(swirlAngle)*dist+0.5
     );
-    float rDist1 = length(pos - rPos1);
-    float r1 = ripple(rDist1, phase1, maxR);
-    col += softPurple * r1 * vs1 * 0.25;
+    float sparkle=pow(max(0.0,snoise(sparkleUV*60.0+t*0.4)),16.0);
+    col+=vec3(0.8,0.65,0.95)*sparkle*vs1*2.5;
 
-    // Ripple 2 — золотой, каждые 12 сек
-    float phase2 = ripplePhase(realTime, 3.5, 12.0);
-    vec2 rPos2 = vec2(
-      snoise(vec2(floor((realTime+3.5)/12.0)*2.3, 5.0))*0.18,
-      snoise(vec2(5.0, floor((realTime+3.5)/12.0)*2.3))*0.18
-    );
-    float rDist2 = length(pos - rPos2);
-    float r2 = ripple(rDist2, phase2, maxR);
-    col += softGold * r2 * vs1 * 0.2;
-
-    // Ripple 3 — изумрудный, каждые 15 сек
-    float phase3 = ripplePhase(realTime, 7.0, 15.0);
-    vec2 rPos3 = vec2(
-      snoise(vec2(floor((realTime+7.0)/15.0)*3.7, 10.0))*0.15,
-      snoise(vec2(10.0, floor((realTime+7.0)/15.0)*3.7))*0.2
-    );
-    float rDist3 = length(pos - rPos3);
-    float r3 = ripple(rDist3, phase3, maxR);
-    col += softEmerald * r3 * vs1 * 0.2;
-
-    // Ripple 4 — розовый, каждые 18 сек
-    float phase4 = ripplePhase(realTime, 11.0, 18.0);
-    vec2 rPos4 = vec2(
-      snoise(vec2(floor((realTime+11.0)/18.0)*4.1, 15.0))*0.22,
-      snoise(vec2(15.0, floor((realTime+11.0)/18.0)*4.1))*0.15
-    );
-    float rDist4 = length(pos - rPos4);
-    float r4 = ripple(rDist4, phase4, maxR * 0.8);
-    col += softRose * r4 * vs1 * 0.18;
-
-    // Ripple 5 — голубой, каждые 7 сек (чаще, но ещё мягче)
-    float phase5 = ripplePhase(realTime, 2.0, 7.0);
-    vec2 rPos5 = vec2(
-      snoise(vec2(floor((realTime+2.0)/7.0)*5.3, 20.0))*0.12,
-      snoise(vec2(20.0, floor((realTime+2.0)/7.0)*5.3))*0.12
-    );
-    float rDist5 = length(pos - rPos5);
-    float r5 = ripple(rDist5, phase5, maxR * 0.6);
-    col += softBlue * r5 * vs1 * 0.15;
-
-    // === Тонкие искры ===
-    float sparkle=pow(max(0.0,snoise(uv*80.0+realTime*0.3)),12.0);
-    col+=vec3(0.5,0.45,0.65)*sparkle*vs1*0.8;
-
-    float vignette=smoothstep(0.9,0.25,dist);
-    col*=vignette;
     col*=0.9+0.1*sin(t*2.0);
     col=pow(col,vec3(0.95));
     gl_FragColor=vec4(col,1.0);
@@ -184,7 +107,7 @@ function createShader(gl, type, source) {
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.error(gl.getShaderInfoLog(shader));
+        console.error('[Vortex] Shader compile error:', gl.getShaderInfoLog(shader));
         gl.deleteShader(shader);
         return null;
     }
@@ -197,81 +120,135 @@ function createProgram(gl, vs, fs) {
     gl.attachShader(program, fs);
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        console.error(gl.getProgramInfoLog(program));
+        console.error('[Vortex] Program link error:', gl.getProgramInfoLog(program));
         return null;
     }
     return program;
 }
 
-const VortexBackground = () => {
+const VortexBackground = memo(function VortexBackground({ fast = false }) {
     const canvasRef = useRef(null);
+    const speedRef = useRef(1.0);
+    const targetSpeedRef = useRef(1.0);
+
+    useEffect(() => {
+        targetSpeedRef.current = fast ? 3.0 : 1.0;
+    }, [fast]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
-        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-        if (!gl) return;
+        if (!canvas) return;
+
+        const gl = canvas.getContext('webgl', {
+            antialias: false,
+            alpha: false,
+            depth: false,
+            stencil: false,
+            preserveDrawingBuffer: false,
+            powerPreference: 'low-power',
+        });
+
+        if (!gl) {
+            console.warn('[Vortex] WebGL not available');
+            return;
+        }
 
         const vs = createShader(gl, gl.VERTEX_SHADER, vertexShader);
         const fs = createShader(gl, gl.FRAGMENT_SHADER, fragmentShader);
+        if (!vs || !fs) return;
+
         const program = createProgram(gl, vs, fs);
+        if (!program) return;
 
         const buffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            -1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1
+            -1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1,
         ]), gl.STATIC_DRAW);
 
         const aPos = gl.getAttribLocation(program, 'a_position');
         const uTime = gl.getUniformLocation(program, 'u_time');
         const uRes = gl.getUniformLocation(program, 'u_resolution');
 
+        gl.useProgram(program);
+        gl.enableVertexAttribArray(aPos);
+        gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
         const resize = () => {
-            const dpr = Math.min(window.devicePixelRatio, 2);
-            canvas.width = canvas.clientWidth * dpr;
-            canvas.height = canvas.clientHeight * dpr;
-            gl.viewport(0, 0, canvas.width, canvas.height);
+            const dpr = Math.min(window.devicePixelRatio, 2.0);
+            const w = canvas.clientWidth * dpr;
+            const h = canvas.clientHeight * dpr;
+            if (w === 0 || h === 0) return;
+            canvas.width = w;
+            canvas.height = h;
+            gl.viewport(0, 0, w, h);
+            gl.uniform2f(uRes, w, h);
         };
 
         window.addEventListener('resize', resize);
         resize();
 
-        const start = performance.now();
         let animId;
+        let prevTime = 0;
+        let accumTime = 0;
+        const MAX_DELTA = 0.1;
 
-        const render = () => {
-            const time = (performance.now() - start) / 1000;
-            gl.useProgram(program);
-            gl.uniform1f(uTime, time);
-            gl.uniform2f(uRes, canvas.width, canvas.height);
-            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-            gl.enableVertexAttribArray(aPos);
-            gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+        const render = (now) => {
+            animId = requestAnimationFrame(render);
+
+            const nowSec = now / 1000;
+
+            if (prevTime === 0) {
+                prevTime = nowSec;
+                return;
+            }
+
+            const rawDelta = nowSec - prevTime;
+            prevTime = nowSec;
+
+            // Защита от скачка при возврате из фона
+            const delta = Math.min(rawDelta, MAX_DELTA);
+
+            // Плавное изменение скорости
+            speedRef.current += (targetSpeedRef.current - speedRef.current) * 0.05;
+
+            accumTime += delta * speedRef.current;
+
+            if (gl.isContextLost()) return;
+
+            gl.uniform1f(uTime, accumTime);
             gl.drawArrays(gl.TRIANGLES, 0, 6);
+        };
+
+        animId = requestAnimationFrame(render);
+
+        const handleContextLost = (e) => {
+            e.preventDefault();
+            cancelAnimationFrame(animId);
+        };
+
+        const handleContextRestored = () => {
+            prevTime = 0;
+            resize();
             animId = requestAnimationFrame(render);
         };
 
-        render();
+        canvas.addEventListener('webglcontextlost', handleContextLost);
+        canvas.addEventListener('webglcontextrestored', handleContextRestored);
 
         return () => {
             cancelAnimationFrame(animId);
             window.removeEventListener('resize', resize);
+            canvas.removeEventListener('webglcontextlost', handleContextLost);
+            canvas.removeEventListener('webglcontextrestored', handleContextRestored);
+            gl.deleteProgram(program);
+            gl.deleteShader(vs);
+            gl.deleteShader(fs);
+            gl.deleteBuffer(buffer);
         };
     }, []);
 
-    return (
-        <canvas
-            ref={canvasRef}
-            style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: '100%',
-                height: '100%',
-                pointerEvents: 'none',
-            }}
-        />
-    );
-};
+    return <canvas ref={canvasRef} className={styles.canvas} />;
+});
 
 export default VortexBackground;
