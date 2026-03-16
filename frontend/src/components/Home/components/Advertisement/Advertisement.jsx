@@ -15,7 +15,9 @@ function Advertisement() {
                 Каждое воспоминание — это часть вашей истории. Соберите их
                 вместе и откройте новые грани себя.
             </p>
-            <ButtonMain onClick={() => handleDive('/auth')} />
+            <ButtonMain onClick={() => handleDive('/auth')}>
+                Погрузиться
+            </ButtonMain>
             <p className={styles.subtext}>
                 Регистрация не требуется • Начните прямо сейчас
             </p>

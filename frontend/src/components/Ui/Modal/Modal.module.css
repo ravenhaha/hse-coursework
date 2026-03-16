@@ -1,0 +1,141 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    background:
+        radial-gradient(80% 60% at 50% 30%, rgba(17, 50, 83, 0.6) 0%, rgba(3, 13, 28, 0.2) 46%, rgba(1, 6, 16, 0.95) 100%),
+        rgba(1, 5, 15, 0.92);
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal {
+    width: 100%;
+    max-width: 640px;
+    max-height: 90vh;
+    border-radius: 18px;
+    border: 1px solid #164567;
+    background: linear-gradient(180deg, #0A1A2A 0%, #071b31 100%);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.25s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 24px 0;
+}
+
+.title {
+    color: #f2feff;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.closeBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    border: 1px solid #215676;
+    background: #0c3146;
+    color: #7cdde3;
+    cursor: pointer;
+    transition:
+        border-color 0.2s ease,
+        color 0.2s ease,
+        background-color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.closeBtn:hover {
+    border-color: #43d9dc;
+    color: #b7fcff;
+    background: #12445f;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(67, 217, 220, 0.18);
+}
+
+.closeBtn:active {
+    transform: translateY(0);
+}
+
+.closeBtn:focus-visible {
+    outline: none;
+    border-color: #43d9dc;
+    box-shadow: 0 0 0 3px rgba(67, 217, 220, 0.25);
+}
+
+.closeBtn svg {
+    width: 19px;
+    height: 19px;
+}
+
+.body {
+    padding: 20px 24px 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.body::-webkit-scrollbar-thumb {
+    background: #1f4e67;
+    border-radius: 3px;
+}
+
+.body::-webkit-scrollbar-thumb:hover {
+    background: #2a6a8a;
+}
+
+@media (max-width: 680px) {
+    .modal {
+        max-width: 100%;
+        max-height: 95vh;
+        border-radius: 14px;
+    }
+
+    .header {
+        padding: 18px 18px 0;
+    }
+
+    .title {
+        font-size: 19px;
+    }
+
+    .body {
+        padding: 16px 18px 20px;
+    }
+}

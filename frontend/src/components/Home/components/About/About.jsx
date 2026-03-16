@@ -40,7 +40,9 @@ function About() {
                 ))}
             </div>
             <FadeIn delay={0.3}>
-                <ButtonMain onClick={() => handleDive('/auth')} />
+                <ButtonMain onClick={() => handleDive('/auth')}>
+                    Погрузиться
+                </ButtonMain>
             </FadeIn>
         </section>
     );

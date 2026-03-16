@@ -1,0 +1,97 @@
+.section {
+    margin-bottom: 20px;
+}
+
+.label {
+    display: block;
+    color: #8fb2c3;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px dashed #1f4e67;
+    background: #0a2a3d;
+    color: #8fb2c3;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.btn:hover {
+    border-color: #3AD7D3;
+    color: #3AD7D3;
+}
+
+.btnRecording {
+    border-color: #3AD7D3;
+    color: #ffffff;
+    background: rgba(58, 215, 211, 0.1);
+}
+
+.btnRecording:hover {
+    border-color: #3AD7D3;
+    color: #ffffff;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+.icon {
+    font-size: 20px;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #3AD7D3;
+    margin-left: auto;
+    animation: pulse 1s ease infinite;
+}
+
+.preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 14px;
+    border: 1px solid #1f4e67;
+    background: #0a2a3d;
+}
+
+.player {
+    flex: 1;
+    height: 36px;
+}
+
+.delete {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid #1f4e67;
+    background: none;
+    color: #8fb2c3;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.delete:hover {
+    background: rgba(58, 215, 211, 0.1);
+    border-color: #3AD7D3;
+    color: #3AD7D3;
+}

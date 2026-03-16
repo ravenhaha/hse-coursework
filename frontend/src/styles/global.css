@@ -16,7 +16,7 @@ body.no-scroll {
 }
 
 @media (pointer: fine) {
-    body:not(.workspace) * {
+    body.landing * {
         cursor: none !important;
     }
 }

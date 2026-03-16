@@ -19,13 +19,14 @@ const AuthLayout = lazy(() => import('./layouts/AuthLayout/AuthLayout.jsx'));
 function AppContent() {
     const { blurActive } = useDive();
     const location = useLocation();
+    const isHome = location.pathname === '/';
     const isAuth = location.pathname === '/auth';
 
     return (
         <div className={styles.root}>
             {!isAuth && <AmbientParticles />}
             <GrainOverlay />
-            <LumosCursor />
+            {isHome && <LumosCursor />}
             <BlurFade active={blurActive} />
             <DevNav />
             <Suspense fallback={null}>
