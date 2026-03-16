@@ -1,8 +1,8 @@
-import AuthPage from './pages/AuthPage/AuthPage.jsx';
+import WorkspacePage from './pages/WorkspacePage/WorkspacePage.jsx';
 
 function App() {
   return (
-    <AuthPage />
+    <WorkspacePage />
   )
 }
 
