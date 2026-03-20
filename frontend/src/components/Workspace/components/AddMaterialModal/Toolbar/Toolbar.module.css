@@ -1,41 +1,141 @@
 .toolbar {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    padding: 8px 10px;
-    background: #0a2a3d;
-    border-bottom: 1px solid #1f4e67;
-    flex-wrap: wrap;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  background: #0a2a3d;
+  border-bottom: 1px solid #1f4e67;
+  border-radius: 12px 12px 0 0;
+  user-select: none;
 }
 
-.toolBtn {
-    background: none;
-    border: none;
-    color: #7a9aaa;
-    padding: 5px 8px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
-    transition: all 0.2s;
-    min-width: 30px;
-    text-align: center;
-    line-height: 1;
+.row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+  padding: 2px 0;
 }
 
-.toolBtn:hover {
-    background: #163d55;
-    color: #e9f7ff;
-}
-
-.active {
-    background: rgba(58, 215, 211, 0.2);
-    color: #3AD7D3;
+.group {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  white-space: nowrap;
 }
 
 .divider {
-    width: 1px;
-    height: 18px;
-    background: #1f4e67;
-    margin: 0 3px;
+  width: 1px;
+  height: 20px;
+  background: #1f4e67;
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* ─── Кнопка ─── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid transparent;
+  color: #8fb2c3;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.15s;
+  min-width: 28px;
+  min-height: 28px;
+  line-height: 1;
+}
+
+.btn:hover {
+  background: #163d55;
+  color: #e9f7ff;
+  border-color: #1f4e67;
+}
+
+.btn:active {
+  transform: scale(0.95);
+}
+
+.btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.btn:disabled:hover {
+  background: none;
+  border-color: transparent;
+  transform: none;
+}
+
+.btn svg {
+  flex-shrink: 0;
+}
+
+/* ─── Активная кнопка ─── */
+.active {
+  background: rgba(58, 215, 211, 0.15);
+  color: #3AD7D3;
+  border-color: rgba(58, 215, 211, 0.3);
+}
+
+.active:hover {
+  background: rgba(58, 215, 211, 0.25);
+  color: #3AD7D3;
+}
+
+/* ─── Цвет текста ─── */
+.colorIndicator {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.colorDot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+}
+
+/* ─── Палитра цветов ─── */
+.colorPicker {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 8px;
+  background: #0c3148;
+  border: 1px solid #1f4e67;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+}
+
+.colorSwatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.colorSwatch:hover {
+  border-color: #e9f7ff;
+  transform: scale(1.2);
+}
+
+.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }

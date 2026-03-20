@@ -1,0 +1,140 @@
+.wrapper {
+    position: relative;
+}
+
+.trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    border: 1px solid #1f4e67;
+    background: #0c2a3d;
+    cursor: pointer;
+    transition:
+        border-color 0.2s ease,
+        transform 0.15s ease;
+}
+
+.trigger:hover {
+    transform: scale(1.03);
+}
+
+.triggerIcon {
+    font-size: 18px;
+}
+
+.triggerDot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 20;
+    min-width: 220px;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid #1f4e67;
+    background: #0b2538;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    animation: dropIn 0.15s ease;
+}
+
+@keyframes dropIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sectionLabel {
+    color: #5a8a9a;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.divider {
+    height: 1px;
+    background: #1a3a50;
+    margin: 10px 0;
+}
+
+/* ─── Colors ─── */
+.colorGrid {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.colorBtn {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition:
+        transform 0.15s ease,
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.colorBtn:hover {
+    transform: scale(1.15);
+}
+
+.colorBtnActive {
+    border-color: #fff;
+    box-shadow: 0 0 10px currentColor;
+    transform: scale(1.1);
+}
+
+/* ─── Icons ─── */
+.iconGrid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+}
+
+.iconBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    font-size: 16px;
+    cursor: pointer;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        transform 0.15s ease;
+}
+
+.iconBtn:hover {
+    background: rgba(58, 215, 211, 0.08);
+    transform: scale(1.1);
+}
+
+.iconBtnActive {
+    border-color: #3AD7D3;
+    background: rgba(58, 215, 211, 0.12);
+}
