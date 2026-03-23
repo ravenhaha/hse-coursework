@@ -10,7 +10,7 @@
   background: linear-gradient(180deg, #0b1929 0%, #091422 100%);
   border-right: 1px solid #152a3f;
   padding: 0 14px;
-  z-index: 100;
+  z-index: var(--z-sticky);
 }
 
 .scrollArea {
@@ -197,7 +197,6 @@
   display: flex;
   align-items: center;
 }
-
 
 .treeItem {
   display: flex;
