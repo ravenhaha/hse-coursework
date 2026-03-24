@@ -7,18 +7,22 @@ export default function DiveProvider({ children }) {
     const [blurActive, setBlurActive] = useState(false);
     const [vortexFast, setVortexFast] = useState(false);
     const navigate = useNavigate();
-    const timersRef = useRef([]);
+    const timersRef = useRef(new Set());
 
     useEffect(() => {
         const timers = timersRef.current;
         return () => {
             timers.forEach(clearTimeout);
+            timers.clear();
         };
     }, []);
 
     const safeTimeout = useCallback((fn, delay) => {
-        const id = setTimeout(fn, delay);
-        timersRef.current.push(id);
+        const id = setTimeout(() => {
+            timersRef.current.delete(id);
+            fn();
+        }, delay);
+        timersRef.current.add(id);
         return id;
     }, []);
 

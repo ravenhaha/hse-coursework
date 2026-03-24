@@ -1,20 +1,38 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import styles from './Modal.module.css';
 
+let openCount = 0;
+
 export function Modal({ isOpen, onClose, title, children }) {
+    const wasOpenRef = useRef(false);
+
     const handleKeyDown = useCallback((e) => {
         if (e.key === 'Escape') onClose();
     }, [onClose]);
 
     useEffect(() => {
-        if (isOpen) {
+        if (isOpen && !wasOpenRef.current) {
+            openCount++;
+            wasOpenRef.current = true;
             document.body.classList.add('no-scroll');
             document.addEventListener('keydown', handleKeyDown);
-        } else {
-            document.body.classList.remove('no-scroll');
+        } else if (!isOpen && wasOpenRef.current) {
+            openCount--;
+            wasOpenRef.current = false;
+            if (openCount === 0) {
+                document.body.classList.remove('no-scroll');
+            }
+            document.removeEventListener('keydown', handleKeyDown);
         }
+
         return () => {
-            document.body.classList.remove('no-scroll');
+            if (wasOpenRef.current) {
+                openCount--;
+                wasOpenRef.current = false;
+                if (openCount === 0) {
+                    document.body.classList.remove('no-scroll');
+                }
+            }
             document.removeEventListener('keydown', handleKeyDown);
         };
     }, [isOpen, handleKeyDown]);

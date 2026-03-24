@@ -11,7 +11,7 @@ import GrainOverlay from './components/Effects/GrainOverlay/GrainOverlay.jsx';
 import AmbientParticles from './components/Effects/AmbientParticles/AmbientParticles.jsx';
 import styles from './App.module.css';
 
-const AuthPage = lazy(() => import('./components/Auth/AuthPage.jsx'));
+const AuthPage = lazy(() => import('./pages/AuthPage/AuthPage.jsx'));
 const WorkspacePage = lazy(() => import('./pages/WorkspacePage/WorkspacePage.jsx'));
 const WorkspaceLayout = lazy(() => import('./layouts/WorkspaceLayout/WorkspaceLayout.jsx'));
 const AuthLayout = lazy(() => import('./layouts/AuthLayout/AuthLayout.jsx'));

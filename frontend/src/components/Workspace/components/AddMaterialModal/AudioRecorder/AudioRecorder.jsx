@@ -1,10 +1,17 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import styles from './AudioRecorder.module.css';
 
 export function AudioRecorder({ audioUrl, setAudioUrl }) {
     const [isRecording, setIsRecording] = useState(false);
     const mediaRecorder = useRef(null);
     const chunks = useRef([]);
+
+    useEffect(() => {
+        const url = audioUrl;
+        return () => {
+            if (url) URL.revokeObjectURL(url);
+        };
+    }, [audioUrl]);
 
     const startRecording = useCallback(async () => {
         try {
