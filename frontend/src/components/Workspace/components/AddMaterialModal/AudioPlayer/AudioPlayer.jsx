@@ -1,5 +1,12 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import styles from './AudioPlayer.module.css';
+
+function formatTime(s) {
+    if (!s || isNaN(s)) return '0:00';
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+}
 
 export function AudioPlayer({ src, onRemove }) {
     const audioRef = useRef(null);
@@ -27,7 +34,7 @@ export function AudioPlayer({ src, onRemove }) {
         };
     }, [src]);
 
-    const togglePlay = () => {
+    const togglePlay = useCallback(() => {
         const audio = audioRef.current;
         if (!audio) return;
 
@@ -36,25 +43,18 @@ export function AudioPlayer({ src, onRemove }) {
         } else {
             audio.play();
         }
-        setIsPlaying(!isPlaying);
-    };
+        setIsPlaying(prev => !prev);
+    }, [isPlaying]);
 
-    const handleProgressClick = (e) => {
+    const handleProgressClick = useCallback((e) => {
         const audio = audioRef.current;
         const bar = progressRef.current;
-        if (!audio || !bar) return;
+        if (!audio || !bar || !duration) return;
 
         const rect = bar.getBoundingClientRect();
         const ratio = (e.clientX - rect.left) / rect.width;
         audio.currentTime = ratio * duration;
-    };
-
-    const formatTime = (s) => {
-        if (!s || isNaN(s)) return '0:00';
-        const m = Math.floor(s / 60);
-        const sec = Math.floor(s % 60);
-        return `${m}:${sec.toString().padStart(2, '0')}`;
-    };
+    }, [duration]);
 
     const progress = duration ? (currentTime / duration) * 100 : 0;
 

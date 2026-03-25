@@ -1,384 +1,342 @@
-import { useState, useRef, useEffect } from 'react';
-import { FontSelect } from './FontSelect';
-import { COLORS } from './colors';
+import { useState, useCallback } from 'react';
+import { TemplatesGrid } from '../TemplatesGrid/TemplatesGrid';
+import { ColorPicker } from '../ColorPicker/ColorPicker';
+import { useFonts } from '../../../../../hooks/useFonts';
 import styles from './Toolbar.module.css';
 
-export function Toolbar({ editor }) {
-  const [showColorPicker, setShowColorPicker] = useState(false);
-  const [, forceUpdate] = useState(0);
-  const colorRef = useRef(null);
+export function Toolbar({ editor, onTemplate, onBack }) {
+    const [showTemplates, setShowTemplates] = useState(false);
+    const { fonts, loadFont, loadingFont } = useFonts();
 
-  // Подписка на изменения редактора — чтобы кнопки undo/redo обновлялись
-  useEffect(() => {
-    if (!editor) return;
+    const handleTemplateSelect = useCallback((template) => {
+        setShowTemplates(false);
+        if (onTemplate) onTemplate(template);
+    }, [onTemplate]);
 
-    const update = () => forceUpdate(n => n + 1);
+    const handleFontChange = useCallback(async (e) => {
+        if (!editor) return;
+        const value = e.target.value;
 
-    editor.on('transaction', update);
-    return () => editor.off('transaction', update);
-  }, [editor]);
+        if (!value) {
+            editor.chain().focus().unsetFontFamily().run();
+            return;
+        }
 
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (colorRef.current && !colorRef.current.contains(e.target)) {
-        setShowColorPicker(false);
-      }
+        const fontConfig = fonts.find(f => f.value === value);
+        if (fontConfig) {
+            await loadFont(fontConfig);
+        }
+        editor.chain().focus().setFontFamily(value).run();
+    }, [editor, fonts, loadFont]);
+
+    const handleHeadingChange = useCallback((e) => {
+        if (!editor) return;
+        const value = e.target.value;
+        if (value === 'paragraph') {
+            editor.chain().focus().setParagraph().run();
+        } else {
+            editor.chain().focus().toggleHeading({ level: Number(value) }).run();
+        }
+    }, [editor]);
+
+    if (!editor) return null;
+
+    const currentFont = editor.getAttributes('textStyle')?.fontFamily || '';
+
+    const getHeadingValue = () => {
+        for (let i = 1; i <= 4; i++) {
+            if (editor.isActive('heading', { level: i })) return String(i);
+        }
+        return 'paragraph';
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
-  if (!editor) return null;
+    const btn = (action, isActive, icon, title, disabled = false) => (
+        <button
+            className={`${styles.btn} ${isActive ? styles.btnActive : ''} ${disabled ? styles.btnDisabled : ''}`}
+            onClick={disabled ? undefined : action}
+            title={title}
+            disabled={disabled}
+        >
+            {icon}
+        </button>
+    );
 
-  const setColor = (color) => {
-    editor.chain().focus().setColor(color).run();
-    setShowColorPicker(false);
-  };
+    return (
+        <div className={styles.toolbar}>
+            {onBack && (
+                <>
+                    <div className={styles.group}>
+                        <button className={styles.btn} onClick={onBack} title="Назад">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                <polyline points="15 18 9 12 15 6" />
+                            </svg>
+                        </button>
+                    </div>
+                    <span className={styles.sep} />
+                </>
+            )}
 
-  const addLink = () => {
-    if (editor.isActive('link')) {
-      editor.chain().focus().unsetLink().run();
-      return;
-    }
-    const url = prompt('Вставьте URL:');
-    if (url) editor.chain().focus().setLink({ href: url }).run();
-  };
-
-  const addImage = () => {
-    const url = prompt('Вставьте ссылку на картинку:');
-    if (url) editor.chain().focus().setImage({ src: url }).run();
-  };
-
-  const addTable = () => {
-    editor
-      .chain()
-      .focus()
-      .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
-      .run();
-  };
-
-  const currentColor = editor.getAttributes('textStyle').color || '#FFFFFF';
-
-  const canUndo = editor.can().undo();
-  const canRedo = editor.can().redo();
-
-  return (
-    <div className={styles.toolbar}>
-
-      {/* ─── Строка 1 ─── */}
-      <div className={styles.row}>
-
-        <FontSelect editor={editor} />
-
-        <span className={styles.divider} />
-
-        {/* Форматирование */}
-        <span className={styles.group}>
-          <button
-            className={`${styles.btn} ${editor.isActive('bold') ? styles.active : ''}`}
-            onClick={() => editor.chain().focus().toggleBold().run()}
-            title="Жирный (Ctrl+B)"
-          >
-            <strong>B</strong>
-          </button>
-          <button
-            className={`${styles.btn} ${editor.isActive('italic') ? styles.active : ''}`}
-            onClick={() => editor.chain().focus().toggleItalic().run()}
-            title="Курсив (Ctrl+I)"
-          >
-            <em>I</em>
-          </button>
-          <button
-            className={`${styles.btn} ${editor.isActive('underline') ? styles.active : ''}`}
-            onClick={() => editor.chain().focus().toggleUnderline().run()}
-            title="Подчёркнутый (Ctrl+U)"
-          >
-            <span style={{ textDecoration: 'underline' }}>U</span>
-          </button>
-          <button
-            className={`${styles.btn} ${editor.isActive('strike') ? styles.active : ''}`}
-            onClick={() => editor.chain().focus().toggleStrike().run()}
-            title="Зачёркнутый"
-          >
-            <s>S</s>
-          </button>
-        </span>
-
-        <span className={styles.divider} />
-
-        {/* Цвет и маркер */}
-        <span className={styles.group} ref={colorRef} style={{ position: 'relative' }}>
-          <button
-            className={`${styles.btn} ${editor.isActive('highlight') ? styles.active : ''}`}
-            onClick={() => editor.chain().focus().toggleHighlight().run()}
-            title="Маркер"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 20h9" />
-              <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
-            </svg>
-          </button>
-
-          <button
-            className={styles.btn}
-            onClick={() => setShowColorPicker(!showColorPicker)}
-            title="Цвет текста"
-          >
-            <span className={styles.colorIndicator}>
-              <span style={{ background: currentColor }} className={styles.colorDot} />
-              A
-            </span>
-          </button>
-
-          {showColorPicker && (
-            <div className={styles.colorPicker}>
-              {COLORS.map(color => (
-                <button
-                  key={color}
-                  className={styles.colorSwatch}
-                  style={{ background: color }}
-                  onClick={() => setColor(color)}
-                  title={color}
-                />
-              ))}
+            <div className={styles.group}>
+                {btn(
+                    () => editor.chain().focus().undo().run(),
+                    false,
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <polyline points="1 4 1 10 7 10" />
+                        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                    </svg>,
+                    'Отменить (Ctrl+Z)',
+                    !editor.can().undo()
+                )}
+                {btn(
+                    () => editor.chain().focus().redo().run(),
+                    false,
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <polyline points="23 4 23 10 17 10" />
+                        <path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10" />
+                    </svg>,
+                    'Повторить (Ctrl+Y)',
+                    !editor.can().redo()
+                )}
             </div>
-          )}
 
-          <button
-            className={styles.btn}
-            onClick={() => editor.chain().focus().unsetAllMarks().run()}
-            title="Очистить форматирование"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-        </span>
+            <span className={styles.sep} />
 
-        <span className={styles.divider} />
+            <div className={styles.group}>
+                <select
+                    className={styles.select}
+                    value={getHeadingValue()}
+                    onChange={handleHeadingChange}
+                >
+                    <option value="paragraph">Текст</option>
+                    <option value="1">H1</option>
+                    <option value="2">H2</option>
+                    <option value="3">H3</option>
+                    <option value="4">H4</option>
+                </select>
 
-        {/* Индексы */}
-        <span className={styles.group}>
-          <button
-            className={`${styles.btn} ${editor.isActive('superscript') ? styles.active : ''}`}
-            onClick={() => editor.chain().focus().toggleSuperscript().run()}
-            title="Верхний индекс"
-          >
-            X<sup>²</sup>
-          </button>
-          <button
-            className={`${styles.btn} ${editor.isActive('subscript') ? styles.active : ''}`}
-            onClick={() => editor.chain().focus().toggleSubscript().run()}
-            title="Нижний индекс"
-          >
-            X<sub>₂</sub>
-          </button>
-        </span>
+                <select
+                    className={`${styles.select} ${loadingFont ? styles.selectLoading : ''}`}
+                    value={currentFont}
+                    onChange={handleFontChange}
+                    disabled={!!loadingFont}
+                >
+                    {fonts.map(f => (
+                        <option key={f.name} value={f.value}>
+                            {f.name}{loadingFont === f.name ? ' ⏳' : ''}
+                        </option>
+                    ))}
+                </select>
+            </div>
 
-        <span className={styles.divider} />
+            <span className={styles.sep} />
 
-        {/* Заголовки */}
-        <span className={styles.group}>
-          {[1, 2, 3, 4].map(level => (
-            <button
-              key={level}
-              className={`${styles.btn} ${editor.isActive('heading', { level }) ? styles.active : ''}`}
-              onClick={() => editor.chain().focus().toggleHeading({ level }).run()}
-              title={`Заголовок ${level}`}
-            >
-              H{level}
-            </button>
-          ))}
-          <button
-            className={`${styles.btn} ${editor.isActive('paragraph') ? styles.active : ''}`}
-            onClick={() => editor.chain().focus().setParagraph().run()}
-            title="Обычный текст"
-          >
-            ¶
-          </button>
-        </span>
-      </div>
+            <div className={styles.group}>
+                {btn(
+                    () => editor.chain().focus().toggleBold().run(),
+                    editor.isActive('bold'),
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z" />
+                        <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z" />
+                    </svg>,
+                    'Жирный (Ctrl+B)'
+                )}
+                {btn(
+                    () => editor.chain().focus().toggleItalic().run(),
+                    editor.isActive('italic'),
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <line x1="19" y1="4" x2="10" y2="4" />
+                        <line x1="14" y1="20" x2="5" y2="20" />
+                        <line x1="15" y1="4" x2="9" y2="20" />
+                    </svg>,
+                    'Курсив (Ctrl+I)'
+                )}
+                {btn(
+                    () => editor.chain().focus().toggleUnderline().run(),
+                    editor.isActive('underline'),
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3" />
+                        <line x1="4" y1="21" x2="20" y2="21" />
+                    </svg>,
+                    'Подчёркнутый (Ctrl+U)'
+                )}
+                {btn(
+                    () => editor.chain().focus().toggleStrike().run(),
+                    editor.isActive('strike'),
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <path d="M16 4c-.5-1.5-2.5-3-5-3C8 1 5.5 3 5.5 5.5c0 2 1 3.5 3.5 4.5" />
+                        <path d="M8 20c.5 1.5 2.5 3 5 3 3 0 5.5-2 5.5-4.5 0-2-1-3.5-3.5-4.5" />
+                        <line x1="2" y1="12" x2="22" y2="12" />
+                    </svg>,
+                    'Зачёркнутый'
+                )}
 
-      {/* ─── Строка 2 ─── */}
-      <div className={styles.row}>
+                <ColorPicker editor={editor} />
 
-        {/* Выравнивание */}
-        <span className={styles.group}>
-          {[
-            { align: 'left', lines: [['3','21'],['3','15'],['3','18']] },
-            { align: 'center', lines: [['3','21'],['6','18'],['4','20']] },
-            { align: 'right', lines: [['3','21'],['9','21'],['6','21']] },
-            { align: 'justify', lines: [['3','21'],['3','21'],['3','21']] },
-          ].map(({ align, lines }) => (
-            <button
-              key={align}
-              className={`${styles.btn} ${editor.isActive({ textAlign: align }) ? styles.active : ''}`}
-              onClick={() => editor.chain().focus().setTextAlign(align).run()}
-              title={align === 'left' ? 'По левому краю' : align === 'center' ? 'По центру' : align === 'right' ? 'По правому краю' : 'По ширине'}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <line x1={lines[0][0]} y1="6" x2={lines[0][1]} y2="6" />
-                <line x1={lines[1][0]} y1="12" x2={lines[1][1]} y2="12" />
-                <line x1={lines[2][0]} y1="18" x2={lines[2][1]} y2="18" />
-              </svg>
-            </button>
-          ))}
-        </span>
+                {btn(
+                    () => editor.chain().focus().toggleHighlight().run(),
+                    editor.isActive('highlight'),
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                    </svg>,
+                    'Выделение'
+                )}
+            </div>
 
-        <span className={styles.divider} />
+            <span className={styles.sep} />
 
-        {/* Списки */}
-        <span className={styles.group}>
-          <button
-            className={`${styles.btn} ${editor.isActive('bulletList') ? styles.active : ''}`}
-            onClick={() => editor.chain().focus().toggleBulletList().run()}
-            title="Маркированный список"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none" />
-              <circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none" />
-              <circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none" />
-              <line x1="9" y1="6" x2="21" y2="6" />
-              <line x1="9" y1="12" x2="21" y2="12" />
-              <line x1="9" y1="18" x2="21" y2="18" />
-            </svg>
-          </button>
+            <div className={styles.group}>
+                {btn(
+                    () => editor.chain().focus().toggleBulletList().run(),
+                    editor.isActive('bulletList'),
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <line x1="9" y1="6" x2="20" y2="6" />
+                        <line x1="9" y1="12" x2="20" y2="12" />
+                        <line x1="9" y1="18" x2="20" y2="18" />
+                        <circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none" />
+                        <circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none" />
+                        <circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none" />
+                    </svg>,
+                    'Маркированный список'
+                )}
+                {btn(
+                    () => editor.chain().focus().toggleOrderedList().run(),
+                    editor.isActive('orderedList'),
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <line x1="10" y1="6" x2="21" y2="6" />
+                        <line x1="10" y1="12" x2="21" y2="12" />
+                        <line x1="10" y1="18" x2="21" y2="18" />
+                        <text x="2" y="8" fontSize="8" fill="currentColor" stroke="none"
+                            fontFamily="inherit" fontWeight="600">1</text>
+                        <text x="2" y="14" fontSize="8" fill="currentColor" stroke="none"
+                            fontFamily="inherit" fontWeight="600">2</text>
+                        <text x="2" y="20" fontSize="8" fill="currentColor" stroke="none"
+                            fontFamily="inherit" fontWeight="600">3</text>
+                    </svg>,
+                    'Нумерованный список'
+                )}
+                {btn(
+                    () => editor.chain().focus().toggleTaskList().run(),
+                    editor.isActive('taskList'),
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <rect x="3" y="5" width="6" height="6" rx="1" />
+                        <line x1="13" y1="8" x2="21" y2="8" />
+                        <path d="M4.5 14.5l2 2 3-3" />
+                        <rect x="3" y="13" width="6" height="6" rx="1" />
+                        <line x1="13" y1="16" x2="21" y2="16" />
+                    </svg>,
+                    'Чек-лист'
+                )}
+            </div>
 
-          <button
-            className={`${styles.btn} ${editor.isActive('orderedList') ? styles.active : ''}`}
-            onClick={() => editor.chain().focus().toggleOrderedList().run()}
-            title="Нумерованный список"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-              <text x="2" y="8" style={{ fontSize: '8px', fontFamily: 'Arial, sans-serif', fontWeight: 'bold' }}>1.</text>
-              <text x="2" y="15" style={{ fontSize: '8px', fontFamily: 'Arial, sans-serif', fontWeight: 'bold' }}>2.</text>
-              <text x="2" y="22" style={{ fontSize: '8px', fontFamily: 'Arial, sans-serif', fontWeight: 'bold' }}>3.</text>
-              <rect x="11" y="5" width="10" height="1.5" rx="0.75" />
-              <rect x="11" y="12" width="10" height="1.5" rx="0.75" />
-              <rect x="11" y="19" width="10" height="1.5" rx="0.75" />
-            </svg>
-          </button>
+            <span className={styles.sep} />
 
-          <button
-            className={`${styles.btn} ${editor.isActive('taskList') ? styles.active : ''}`}
-            onClick={() => editor.chain().focus().toggleTaskList().run()}
-            title="Чек-лист"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="6" height="6" rx="1" />
-              <path d="M5 6l1 1 2.5-2.5" />
-              <line x1="13" y1="6" x2="21" y2="6" />
-              <rect x="3" y="14" width="6" height="6" rx="1" />
-              <line x1="13" y1="17" x2="21" y2="17" />
-            </svg>
-          </button>
-        </span>
+            <div className={styles.group}>
+                {btn(
+                    () => editor.chain().focus().toggleBlockquote().run(),
+                    editor.isActive('blockquote'),
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z" />
+                        <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z" />
+                    </svg>,
+                    'Цитата'
+                )}
+                {btn(
+                    () => editor.chain().focus().toggleCodeBlock().run(),
+                    editor.isActive('codeBlock'),
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <polyline points="16 18 22 12 16 6" />
+                        <polyline points="8 6 2 12 8 18" />
+                    </svg>,
+                    'Блок кода'
+                )}
+                {btn(
+                    () => editor.chain().focus().setHorizontalRule().run(),
+                    false,
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <line x1="2" y1="12" x2="22" y2="12" />
+                    </svg>,
+                    'Разделитель'
+                )}
+            </div>
 
-        <span className={styles.divider} />
+            <span className={styles.sep} />
 
-        {/* Блоки */}
-        <span className={styles.group}>
-          <button
-            className={`${styles.btn} ${editor.isActive('blockquote') ? styles.active : ''}`}
-            onClick={() => editor.chain().focus().toggleBlockquote().run()}
-            title="Цитата"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <line x1="3" y1="4" x2="3" y2="20" />
-              <line x1="8" y1="8" x2="20" y2="8" />
-              <line x1="8" y1="12" x2="17" y2="12" />
-              <line x1="8" y1="16" x2="14" y2="16" />
-            </svg>
-          </button>
-          <button
-            className={`${styles.btn} ${editor.isActive('codeBlock') ? styles.active : ''}`}
-            onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-            title="Блок кода"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <polyline points="16 18 22 12 16 6" />
-              <polyline points="8 6 2 12 8 18" />
-            </svg>
-          </button>
-          <button
-            className={`${styles.btn} ${editor.isActive('code') ? styles.active : ''}`}
-            onClick={() => editor.chain().focus().toggleCode().run()}
-            title="Инлайн код"
-          >
-            <code style={{ fontSize: '11px' }}>{'{}'}</code>
-          </button>
-        </span>
+            <div className={styles.group}>
+                {['left', 'center', 'right'].map(align => (
+                    <button
+                        key={align}
+                        className={`${styles.btn} ${editor.isActive({ textAlign: align }) ? styles.btnActive : ''}`}
+                        onClick={() => editor.chain().focus().setTextAlign(align).run()}
+                        title={`По ${align === 'left' ? 'левому краю' : align === 'center' ? 'центру' : 'правому краю'}`}
+                    >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                            {align === 'left' && (
+                                <>
+                                    <line x1="2" y1="6" x2="18" y2="6" />
+                                    <line x1="2" y1="12" x2="14" y2="12" />
+                                    <line x1="2" y1="18" x2="18" y2="18" />
+                                </>
+                            )}
+                            {align === 'center' && (
+                                <>
+                                    <line x1="4" y1="6" x2="20" y2="6" />
+                                    <line x1="6" y1="12" x2="18" y2="12" />
+                                    <line x1="4" y1="18" x2="20" y2="18" />
+                                </>
+                            )}
+                            {align === 'right' && (
+                                <>
+                                    <line x1="6" y1="6" x2="22" y2="6" />
+                                    <line x1="10" y1="12" x2="22" y2="12" />
+                                    <line x1="6" y1="18" x2="22" y2="18" />
+                                </>
+                            )}
+                        </svg>
+                    </button>
+                ))}
+            </div>
 
-        <span className={styles.divider} />
+            <span className={styles.sep} />
 
-        {/* Вставки */}
-        <span className={styles.group}>
-          <button
-            className={`${styles.btn} ${editor.isActive('link') ? styles.active : ''}`}
-            onClick={addLink}
-            title="Ссылка"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
-              <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
-            </svg>
-          </button>
-          <button className={styles.btn} onClick={addImage} title="Картинка">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <circle cx="8.5" cy="8.5" r="1.5" />
-              <path d="M21 15l-5-5L5 21" />
-            </svg>
-          </button>
-          <button className={styles.btn} onClick={addTable} title="Таблица">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <line x1="3" y1="9" x2="21" y2="9" />
-              <line x1="3" y1="15" x2="21" y2="15" />
-              <line x1="9" y1="3" x2="9" y2="21" />
-              <line x1="15" y1="3" x2="15" y2="21" />
-            </svg>
-          </button>
-          <button
-            className={styles.btn}
-            onClick={() => editor.chain().focus().setHorizontalRule().run()}
-            title="Разделитель"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <line x1="3" y1="12" x2="21" y2="12" />
-            </svg>
-          </button>
-        </span>
+            <div className={styles.templateWrapper}>
+                <button
+                    className={`${styles.btn} ${showTemplates ? styles.btnActive : ''}`}
+                    onClick={() => setShowTemplates(!showTemplates)}
+                    title="Шаблоны"
+                >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                        <line x1="3" y1="9" x2="21" y2="9" />
+                        <line x1="9" y1="21" x2="9" y2="9" />
+                    </svg>
+                </button>
 
-        <span className={styles.divider} />
-
-        {/* Отмена / Повтор */}
-        <span className={styles.group}>
-          <button
-            className={`${styles.btn} ${!canUndo ? styles.disabled : ''}`}
-            onClick={() => editor.chain().focus().undo().run()}
-            disabled={!canUndo}
-            title="Отменить (Ctrl+Z)"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="1 4 1 10 7 10" />
-              <path d="M3.51 15a9 9 0 105.64-11.36L1 10" />
-            </svg>
-          </button>
-          <button
-            className={`${styles.btn} ${!canRedo ? styles.disabled : ''}`}
-            onClick={() => editor.chain().focus().redo().run()}
-            disabled={!canRedo}
-            title="Повторить (Ctrl+Shift+Z)"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="23 4 23 10 17 10" />
-              <path d="M20.49 15a9 9 0 11-5.64-11.36L23 10" />
-            </svg>
-          </button>
-        </span>
-      </div>
-    </div>
-  );
+                {showTemplates && (
+                    <>
+                        <div className={styles.templateOverlay} onClick={() => setShowTemplates(false)} />
+                        <div className={styles.templatePopup}>
+                            <TemplatesGrid onSelect={handleTemplateSelect} />
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    );
 }

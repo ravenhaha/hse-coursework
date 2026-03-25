@@ -1,108 +1,93 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import styles from './TagPicker.module.css';
 
-const PRESET_TAGS = [
-    { label: 'Лекция', icon: '🎓' },
-    { label: 'Конспект', icon: '📝' },
-    { label: 'Статья', icon: '📰' },
-    { label: 'Книга', icon: '📚' },
-    { label: 'Видео', icon: '🎬' },
-    { label: 'Подкаст', icon: '🎧' },
-    { label: 'Идея', icon: '💡' },
-    { label: 'Проект', icon: '🚀' },
-    { label: 'Задача', icon: '✅' },
-    { label: 'Формула', icon: '🔬' },
-    { label: 'Цитата', icon: '💬' },
-    { label: 'Код', icon: '💻' },
+const PRESETS = [
+    { icon: '📖', name: 'Лекция' },
+    { icon: '📝', name: 'Конспект' },
+    { icon: '📰', name: 'Статья' },
+    { icon: '📕', name: 'Книга' },
+    { icon: '🎬', name: 'Видео' },
+    { icon: '🎧', name: 'Подкаст' },
+    { icon: '💡', name: 'Идея' },
+    { icon: '🚀', name: 'Проект' },
+    { icon: '✅', name: 'Задача' },
+    { icon: '📐', name: 'Формула' },
+    { icon: '💬', name: 'Цитата' },
+    { icon: '💻', name: 'Код' },
 ];
-
-const MAX_TAGS = 8;
 
 export function TagPicker({ tags, setTags }) {
     const [input, setInput] = useState('');
 
-    const getIcon = (label) => {
-        const preset = PRESET_TAGS.find(p => p.label === label);
-        return preset ? preset.icon : '🏷';
-    };
+    const addTag = useCallback((name) => {
+        const trimmed = name.trim();
+        if (!trimmed || tags.includes(trimmed)) return;
+        setTags(prev => [...prev, trimmed]);
+    }, [tags, setTags]);
 
-    const addTag = (tag) => {
-        const trimmed = tag.trim();
-        if (!trimmed || tags.includes(trimmed) || tags.length >= MAX_TAGS) return;
-        setTags([...tags, trimmed]);
+    const removeTag = useCallback((tag) => {
+        setTags(prev => prev.filter(t => t !== tag));
+    }, [setTags]);
+
+    const handleSubmit = useCallback((e) => {
+        e.preventDefault();
+        addTag(input);
         setInput('');
-    };
+    }, [input, addTag]);
 
-    const removeTag = (tag) => {
-        setTags(tags.filter(t => t !== tag));
-    };
-
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            addTag(input);
+    const togglePreset = useCallback((name) => {
+        if (tags.includes(name)) {
+            removeTag(name);
+        } else {
+            addTag(name);
         }
-        if (e.key === 'Backspace' && !input && tags.length) {
-            removeTag(tags[tags.length - 1]);
-        }
-    };
-
-    const isFull = tags.length >= MAX_TAGS;
+    }, [tags, addTag, removeTag]);
 
     return (
-        <div className={styles.section}>
-            <div className={styles.header}>
-                <label className={styles.label}>Теги</label>
-                <span className={`${styles.counter} ${isFull ? styles.counterFull : ''}`}>
-                    {tags.length}/{MAX_TAGS}
-                </span>
-            </div>
+        <div className={styles.wrapper}>
+            <form className={styles.inputRow} onSubmit={handleSubmit}>
+                <input
+                    className={styles.input}
+                    value={input}
+                    onChange={e => setInput(e.target.value)}
+                    placeholder="Добавьте тег..."
+                    maxLength={30}
+                    autoFocus
+                />
+                <button type="submit" className={styles.addBtn} disabled={!input.trim()}>
+                    Добавить
+                </button>
+            </form>
 
-            <div className={styles.list}>
-                {tags.map(tag => (
-                    <span key={tag} className={styles.tag}>
-                        <span className={styles.tagIcon}>{getIcon(tag)}</span>
-                        <span className={styles.tagText}>{tag}</span>
-                        <button
-                            type="button"
-                            className={styles.remove}
-                            onClick={() => removeTag(tag)}
-                            aria-label={`Удалить тег ${tag}`}
-                        >
-                            ×
-                        </button>
-                    </span>
-                ))}
-                {!isFull && (
-                    <input
-                        className={styles.input}
-                        value={input}
-                        onChange={e => setInput(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder={tags.length ? 'Ещё тег...' : 'Добавьте тег...'}
-                        maxLength={30}
-                    />
-                )}
-            </div>
-
-            {!isFull && (
-                <div className={styles.presets}>
-                    {PRESET_TAGS
-                        .filter(p => !tags.includes(p.label))
-                        .map(preset => (
-                            <button
-                                key={preset.label}
-                                type="button"
-                                className={styles.preset}
-                                onClick={() => addTag(preset.label)}
-                            >
-                                <span className={styles.presetIcon}>{preset.icon}</span>
-                                {preset.label}
+            {tags.length > 0 && (
+                <div className={styles.selectedTags}>
+                    {tags.map(tag => (
+                        <span key={tag} className={styles.selectedTag}>
+                            {tag}
+                            <button className={styles.removeTag} onClick={() => removeTag(tag)}>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                                    <line x1="18" y1="6" x2="6" y2="18" />
+                                    <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
                             </button>
-                        ))
-                    }
+                        </span>
+                    ))}
                 </div>
             )}
+
+            <div className={styles.presets}>
+                {PRESETS.map(p => (
+                    <button
+                        key={p.name}
+                        className={`${styles.preset} ${tags.includes(p.name) ? styles.presetActive : ''}`}
+                        onClick={() => togglePreset(p.name)}
+                    >
+                        <span className={styles.presetIcon}>{p.icon}</span>
+                        <span className={styles.presetName}>{p.name}</span>
+                    </button>
+                ))}
+            </div>
         </div>
     );
 }

@@ -19,56 +19,54 @@ import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
 
 export const editorExtensions = [
-  StarterKit.configure({
-    heading: { levels: [1, 2, 3, 4] },
-    // Отключаем встроенный Link — подключим свой с настройками
-    link: false,
-  }),
+    StarterKit.configure({
+        heading: { levels: [1, 2, 3, 4] },
+        link: false,
+    }),
 
-  // Отдельные расширения
-  Underline,
-  Link.configure({
-    openOnClick: false,
-    HTMLAttributes: {
-      rel: 'noopener noreferrer',
-      target: '_blank',
-    },
-  }),
+    Underline,
 
-  Placeholder.configure({
-    placeholder: 'Начните писать или вставьте текст...',
-  }),
-  Image.configure({
-    inline: true,
-    allowBase64: true,
-  }),
+    Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+            rel: 'noopener noreferrer',
+            target: '_blank',
+        },
+    }),
 
-  // Стили текста
-  TextStyle,
-  Color,
-  FontFamily,
-  Highlight.configure({ multicolor: true }),
+    Placeholder.configure({
+        placeholder: 'Начните писать или вставьте текст...',
+    }),
 
-  TextAlign.configure({
-    types: ['heading', 'paragraph'],
-    alignments: ['left', 'center', 'right', 'justify'],
-  }),
+    Image.configure({
+        inline: true,
+        allowBase64: true,
+    }),
 
-  Subscript,
-  Superscript,
+    TextStyle,
+    Color,
+    FontFamily,
 
-  // Списки
-  TaskList,
-  TaskItem.configure({ nested: true }),
+    Highlight.configure({ multicolor: true }),
 
-  // Таблицы
-  Table.configure({
-    resizable: true,
-    HTMLAttributes: { class: 'editor-table' },
-  }),
-  TableRow,
-  TableCell,
-  TableHeader,
+    TextAlign.configure({
+        types: ['heading', 'paragraph'],
+        alignments: ['left', 'center', 'right', 'justify'],
+    }),
 
-  Typography,
+    Subscript,
+    Superscript,
+
+    TaskList,
+    TaskItem.configure({ nested: true }),
+
+    Table.configure({
+        resizable: true,
+        HTMLAttributes: { class: 'editor-table' },
+    }),
+    TableRow,
+    TableCell,
+    TableHeader,
+
+    Typography,
 ];

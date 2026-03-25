@@ -1,0 +1,45 @@
+.bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-top: 1px solid #1f4e67;
+    color: #ff6b6b;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ff6b6b;
+    animation: blink 1s ease infinite;
+}
+
+@keyframes blink {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.3;
+    }
+}
+
+.stop {
+    margin-left: auto;
+    padding: 4px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 107, 107, 0.25);
+    background: rgba(255, 107, 107, 0.08);
+    color: #ff6b6b;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background-color 0.15s;
+}
+
+.stop:hover {
+    background: rgba(255, 107, 107, 0.15);
+}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 
 const DRAFT_KEY = 'material_draft';
 const SAVE_DELAY = 1000;
+const DRAFT_TTL = 7 * 24 * 60 * 60 * 1000; // 7 дней
 
 export function useDraft({ editor, title, tags }) {
     const timeoutRef = useRef(null);
@@ -32,12 +33,19 @@ export function useDraft({ editor, title, tags }) {
         scheduleSave();
     }, [title, tags, scheduleSave]);
 
+    // Cleanup timeout при unmount
+    useEffect(() => {
+        return () => {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        };
+    }, []);
+
     const loadDraft = useCallback(() => {
         try {
             const raw = localStorage.getItem(DRAFT_KEY);
             if (!raw) return null;
             const draft = JSON.parse(raw);
-            if (Date.now() - draft.savedAt > 7 * 24 * 60 * 60 * 1000) {
+            if (Date.now() - draft.savedAt > DRAFT_TTL) {
                 localStorage.removeItem(DRAFT_KEY);
                 return null;
             }

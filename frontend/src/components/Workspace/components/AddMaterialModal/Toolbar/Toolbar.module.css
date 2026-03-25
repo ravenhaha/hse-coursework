@@ -1,141 +1,142 @@
 .toolbar {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 6px 8px;
-  background: #0a2a3d;
-  border-bottom: 1px solid #1f4e67;
-  border-radius: 12px 12px 0 0;
-  user-select: none;
-}
-
-.row {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  flex-wrap: wrap;
-  padding: 2px 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 8px 10px;
+    border-bottom: 1px solid #1f4e67;
 }
 
 .group {
-  display: inline-flex;
-  align-items: center;
-  gap: 1px;
-  white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 1px;
 }
 
-.divider {
-  width: 1px;
-  height: 20px;
-  background: #1f4e67;
-  margin: 0 4px;
-  flex-shrink: 0;
+.sep {
+    width: 1px;
+    height: 20px;
+    background: #1f4e67;
+    margin: 0 6px;
+    flex-shrink: 0;
 }
 
-/* ─── Кнопка ─── */
 .btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: 1px solid transparent;
-  color: #8fb2c3;
-  padding: 4px 6px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  transition: all 0.15s;
-  min-width: 28px;
-  min-height: 28px;
-  line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: #5a8899;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: color 0.15s, background-color 0.15s;
 }
 
 .btn:hover {
-  background: #163d55;
-  color: #e9f7ff;
-  border-color: #1f4e67;
+    color: #b7fcff;
+    background: rgba(67, 217, 220, 0.08);
 }
 
-.btn:active {
-  transform: scale(0.95);
+.btnActive {
+    color: #3AD7D3;
+    background: rgba(58, 215, 211, 0.1);
 }
 
-.btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
+.btnDisabled {
+    color: #2a4a5a;
+    cursor: default;
+    pointer-events: none;
 }
 
-.btn:disabled:hover {
-  background: none;
-  border-color: transparent;
-  transform: none;
+.select {
+    padding: 4px 8px;
+    border-radius: 8px;
+    border: 1px solid #1f4e67;
+    background: transparent;
+    color: #89aab7;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s, opacity 0.15s;
+    max-width: 120px;
 }
 
-.btn svg {
-  flex-shrink: 0;
+.select:focus {
+    border-color: #43d9dc;
 }
 
-/* ─── Активная кнопка ─── */
-.active {
-  background: rgba(58, 215, 211, 0.15);
-  color: #3AD7D3;
-  border-color: rgba(58, 215, 211, 0.3);
+.select option {
+    background: #0A1A2A;
+    color: #e9f7ff;
 }
 
-.active:hover {
-  background: rgba(58, 215, 211, 0.25);
-  color: #3AD7D3;
+.selectLoading {
+    opacity: 0.6;
+    pointer-events: none;
 }
 
-/* ─── Цвет текста ─── */
-.colorIndicator {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-weight: 700;
-  font-size: 13px;
+.templateWrapper {
+    position: relative;
 }
 
-.colorDot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.3);
+.templateOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
 }
 
-/* ─── Палитра цветов ─── */
-.colorPicker {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-  padding: 8px;
-  background: #0c3148;
-  border: 1px solid #1f4e67;
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  z-index: 100;
+.templatePopup {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 11;
+    min-width: 420px;
+    padding: 12px;
+    border-radius: 14px;
+    border: 1px solid #164567;
+    background: linear-gradient(180deg, #0d2137 0%, #091a2e 100%);
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+    animation: popDown 0.15s ease;
 }
 
-.colorSwatch {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  border: 2px solid transparent;
-  cursor: pointer;
-  transition: all 0.15s;
+@keyframes popDown {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
 }
 
-.colorSwatch:hover {
-  border-color: #e9f7ff;
-  transform: scale(1.2);
-}
+@media (max-width: 680px) {
+    .toolbar {
+        gap: 1px;
+        padding: 6px 8px;
+    }
 
-.disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
+    .btn {
+        width: 28px;
+        height: 28px;
+    }
+
+    .sep {
+        margin: 0 3px;
+    }
+
+    .select {
+        max-width: 90px;
+        font-size: 11px;
+    }
+
+    .templatePopup {
+        min-width: 300px;
+    }
 }

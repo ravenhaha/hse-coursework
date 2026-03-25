@@ -10,7 +10,6 @@
     border: 1px solid rgba(58, 215, 211, 0.15);
 }
 
-/* ─── Play / Pause ─── */
 .playBtn {
     display: inline-flex;
     align-items: center;
@@ -23,10 +22,7 @@
     color: #002733;
     cursor: pointer;
     flex-shrink: 0;
-    transition:
-        transform 0.15s ease,
-        box-shadow 0.2s ease,
-        filter 0.2s ease;
+    transition: transform 0.15s, box-shadow 0.2s, filter 0.2s;
 }
 
 .playBtn:hover {
@@ -39,7 +35,6 @@
     transform: scale(0.95);
 }
 
-/* ─── Time ─── */
 .time {
     color: #7cdde3;
     font-size: 12px;
@@ -50,7 +45,6 @@
     text-align: center;
 }
 
-/* ─── Progress Bar ─── */
 .progressBar {
     flex: 1;
     min-width: 0;
@@ -101,7 +95,6 @@
     background: linear-gradient(90deg, #5be8e5, #8af1f4);
 }
 
-/* ─── Remove ─── */
 .removeBtn {
     display: inline-flex;
     align-items: center;
@@ -114,10 +107,7 @@
     color: #7a9aaa;
     cursor: pointer;
     flex-shrink: 0;
-    transition:
-        color 0.2s ease,
-        background-color 0.2s ease,
-        border-color 0.2s ease;
+    transition: color 0.2s, background-color 0.2s, border-color 0.2s;
 }
 
 .removeBtn:hover {

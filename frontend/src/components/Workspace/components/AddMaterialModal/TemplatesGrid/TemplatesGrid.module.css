@@ -1,0 +1,34 @@
+.grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.card {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid #1f4e67;
+    background: transparent;
+    color: #89aab7;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.card:hover {
+    background: rgba(67, 217, 220, 0.06);
+    color: #c6e8f2;
+    border-color: #2a6b8a;
+}
+
+.icon {
+    font-size: 14px;
+}
+
+.name {
+    font-weight: 500;
+}
