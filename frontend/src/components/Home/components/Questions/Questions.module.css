@@ -1,44 +1,61 @@
 .questions {
     background: #070a10;
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: clamp(30px, 5vw, 50px);
+    justify-content: space-between;
+    padding: clamp(30px, 5vw, 50px) 0;
 }
 
-.maintitle {
+.mainTitle {
     font-size: clamp(32px, 5vw, 48px);
     color: #F2FEFF;
     margin-bottom: 20px;
-    text-align: center;
 }
 
-.maintext {
+.mainText {
     font-size: clamp(15px, 2vw, 18px);
     color: #F2FEFF;
     margin-bottom: 50px;
-    text-align: center;
     padding: 0 16px;
 }
 
 .list {
-    width: 100%;
+    flex: 1;
     max-width: 1000px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
 }
 
 .title {
     font-size: clamp(17px, 2vw, 20px);
     color: #F2FEFF;
-    margin-bottom: 8px;
+}
+
+.icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    margin-left: 16px;
+    user-select: none;
+    transition: transform 0.3s ease;
+}
+
+.iconOpen {
+    transform: rotate(180deg);
 }
 
 .text {
     font-size: clamp(14px, 1.5vw, 16px);
     color: #ABB5B7;
     line-height: 1.6;
+    margin-top: 12px;
 }
 
-.quest-card {
+.questCard {
     background: #0A1A2A;
     border-radius: 16px;
     border: 1px solid #1E4658;
@@ -46,18 +63,28 @@
     width: 100%;
     position: relative;
     z-index: var(--z-content);
+    cursor: pointer;
+    transition: border-color 0.2s;
 }
 
-.quest-card:not(:last-child) {
+.questCard:hover {
+    border-color: #2a6a80;
+}
+
+.questCard.open {
+    border-color: #2a6a80;
+}
+
+.questCard:not(:last-child) {
     margin-bottom: 15px;
 }
 
 @media (max-width: 768px) {
     .questions {
-        padding: 40px 16px;
+        padding: 40px 0;
     }
 
-    .quest-card {
+    .questCard {
         padding: 20px 16px;
     }
 }

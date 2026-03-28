@@ -15,6 +15,7 @@ function About() {
 
     return (
         <section id="about" className={styles.about}>
+            <div className="container">
             <FadeIn>
                 <h2 className={styles.title}>О нас</h2>
             </FadeIn>
@@ -44,6 +45,7 @@ function About() {
                     Погрузиться
                 </ButtonMain>
             </FadeIn>
+            </div>
         </section>
     );
 }

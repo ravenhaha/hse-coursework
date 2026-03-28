@@ -7,6 +7,7 @@ function Advertisement() {
 
     return (
         <section className={styles.advertisement}>
+            <div className="container">
             <h2 className={styles.title}>
                 Начните своё путешествие
                 в глубины памяти
@@ -21,6 +22,7 @@ function Advertisement() {
             <p className={styles.subtext}>
                 Регистрация не требуется • Начните прямо сейчас
             </p>
+            </div>
         </section>
     );
 }

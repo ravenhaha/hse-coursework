@@ -4,7 +4,7 @@ function ButtonMain({ className, onClick, children }) {
     return (
         <button
             type="button"
-            className={`${styles.link_main} ${className || ''}`}
+            className={`${styles.linkMain} ${className || ''}`}
             onClick={onClick}
         >
             {children}

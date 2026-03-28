@@ -15,16 +15,17 @@ body.no-scroll {
     overflow: hidden;
 }
 
-@media (pointer: fine) {
+/* @media (pointer: fine) {
     body.landing * {
         cursor: none !important;
     }
-}
+} */
 
 .container {
-    max-width: 1920px;
+    max-width: 1280px;
     width: 100%;
     margin: 0 auto;
+    padding: 3px;
 }
 
 ::-webkit-scrollbar {

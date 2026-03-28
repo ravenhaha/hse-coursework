@@ -6,8 +6,7 @@ import styles from "./ReasonStart.module.css";
 function ReasonsStart() {
     return (
         <section className={styles.section}>
-
-            
+            <div className="container">
                 <div className={styles.content}>
                     <div className={styles.left}>
                         <h2 className={styles.title}>{titleData.title}</h2>
@@ -33,7 +32,7 @@ function ReasonsStart() {
                         </div>
                     </div>
                 </div>
-            
+            </div>
         </section>
     )
 }

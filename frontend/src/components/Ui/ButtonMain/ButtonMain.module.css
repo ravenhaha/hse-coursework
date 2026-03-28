@@ -1,4 +1,4 @@
-.link_main {
+.linkMain {
     display: inline-block;
     background-color: #3AD7D3;
     color: white;
@@ -14,16 +14,16 @@
     transition: box-shadow 0.3s ease, transform 0.2s ease;
 }
 
-.link_main:hover {
+.linkMain:hover {
     box-shadow: 0 0 20px rgba(58, 215, 211, 0.5),
                 0 0 40px rgba(58, 215, 211, 0.2);
     transform: translateY(-1px);
 }
 
-.link_main:active {
+.linkMain:active {
     transform: translateY(0);
 }
 
-.link_main:focus-visible {
+.linkMain:focus-visible {
     box-shadow: 0 0 0 3px rgba(58, 215, 211, 0.4);
 }

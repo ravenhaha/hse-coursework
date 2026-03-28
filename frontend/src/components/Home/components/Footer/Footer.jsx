@@ -4,12 +4,13 @@ import { footerLinks } from "./index.js";
 function Footer() {
     return (
         <footer className={styles.footer}>
+            <div className="container">
             <div className={styles.content}>
                 <div className={styles.descr}>
-                    <h3 className={styles.titledescr}>
+                    <h3 className={styles.titleDescr}>
                         Омут памяти
                     </h3>
-                    <p className={styles.textdescr}>
+                    <p className={styles.textDescr}>
                         Пространство для осмысления
                         прошлого и построения осознанного
                         будущего
@@ -28,11 +29,11 @@ function Footer() {
                     </div>
                 ))}
             </div>
-            <div className={styles.contentdown}>
+            <div className={styles.contentDown}>
                 <p>
                     © 2024 Омут памяти. Все права защищены.
                 </p>
-                <div className={styles.sociallink}>
+                <div className={styles.socialLink}>
                     <a className={styles.link} href="#">
                         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <g clipPath="url(#clip0_2057_583)">
@@ -64,6 +65,7 @@ function Footer() {
                         </svg>
                     </a>
                 </div>
+            </div>
             </div>
         </footer>
     );

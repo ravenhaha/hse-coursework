@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout/MainLayout';
 import HomePage from './pages/HomePage/HomePage.jsx';
-import LumosCursor from './components/Effects/LumosCursor/LumosCursor.jsx';
+// import LumosCursor from './components/Effects/LumosCursor/LumosCursor.jsx';
 import BlurFade from './components/Effects/BlurFade/BlurFade.jsx';
 import DiveProvider from './context/DiveContext';
 import useDive from './hooks/useDive';
@@ -26,7 +26,7 @@ function AppContent() {
         <div className={styles.root}>
             {!isAuth && <AmbientParticles />}
             <GrainOverlay />
-            {isHome && <LumosCursor />}
+            {/* {isHome && <LumosCursor />} */}
             <BlurFade active={blurActive} />
             <DevNav />
             <Suspense fallback={null}>
