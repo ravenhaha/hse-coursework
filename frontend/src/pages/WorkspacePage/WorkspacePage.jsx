@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Sidebar from '../../components/Sidebar/Sidebar';
+import ProfileModal from '../../components/ProfileModal/ProfileModal';
 import styles from './WorkspacePage.module.css';
 
 const mockCollections = [
@@ -25,31 +26,45 @@ const mockMaterials = [
   { id: 4, name: 'Избранное', type: 'document' },
 ];
 
-const mockUser = {
-  name: 'Анна Иванова',
-  email: 'anna@example.com',
-};
-
-export default function WorkspacePage() {
+export default function WorkspacePage({ user, settings, onUpdateSettings, onLogout }) {
   const [activeItemId, setActiveItemId] = useState(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const stats = {
+    collections: mockCollections.length,
+    materials: mockMaterials.length,
+  };
 
   return (
     <div className={styles.layout}>
       <Sidebar
         collections={mockCollections}
         materials={mockMaterials}
-        user={mockUser}
+        user={user}
         activeItemId={activeItemId}
         onSelectItem={(id) => setActiveItemId(id)}
         onNavigateHome={() => setActiveItemId(null)}
         onCreateCollection={() => console.log('Создать коллекцию')}
         onAddMaterial={() => console.log('Добавить материал')}
-        onSettings={() => console.log('Настройки')}
-        onLogout={() => console.log('Выход')}
+        onSettings={() => setSettingsOpen(true)}
+        onLogout={onLogout}
       />
       <main className={styles.content}>
         {/* Рабочая область графа */}
       </main>
+
+      {settingsOpen && (
+        <ProfileModal
+          user={user}
+          settings={settings}
+          stats={stats}
+          onClose={() => setSettingsOpen(false)}
+          onUpdateSettings={onUpdateSettings}
+          onLogout={onLogout}
+          onDeleteAccount={() => console.log('Удалить аккаунт')}
+          onExportData={() => console.log('Экспорт данных')}
+        />
+      )}
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { FaVk, FaYandex } from 'react-icons/fa';
 import { IoClose } from 'react-icons/io5';
 import styles from './AuthPage.module.css';
 
-function AuthPage() {
+function AuthPage({ onAuthSuccess }) {
   const [mode, setMode] = useState('register');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -72,8 +72,11 @@ function AuthPage() {
 
     setLoading(true);
     try {
+      // TODO: заменить на реальный API-вызов
       await new Promise((resolve) => setTimeout(resolve, 500));
-      console.log(`[mock-auth] ${mode}`, { email });
+      onAuthSuccess?.({ name: email.split('@')[0], email });
+    } catch {
+      setErrorText('Ошибка сервера. Попробуйте позже.');
     } finally {
       setLoading(false);
     }
