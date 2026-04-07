@@ -1,190 +1,414 @@
+.content {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
 .titleInput {
     width: 100%;
-    padding: 14px 16px;
-    border-radius: 14px;
-    border: 1px solid #1f4e67;
-    background: #0f3246;
+    padding: 10px 0;
+    border: none;
+    border-bottom: 1px solid #1f4e67;
+    background: transparent;
     color: #e9f7ff;
     font-size: 18px;
     font-weight: 600;
-    outline: none;
-    margin-bottom: 16px;
     font-family: inherit;
+    outline: none;
     transition: border-color 0.2s;
 }
 
 .titleInput::placeholder {
-    color: #7a9aaa;
-    font-weight: 400;
+    color: #3d6a7e;
 }
 
 .titleInput:focus {
-    border-color: #3AD7D3;
+    border-color: #43d9dc;
 }
 
+/* ── Editor ── */
+
 .editor {
+    border-radius: 12px;
     border: 1px solid #1f4e67;
-    border-radius: 14px;
     overflow: hidden;
-    margin-bottom: 16px;
-    background: #0f3246;
+    background: rgba(67, 217, 220, 0.02);
+}
+
+.editorBody {
+    padding: 16px;
+    min-height: 200px;
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+.editorBody::-webkit-scrollbar {
+    width: 4px;
+}
+
+.editorBody::-webkit-scrollbar-thumb {
+    background: #1f4e67;
+    border-radius: 4px;
 }
 
 .editorContent {
-    padding: 16px;
-    min-height: 200px;
-    max-height: 350px;
-    overflow-y: auto;
-    color: #e9f7ff;
-    font-size: 15px;
-    line-height: 1.6;
-}
-
-.editorContent :global(.tiptap) {
     outline: none;
-    min-height: 180px;
 }
 
-.editorContent :global(.tiptap p.is-editor-empty:first-child::before) {
-    content: attr(data-placeholder);
-    color: #7a9aaa;
-    pointer-events: none;
-    float: left;
-    height: 0;
+.editorContent :global(.ProseMirror) {
+    outline: none;
+    border: none;
+    box-shadow: none;
+    min-height: 160px;
+    color: #e9f7ff;
+    font-size: 14px;
+    line-height: 1.7;
 }
 
-.editorContent :global(.tiptap h1) {
-    color: #f2feff;
-    font-size: 24px;
-    margin: 16px 0 8px;
+.editorContent :global(.ProseMirror):focus {
+    outline: none;
+    border: none;
+    box-shadow: none;
 }
 
-.editorContent :global(.tiptap h2) {
-    color: #f2feff;
-    font-size: 20px;
-    margin: 14px 0 6px;
+.editorContent :global(.ProseMirror):focus-visible {
+    outline: none;
 }
 
-.editorContent :global(.tiptap h3) {
-    color: #f2feff;
-    font-size: 17px;
-    margin: 12px 0 4px;
+.editorContent :global(.ProseMirror) p {
+    margin: 0 0 0.5em;
 }
 
-.editorContent :global(.tiptap ul),
-.editorContent :global(.tiptap ol) {
+.editorContent :global(.ProseMirror) h1 {
+    font-size: 1.8em;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0.8em 0 0.4em;
+}
+
+.editorContent :global(.ProseMirror) h2 {
+    font-size: 1.5em;
+    font-weight: 700;
+    color: #f0f9ff;
+    margin: 0.7em 0 0.3em;
+}
+
+.editorContent :global(.ProseMirror) h3 {
+    font-size: 1.25em;
+    font-weight: 600;
+    color: #d8f0fa;
+    margin: 0.6em 0 0.3em;
+}
+
+.editorContent :global(.ProseMirror) h4 {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #c0e4f2;
+    margin: 0.5em 0 0.2em;
+}
+
+.editorContent :global(.ProseMirror) blockquote {
+    border-left: 3px solid #3AD7D3;
+    padding-left: 14px;
+    margin: 0.8em 0;
+    color: #89aab7;
+    font-style: italic;
+}
+
+.editorContent :global(.ProseMirror) pre {
+    background: #0a1929;
+    border: 1px solid #1f4e67;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    color: #b7fcff;
+    overflow-x: auto;
+    margin: 0.8em 0;
+}
+
+.editorContent :global(.ProseMirror) code {
+    background: rgba(58, 215, 211, 0.08);
+    color: #3AD7D3;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.9em;
+}
+
+.editorContent :global(.ProseMirror) pre code {
+    background: none;
+    color: inherit;
+    padding: 0;
+    border-radius: 0;
+}
+
+.editorContent :global(.ProseMirror) ul,
+.editorContent :global(.ProseMirror) ol {
     padding-left: 24px;
+    margin: 0.5em 0;
 }
 
-.editorContent :global(.tiptap ul[data-type="taskList"]) {
+.editorContent :global(.ProseMirror) li {
+    margin: 0.2em 0;
+}
+
+.editorContent :global(.ProseMirror) li::marker {
+    color: #3AD7D3;
+}
+
+.editorContent :global(.ProseMirror) ul[data-type="taskList"] {
     list-style: none;
-    padding-left: 0;
+    padding-left: 4px;
 }
 
-.editorContent :global(.tiptap ul[data-type="taskList"] li) {
+.editorContent :global(.ProseMirror) ul[data-type="taskList"] li {
     display: flex;
     align-items: flex-start;
     gap: 8px;
 }
 
-.editorContent :global(.tiptap ul[data-type="taskList"] input[type="checkbox"]) {
+.editorContent :global(.ProseMirror) ul[data-type="taskList"] li label input[type="checkbox"] {
     accent-color: #3AD7D3;
     margin-top: 4px;
 }
 
-.editorContent :global(.tiptap blockquote) {
-    border-left: 3px solid #3AD7D3;
-    padding-left: 16px;
-    color: #8fb2c3;
-    margin: 12px 0;
+.editorContent :global(.ProseMirror) hr {
+    border: none;
+    border-top: 1px solid #1f4e67;
+    margin: 1.2em 0;
 }
 
-.editorContent :global(.tiptap code) {
-    background: #0a2a3d;
-    color: #3AD7D3;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 13px;
-}
-
-.editorContent :global(.tiptap pre) {
-    background: #0a2a3d;
-    border: 1px solid #1f4e67;
-    border-radius: 10px;
-    padding: 14px;
-    overflow-x: auto;
-}
-
-.editorContent :global(.tiptap pre code) {
-    background: none;
-    padding: 0;
-}
-
-.editorContent :global(.tiptap mark) {
-    background: rgba(58, 215, 211, 0.25);
+.editorContent :global(.ProseMirror) mark {
+    background: rgba(255, 212, 59, 0.25);
     color: inherit;
     border-radius: 2px;
     padding: 1px 2px;
 }
 
-.editorContent :global(.tiptap a) {
+.editorContent :global(.ProseMirror) a {
     color: #3AD7D3;
     text-decoration: underline;
+    text-underline-offset: 2px;
 }
 
-.editorContent :global(.tiptap hr) {
-    border: none;
-    border-top: 1px solid #1f4e67;
-    margin: 16px 0;
+.editorContent :global(.ProseMirror) p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    color: #3d6a7e;
+    pointer-events: none;
+    float: left;
+    height: 0;
 }
 
-.editorContent :global(.tiptap img) {
-    max-width: 100%;
+/* ── Hidden Input ── */
+
+.hiddenInput {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+    padding: 0;
+    margin: -1px;
+}
+
+/* ── Drop Actions ── */
+
+.dropActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tagBtnWrapper {
+    position: relative;
+}
+
+.dropActionBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
     border-radius: 10px;
-    margin: 12px 0;
-}
-
-.editorContent :global(.tiptap table) {
-    border-collapse: collapse;
-    width: 100%;
-    margin: 12px 0;
-}
-
-.editorContent :global(.tiptap th),
-.editorContent :global(.tiptap td) {
     border: 1px solid #1f4e67;
-    padding: 8px 12px;
-    text-align: left;
+    background: transparent;
+    color: #5a8899;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s, background-color 0.15s;
 }
 
-.editorContent :global(.tiptap th) {
-    background: rgba(58, 215, 211, 0.1);
+.dropActionBtn:hover {
+    color: #b7fcff;
+    border-color: #2a6b8a;
+    background: rgba(67, 217, 220, 0.04);
+}
+
+.dropActionBtnActive {
+    color: #3AD7D3;
+    border-color: rgba(58, 215, 211, 0.3);
+    background: rgba(58, 215, 211, 0.06);
+}
+
+.dropActionImportant {
+    color: #ffd43b;
+    border-color: rgba(255, 212, 59, 0.3);
+}
+
+.tagCount {
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    background: #3AD7D3;
+    color: #0A1A2A;
+    font-size: 10px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.tagOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+}
+
+.tagPopup {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 0;
+    z-index: 11;
+    min-width: 360px;
+    max-width: 460px;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid #164567;
+    background: linear-gradient(180deg, #0d2137 0%, #091a2e 100%);
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+    animation: popUp 0.15s ease;
+}
+
+.tagPopupHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #1f4e67;
+}
+
+.tagPopupTitle {
+    color: #c6e8f2;
+    font-size: 13px;
     font-weight: 600;
 }
 
-.saveBtn {
-    width: 100%;
-    min-height: 54px;
-    border-radius: 14px;
+.tagClearBtn {
+    background: none;
     border: none;
-    background: #3AD7D3;
-    color: #002733;
-    font-size: 18px;
+    color: #ff6b6b;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 6px;
+    transition: background-color 0.15s;
+}
+
+.tagClearBtn:hover {
+    background: rgba(255, 107, 107, 0.1);
+}
+
+/* ── Error ── */
+
+.error {
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: rgba(255, 107, 107, 0.1);
+    border: 1px solid rgba(255, 107, 107, 0.2);
+    color: #ff6b6b;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: center;
+    animation: shake 0.4s ease;
+}
+
+/* ── Save Button ── */
+
+.saveBtn {
+    padding: 12px 24px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, #3AD7D3 0%, #2BC4C0 100%);
+    color: #ffffff;
+    font-size: 14px;
     font-weight: 700;
     cursor: pointer;
     font-family: inherit;
-    transition:
-        transform 0.2s ease,
-        filter 0.2s ease,
-        box-shadow 0.2s ease;
+    width: 100%;
+    transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .saveBtn:hover {
-    filter: brightness(1.05);
     transform: translateY(-1px);
-    box-shadow: 0 10px 24px rgba(58, 215, 211, 0.28);
+    box-shadow: 0 8px 24px rgba(58, 215, 211, 0.3);
 }
 
 .saveBtn:active {
     transform: translateY(0);
+}
+
+/* ── Animations ── */
+
+@keyframes popUp {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 680px) {
+    .titleInput {
+        font-size: 16px;
+    }
+
+    .editorBody {
+        padding: 12px;
+        min-height: 150px;
+    }
+
+    .dropActions {
+        flex-wrap: wrap;
+    }
+
+    .tagPopup {
+        min-width: 280px;
+        left: -20px;
+    }
+
+    .saveBtn {
+        font-size: 13px;
+        padding: 10px 20px;
+    }
 }

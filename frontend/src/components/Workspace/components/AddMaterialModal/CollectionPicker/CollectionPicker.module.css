@@ -1,0 +1,124 @@
+.wrapper {
+    position: relative;
+}
+
+.trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid #1f4e67;
+    background: transparent;
+    color: #89aab7;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+    width: 100%;
+}
+
+.trigger:hover {
+    color: #c6e8f2;
+    border-color: #2a6b8a;
+    background: rgba(67, 217, 220, 0.03);
+}
+
+.triggerOpen {
+    color: #3AD7D3;
+    border-color: rgba(58, 215, 211, 0.3);
+    background: rgba(58, 215, 211, 0.04);
+}
+
+.placeholder {
+    flex: 1;
+    text-align: left;
+}
+
+.selectedIcon {
+    font-size: 15px;
+}
+
+.selectedName {
+    flex: 1;
+    text-align: left;
+    color: #e9f7ff;
+    font-weight: 500;
+}
+
+.chevron {
+    color: #5a8899;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+}
+
+.chevronOpen {
+    transform: rotate(180deg);
+}
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+}
+
+.dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    padding: 4px;
+    border-radius: 12px;
+    border: 1px solid #164567;
+    background: linear-gradient(180deg, #0A1A2A 0%, #071b31 100%);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+    z-index: 11;
+    animation: dropIn 0.12s ease;
+}
+
+@keyframes dropIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: #89aab7;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.12s, color 0.12s;
+}
+
+.option:hover {
+    background: rgba(67, 217, 220, 0.08);
+    color: #e9f7ff;
+}
+
+.optionActive {
+    color: #3AD7D3;
+    background: rgba(58, 215, 211, 0.06);
+}
+
+.optionIcon {
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.optionName {
+    flex: 1;
+}

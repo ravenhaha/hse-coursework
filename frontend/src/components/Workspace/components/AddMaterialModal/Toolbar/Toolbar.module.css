@@ -1,41 +1,142 @@
 .toolbar {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 2px;
     padding: 8px 10px;
-    background: #0a2a3d;
     border-bottom: 1px solid #1f4e67;
-    flex-wrap: wrap;
 }
 
-.toolBtn {
-    background: none;
-    border: none;
-    color: #7a9aaa;
-    padding: 5px 8px;
+.group {
+    display: flex;
+    align-items: center;
+    gap: 1px;
+}
+
+.sep {
+    width: 1px;
+    height: 20px;
+    background: #1f4e67;
+    margin: 0 6px;
+    flex-shrink: 0;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
     border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: #5a8899;
     cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
-    transition: all 0.2s;
-    min-width: 30px;
-    text-align: center;
-    line-height: 1;
+    flex-shrink: 0;
+    transition: color 0.15s, background-color 0.15s;
 }
 
-.toolBtn:hover {
-    background: #163d55;
+.btn:hover {
+    color: #b7fcff;
+    background: rgba(67, 217, 220, 0.08);
+}
+
+.btnActive {
+    color: #3AD7D3;
+    background: rgba(58, 215, 211, 0.1);
+}
+
+.btnDisabled {
+    color: #2a4a5a;
+    cursor: default;
+    pointer-events: none;
+}
+
+.select {
+    padding: 4px 8px;
+    border-radius: 8px;
+    border: 1px solid #1f4e67;
+    background: transparent;
+    color: #89aab7;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s, opacity 0.15s;
+    max-width: 120px;
+}
+
+.select:focus {
+    border-color: #43d9dc;
+}
+
+.select option {
+    background: #0A1A2A;
     color: #e9f7ff;
 }
 
-.active {
-    background: rgba(58, 215, 211, 0.2);
-    color: #3AD7D3;
+.selectLoading {
+    opacity: 0.6;
+    pointer-events: none;
 }
 
-.divider {
-    width: 1px;
-    height: 18px;
-    background: #1f4e67;
-    margin: 0 3px;
+.templateWrapper {
+    position: relative;
+}
+
+.templateOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+}
+
+.templatePopup {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 11;
+    min-width: 420px;
+    padding: 12px;
+    border-radius: 14px;
+    border: 1px solid #164567;
+    background: linear-gradient(180deg, #0d2137 0%, #091a2e 100%);
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+    animation: popDown 0.15s ease;
+}
+
+@keyframes popDown {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+@media (max-width: 680px) {
+    .toolbar {
+        gap: 1px;
+        padding: 6px 8px;
+    }
+
+    .btn {
+        width: 28px;
+        height: 28px;
+    }
+
+    .sep {
+        margin: 0 3px;
+    }
+
+    .select {
+        max-width: 90px;
+        font-size: 11px;
+    }
+
+    .templatePopup {
+        min-width: 300px;
+    }
 }

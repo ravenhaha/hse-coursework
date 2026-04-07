@@ -1,0 +1,89 @@
+.list {
+    display: flex;
+    flex-direction: column;
+}
+
+.item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: background-color 0.15s;
+}
+
+.item:hover {
+    background: rgba(67, 217, 220, 0.04);
+}
+
+.fileIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: rgba(67, 217, 220, 0.06);
+    color: #3d6a7e;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.ext {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    font-size: 7px;
+    font-weight: 700;
+    color: #5a8899;
+    background: #0d2137;
+    padding: 0 2px;
+    border-radius: 2px;
+    line-height: 1;
+}
+
+.name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #89aab7;
+    font-size: 13px;
+}
+
+.size {
+    color: #3d6a7e;
+    font-size: 12px;
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.preview {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: #3d6a7e;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: color 0.15s, background-color 0.15s;
+}
+
+.remove:hover {
+    color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.08);
+}
