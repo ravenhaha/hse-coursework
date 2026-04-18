@@ -1,22 +1,21 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
+
 
 class UserRegister(BaseModel):
-    username: str
     email: EmailStr
-    password: str
-    display_name: str
+    password: str = Field(min_length=6, max_length=128)
+
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
-#если польз без пароля
+
 class UserResponse(BaseModel):
     id: int
-    username: str
-    email: str | None
+    user_email: str | None = None
     display_name: str
-    avatar_url: str | None
+    avatar_url: str | None = None
     is_active: bool
 
     model_config = {"from_attributes": True}

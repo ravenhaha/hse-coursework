@@ -1,13 +1,12 @@
 from fastapi import HTTPException
 
 
-# === Auth ===
+# ══════════════════════════════════════════
+# Auth
+# ══════════════════════════════════════════
+
 def email_taken():
-    raise HTTPException(status_code=400, detail="Email уже занят")
-
-
-def username_taken():
-    raise HTTPException(status_code=400, detail="Username уже занят")
+    raise HTTPException(status_code=409, detail="Email уже занят")
 
 
 def invalid_credentials():
@@ -30,7 +29,10 @@ def not_authenticated():
     raise HTTPException(status_code=401, detail="Не авторизован")
 
 
-# === User ===
+# ══════════════════════════════════════════
+# User
+# ══════════════════════════════════════════
+
 def user_not_found():
     raise HTTPException(status_code=404, detail="Пользователь не найден")
 
@@ -39,7 +41,10 @@ def user_inactive():
     raise HTTPException(status_code=403, detail="Аккаунт деактивирован")
 
 
-# === Collection ===
+# ══════════════════════════════════════════
+# Collection
+# ══════════════════════════════════════════
+
 def collection_not_found():
     raise HTTPException(status_code=404, detail="Коллекция не найдена")
 
@@ -49,10 +54,23 @@ def collection_access_denied():
 
 
 def collection_name_duplicate():
-    raise HTTPException(status_code=400, detail="Коллекция с таким именем уже существует")
+    raise HTTPException(
+        status_code=409,
+        detail="Коллекция с таким именем уже существует на этом уровне",
+    )
 
 
-# === Material ===
+def collection_self_parent():
+    raise HTTPException(
+        status_code=400,
+        detail="Нельзя переместить коллекцию в саму себя",
+    )
+
+
+# ══════════════════════════════════════════
+# Material
+# ══════════════════════════════════════════
+
 def material_not_found():
     raise HTTPException(status_code=404, detail="Материал не найден")
 
@@ -62,26 +80,72 @@ def material_access_denied():
 
 
 def invalid_source_type():
-    raise HTTPException(status_code=400, detail="Неверный тип источника. Допустимые: text, file")
+    raise HTTPException(
+        status_code=400,
+        detail="Неверный тип источника. Допустимые: text, file",
+    )
 
 
-# === Tag ===
+# ИЗМЕНЕНО: принимает параметр чтобы сообщить лимит
+def file_too_large(max_mb: int = 10):
+    raise HTTPException(
+        status_code=413,
+        detail=f"Файл слишком большой. Максимум: {max_mb} MB",
+    )
+
+
+# ДОБАВЛЕНО: информативная ошибка — какое расширение не подошло
+def file_type_not_allowed(ext: str, allowed: set[str]):
+    raise HTTPException(
+        status_code=400,
+        detail=f"Тип файла '{ext}' не разрешён. Допустимые: {', '.join(sorted(allowed))}",
+    )
+
+
+# ══════════════════════════════════════════
+# Tag
+# ══════════════════════════════════════════
+
 def tag_not_found():
     raise HTTPException(status_code=404, detail="Тег не найден")
 
 
+def tag_access_denied():
+    raise HTTPException(status_code=403, detail="Нет доступа к этому тегу")
+
+
 def tag_name_duplicate():
-    raise HTTPException(status_code=400, detail="Тег с таким именем уже существует")
+    raise HTTPException(status_code=409, detail="Тег с таким именем уже существует")
 
 
-# === General ===
-def forbidden():
-    raise HTTPException(status_code=403, detail="Доступ запрещён")
+def tag_already_assigned():
+    raise HTTPException(status_code=409, detail="Тег уже привязан к материалу")
 
+
+def tag_not_assigned():
+    raise HTTPException(status_code=404, detail="Тег не привязан к материалу")
+
+
+# ══════════════════════════════════════════
+# General — для случаев когда нужна гибкость
+# ══════════════════════════════════════════
 
 def bad_request(detail: str = "Некорректный запрос"):
     raise HTTPException(status_code=400, detail=detail)
 
 
-def server_error():
-    raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
+def forbidden(detail: str = "Доступ запрещён"):
+    raise HTTPException(status_code=403, detail=detail)
+
+
+def not_found(detail: str = "Не найдено"):
+    raise HTTPException(status_code=404, detail=detail)
+
+
+def conflict(detail: str = "Конфликт"):
+    raise HTTPException(status_code=409, detail=detail)
+
+
+# ИЗМЕНЕНО: тоже принимает параметр для гибкости
+def server_error(detail: str = "Внутренняя ошибка сервера"):
+    raise HTTPException(status_code=500, detail=detail)
