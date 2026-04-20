@@ -26,6 +26,12 @@
     }
 }
 
+@media (prefers-reduced-motion: reduce) {
+    .dot {
+        animation: none;
+    }
+}
+
 .stop {
     margin-left: auto;
     padding: 4px 12px;

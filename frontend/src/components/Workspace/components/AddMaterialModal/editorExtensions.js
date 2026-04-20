@@ -21,7 +21,6 @@ import { TableHeader } from '@tiptap/extension-table-header';
 export const editorExtensions = [
     StarterKit.configure({
         heading: { levels: [1, 2, 3, 4] },
-        link: false,
     }),
 
     Underline,

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { Modal } from '../../../Ui/Modal/Modal';
+import { ModeSwitch } from './ModeSwitch/ModeSwitch';
 import { DropZone } from './DropZone/DropZone';
 import { Toolbar } from './Toolbar/Toolbar';
 import { AudioPlayer } from './AudioPlayer/AudioPlayer';
@@ -15,12 +16,15 @@ import { useDraft } from '../../../../hooks/useDraft';
 import { editorExtensions } from './editorExtensions';
 import styles from './AddMaterialModal.module.css';
 
+const MAX_FILES = 10;
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
+
 export function AddMaterialModal({ isOpen, onClose }) {
     const [title, setTitle] = useState('');
     const [tags, setTags] = useState([]);
     const [files, setFiles] = useState([]);
     const [isImportant, setIsImportant] = useState(false);
-    const [showEditor, setShowEditor] = useState(false);
+    const [mode, setMode] = useState('upload');
     const [collection, setCollection] = useState(null);
     const [showDropTags, setShowDropTags] = useState(false);
     const [error, setError] = useState('');
@@ -33,7 +37,10 @@ export function AddMaterialModal({ isOpen, onClose }) {
         content: '',
     });
 
-    const { isRecording, audioUrl, recordingTime, start, stop, remove } = useAudioRecorder();
+    const {
+        isRecording, audioUrl,
+        recordingTime, start, stop, remove
+    } = useAudioRecorder();
     const { words } = useWordCount(editor);
     const { loadDraft, clearDraft, hasDraft } = useDraft({ editor, title, tags });
 
@@ -53,7 +60,7 @@ export function AddMaterialModal({ isOpen, onClose }) {
                     setTitle(draft.title || '');
                     setTags(draft.tags || []);
                     editor.commands.setContent(draft.content || '');
-                    if (hasContent) setShowEditor(true);
+                    if (hasContent) setMode('editor');
                 });
             }
         }
@@ -65,7 +72,7 @@ export function AddMaterialModal({ isOpen, onClose }) {
         setTags([]);
         setFiles([]);
         setIsImportant(false);
-        setShowEditor(false);
+        setMode('upload');
         setShowDropTags(false);
         setCollection(null);
         setError('');
@@ -80,7 +87,7 @@ export function AddMaterialModal({ isOpen, onClose }) {
 
     const handleTemplate = useCallback((template) => {
         if (!editor) return;
-        setShowEditor(true);
+        setMode('editor');
         editor.commands.setContent(template.content);
         if (template.id !== 'empty' && !title) {
             setTitle(template.name);
@@ -89,13 +96,16 @@ export function AddMaterialModal({ isOpen, onClose }) {
     }, [editor, title]);
 
     const handleManualCreate = useCallback(() => {
-        setShowEditor(true);
+        setMode('editor');
         setTimeout(() => editor?.commands.focus(), 50);
     }, [editor]);
 
-    const handleBackToDropZone = useCallback(() => {
-        setShowEditor(false);
-    }, []);
+    const handleModeChange = useCallback((newMode) => {
+        setMode(newMode);
+        if (newMode === 'editor') {
+            setTimeout(() => editor?.commands.focus(), 50);
+        }
+    }, [editor]);
 
     const handleDropFiles = useCallback((droppedFiles) => {
         setFiles(prev => [...prev, ...droppedFiles]);
@@ -124,24 +134,33 @@ export function AddMaterialModal({ isOpen, onClose }) {
     }, []);
 
     const handleSave = useCallback(() => {
-        const hasFiles = files.length > 0;
-        const hasContent = editor && editor.getHTML() !== '<p></p>' && editor.getText().trim() !== '';
-        const hasAudio = !!audioUrl;
+        if (mode === 'upload') {
+            if (files.length === 0) {
+                setError('Добавьте хотя бы один файл');
+                setTimeout(() => setError(''), 4000);
+                return;
+            }
+        } else {
+            const hasContent = editor && editor.getHTML() !== '<p></p>' && editor.getText().trim() !== '';
+            const hasAudio = !!audioUrl;
+            const hasFiles = files.length > 0;
 
-        if (!hasFiles && !hasContent && !hasAudio) {
-            setError('Добавьте контент: текст, аудио или файлы');
-            setTimeout(() => setError(''), 4000);
-            return;
+            if (!hasContent && !hasAudio && !hasFiles) {
+                setError('Добавьте контент: текст, аудио или файлы');
+                setTimeout(() => setError(''), 4000);
+                return;
+            }
         }
 
         setError('');
 
         const material = {
-            title: title || 'Без названия',
-            content: editor?.getHTML() || '',
+            type: mode,
+            title: mode === 'editor' ? (title || 'Без названия') : undefined,
+            content: mode === 'editor' ? (editor?.getHTML() || '') : undefined,
             tags,
             collection,
-            audioUrl,
+            audioUrl: mode === 'editor' ? audioUrl : undefined,
             isImportant,
             files: files.map(f => ({ name: f.name, size: f.size, type: f.type })),
             createdAt: new Date().toISOString(),
@@ -150,7 +169,7 @@ export function AddMaterialModal({ isOpen, onClose }) {
         console.log('Сохранённый материал:', material);
         resetAll();
         onClose();
-    }, [editor, title, tags, collection, audioUrl, isImportant, files, resetAll, onClose]);
+    }, [mode, editor, title, tags, collection, audioUrl, isImportant, files, resetAll, onClose]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -167,18 +186,14 @@ export function AddMaterialModal({ isOpen, onClose }) {
     return (
         <Modal isOpen={isOpen} onClose={handleClose} title="Добавление нового материала">
             <div className={styles.content}>
-                <input
-                    className={styles.titleInput}
-                    value={title}
-                    onChange={e => { setTitle(e.target.value); setError(''); }}
-                    placeholder="Название материала"
-                    autoFocus
-                />
 
-                {!showEditor ? (
-                    <>
-                        <CollectionPicker value={collection} onChange={setCollection} />
+                <ModeSwitch activeMode={mode} onChange={handleModeChange} />
 
+                <CollectionPicker value={collection} onChange={setCollection} />
+
+                <div className={styles.modeContent}>
+                    {/* ── Upload Mode ── */}
+                    <div className={`${styles.modePage} ${mode === 'upload' ? styles.modePageActive : styles.modePageHidden}`}>
                         <FilesList files={files} onRemove={removeFile} />
 
                         <DropZone
@@ -239,18 +254,23 @@ export function AddMaterialModal({ isOpen, onClose }) {
                         {error && <div className={styles.error}>{error}</div>}
 
                         <button className={styles.saveBtn} onClick={handleSave}>
-                            Создать материал
+                            Загрузить файлы
                         </button>
-                    </>
-                ) : (
-                    <>
-                        <CollectionPicker value={collection} onChange={setCollection} />
+                    </div>
+
+                    {/* ── Editor Mode ── */}
+                    <div className={`${styles.modePage} ${mode === 'editor' ? styles.modePageActive : styles.modePageHidden}`}>
+                        <input
+                            className={styles.titleInput}
+                            value={title}
+                            onChange={e => { setTitle(e.target.value); setError(''); }}
+                            placeholder="Название материала"
+                        />
 
                         <div className={styles.editor}>
                             <Toolbar
                                 editor={editor}
                                 onTemplate={handleTemplate}
-                                onBack={handleBackToDropZone}
                             />
                             <div className={styles.editorBody}>
                                 <EditorContent className={styles.editorContent} editor={editor} />
@@ -276,8 +296,8 @@ export function AddMaterialModal({ isOpen, onClose }) {
                             wordCount={words}
                             onSave={handleSave}
                         />
-                    </>
-                )}
+                    </div>
+                </div>
             </div>
 
             <input

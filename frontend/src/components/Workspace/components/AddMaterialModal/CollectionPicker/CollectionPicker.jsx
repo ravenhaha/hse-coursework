@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import styles from './CollectionPicker.module.css';
 
 const MOCK_COLLECTIONS = [
@@ -13,11 +13,27 @@ export function CollectionPicker({ value, onChange }) {
 
     const selected = MOCK_COLLECTIONS.find(c => c.id === value);
 
+    const close = useCallback(() => setIsOpen(false), []);
+
+    /* ── Закрытие по Escape ── */
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleKey = (e) => {
+            if (e.key === 'Escape') close();
+        };
+
+        document.addEventListener('keydown', handleKey);
+        return () => document.removeEventListener('keydown', handleKey);
+    }, [isOpen, close]);
+
     return (
         <div className={styles.wrapper}>
             <button
                 className={`${styles.trigger} ${isOpen ? styles.triggerOpen : ''}`}
                 onClick={() => setIsOpen(!isOpen)}
+                aria-expanded={isOpen}
+                aria-haspopup="listbox"
             >
                 {selected ? (
                     <>
@@ -42,15 +58,17 @@ export function CollectionPicker({ value, onChange }) {
 
             {isOpen && (
                 <>
-                    <div className={styles.overlay} onClick={() => setIsOpen(false)} />
-                    <div className={styles.dropdown}>
+                    <div className={styles.overlay} onClick={close} />
+                    <div className={styles.dropdown} role="listbox">
                         {MOCK_COLLECTIONS.map(col => (
                             <button
                                 key={col.id}
+                                role="option"
+                                aria-selected={value === col.id}
                                 className={`${styles.option} ${value === col.id ? styles.optionActive : ''}`}
                                 onClick={() => {
                                     onChange(col.id);
-                                    setIsOpen(false);
+                                    close();
                                 }}
                             >
                                 <span className={styles.optionIcon}>{col.icon}</span>

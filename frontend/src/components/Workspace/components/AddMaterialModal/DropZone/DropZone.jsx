@@ -8,22 +8,26 @@ export function DropZone({ onFiles, onManualCreate }) {
 
     const handleDragEnter = useCallback((e) => {
         e.preventDefault();
+        e.stopPropagation();
         dragCounter.current++;
         setIsDragging(true);
     }, []);
 
     const handleDragLeave = useCallback((e) => {
         e.preventDefault();
+        e.stopPropagation();
         dragCounter.current--;
         if (dragCounter.current === 0) setIsDragging(false);
     }, []);
 
     const handleDragOver = useCallback((e) => {
         e.preventDefault();
+        e.stopPropagation();
     }, []);
 
     const handleDrop = useCallback((e) => {
         e.preventDefault();
+        e.stopPropagation();
         dragCounter.current = 0;
         setIsDragging(false);
 
@@ -63,18 +67,22 @@ export function DropZone({ onFiles, onManualCreate }) {
                     </svg>
                 </div>
 
-                <p className={styles.title}>
+                <div className={styles.title}>
                     Перетащите файлы сюда
-                </p>
-                <p className={styles.subtitle}>
+                </div>
+                <div className={styles.subtitle}>
                     или{' '}
-                    <button className={styles.browseBtn} onClick={handleBrowse}>
+                    <button
+                        type="button"
+                        className={styles.browseBtn}
+                        onClick={handleBrowse}
+                    >
                         выберите на компьютере
                     </button>
-                </p>
-                <p className={styles.hint}>
+                </div>
+                <div className={styles.hint}>
                     Документы, изображения, аудио — любые файлы
-                </p>
+                </div>
             </div>
 
             <div className={styles.divider}>
@@ -83,7 +91,11 @@ export function DropZone({ onFiles, onManualCreate }) {
                 <span className={styles.dividerLine} />
             </div>
 
-            <button className={styles.manualBtn} onClick={onManualCreate}>
+            <button
+                type="button"
+                className={styles.manualBtn}
+                onClick={onManualCreate}
+            >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <path d="M12 20h9" />
@@ -98,6 +110,7 @@ export function DropZone({ onFiles, onManualCreate }) {
                 multiple
                 onChange={handleFileSelect}
                 tabIndex={-1}
+                aria-label="Выбрать файлы"
                 className={styles.hiddenInput}
             />
         </div>

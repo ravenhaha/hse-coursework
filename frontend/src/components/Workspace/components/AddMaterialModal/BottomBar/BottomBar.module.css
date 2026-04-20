@@ -114,14 +114,14 @@
 .tagOverlay {
     position: fixed;
     inset: 0;
-    z-index: 10;
+    z-index: var(--z-local-dropdown-overlay);
 }
 
 .tagPopup {
     position: absolute;
     bottom: calc(100% + 8px);
     left: 0;
-    z-index: 11;
+    z-index: var(--z-local-dropdown);
     min-width: 360px;
     max-width: 460px;
     padding: 14px;

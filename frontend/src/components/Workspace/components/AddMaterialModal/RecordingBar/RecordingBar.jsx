@@ -1,13 +1,22 @@
 import styles from './RecordingBar.module.css';
 
-export function RecordingBar({ time, onStop }) {
-    const formatted = `${Math.floor(time / 60)}:${(time % 60).toString().padStart(2, '0')}`;
+function formatTime(seconds) {
+    const safe = Math.max(0, Math.floor(seconds) || 0);
+    const m = Math.floor(safe / 60);
+    const s = safe % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+}
 
+export function RecordingBar({ time, onStop }) {
     return (
-        <div className={styles.bar}>
-            <span className={styles.dot} />
-            <span>Запись {formatted}</span>
-            <button className={styles.stop} onClick={onStop}>
+        <div className={styles.bar} role="status" aria-live="polite">
+            <span className={styles.dot} aria-hidden="true" />
+            <span>Запись {formatTime(time)}</span>
+            <button
+                type="button"
+                className={styles.stop}
+                onClick={onStop}
+            >
                 Остановить
             </button>
         </div>

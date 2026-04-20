@@ -2,6 +2,16 @@ import { useState, useCallback } from 'react';
 import { TagPicker } from '../TagPicker/TagPicker';
 import styles from './BottomBar.module.css';
 
+function pluralize(n, one, few, many) {
+    const abs = Math.abs(n);
+    const mod10 = abs % 10;
+    const mod100 = abs % 100;
+
+    if (mod10 === 1 && mod100 !== 11) return one;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return few;
+    return many;
+}
+
 export function BottomBar({
     onFileClick,
     isRecording,
@@ -19,11 +29,24 @@ export function BottomBar({
         setShowTags(prev => !prev);
     }, []);
 
+    const closeTags = useCallback(() => {
+        setShowTags(false);
+    }, []);
+
+    const clearTags = useCallback(() => {
+        setTags([]);
+    }, [setTags]);
+
     return (
         <div className={styles.bar}>
             <div className={styles.row}>
                 <div className={styles.actions}>
-                    <button className={styles.actionBtn} onClick={onFileClick} title="Прикрепить файл">
+                    <button
+                        className={styles.actionBtn}
+                        onClick={onFileClick}
+                        type="button"
+                        title="Прикрепить файл"
+                    >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                             <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
@@ -33,6 +56,7 @@ export function BottomBar({
                     <button
                         className={`${styles.actionBtn} ${isRecording ? styles.recording : ''}`}
                         onClick={onRecordToggle}
+                        type="button"
                         title={isRecording ? 'Остановить запись' : 'Записать аудио'}
                     >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -48,6 +72,7 @@ export function BottomBar({
                         <button
                             className={`${styles.actionBtn} ${showTags ? styles.actionBtnActive : ''}`}
                             onClick={toggleTags}
+                            type="button"
                             title="Теги"
                         >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -62,14 +87,15 @@ export function BottomBar({
 
                         {showTags && (
                             <>
-                                <div className={styles.tagOverlay} onClick={() => setShowTags(false)} />
+                                <div className={styles.tagOverlay} onClick={closeTags} />
                                 <div className={styles.tagPopup}>
                                     <div className={styles.tagPopupHeader}>
                                         <span className={styles.tagPopupTitle}>Теги</span>
                                         {tags.length > 0 && (
                                             <button
                                                 className={styles.tagClearBtn}
-                                                onClick={() => setTags([])}
+                                                onClick={clearTags}
+                                                type="button"
                                             >
                                                 Очистить все
                                             </button>
@@ -84,6 +110,7 @@ export function BottomBar({
                     <button
                         className={`${styles.actionBtn} ${isImportant ? styles.important : ''}`}
                         onClick={onImportantToggle}
+                        type="button"
                         title={isImportant ? 'Убрать из важных' : 'Отметить как важное'}
                     >
                         <svg width="16" height="16" viewBox="0 0 24 24"
@@ -96,10 +123,10 @@ export function BottomBar({
 
                 <div className={styles.right}>
                     <span className={styles.wordCount}>
-                        {wordCount} {wordCount === 1 ? 'слово' : wordCount < 5 ? 'слова' : 'слов'}
+                        {wordCount} {pluralize(wordCount, 'слово', 'слова', 'слов')}
                     </span>
 
-                    <button className={styles.saveBtn} onClick={onSave}>
+                    <button className={styles.saveBtn} onClick={onSave} type="button">
                         Создать материал
                     </button>
                 </div>

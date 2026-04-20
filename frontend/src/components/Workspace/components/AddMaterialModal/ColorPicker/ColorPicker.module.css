@@ -41,7 +41,7 @@
 .overlay {
     position: fixed;
     inset: 0;
-    z-index: 10;
+    z-index: var(--z-local-dropdown-overlay);  /* ← было 10 */
 }
 
 .dropdown {
@@ -49,7 +49,7 @@
     top: calc(100% + 6px);
     left: 50%;
     transform: translateX(-50%);
-    z-index: 11;
+    z-index: var(--z-local-dropdown);          /* ← было 11 */
     padding: 8px;
     border-radius: 12px;
     border: 1px solid #164567;
