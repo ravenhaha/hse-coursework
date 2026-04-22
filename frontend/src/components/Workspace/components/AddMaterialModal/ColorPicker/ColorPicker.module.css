@@ -15,12 +15,17 @@
     cursor: pointer;
     position: relative;
     flex-shrink: 0;
-    transition: color 0.15s, background-color 0.15s;
+    transition: color 0.15s, background-color 0.15s, box-shadow 0.15s;
 }
 
 .trigger:hover {
     color: #b7fcff;
     background: rgba(67, 217, 220, 0.08);
+}
+
+.trigger:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(67, 217, 220, 0.25);
 }
 
 .triggerOpen {
@@ -41,7 +46,7 @@
 .overlay {
     position: fixed;
     inset: 0;
-    z-index: var(--z-local-dropdown-overlay);  /* ← было 10 */
+    z-index: var(--z-local-dropdown-overlay);
 }
 
 .dropdown {
@@ -49,7 +54,7 @@
     top: calc(100% + 6px);
     left: 50%;
     transform: translateX(-50%);
-    z-index: var(--z-local-dropdown);          /* ← было 11 */
+    z-index: var(--z-local-dropdown);
     padding: 8px;
     border-radius: 12px;
     border: 1px solid #164567;
@@ -80,6 +85,12 @@
 
 .swatch:hover {
     transform: scale(1.15);
+}
+
+.swatch:focus-visible {
+    outline: none;
+    border-color: #43d9dc;
+    box-shadow: 0 0 0 2px rgba(67, 217, 220, 0.3);
 }
 
 .swatchActive {

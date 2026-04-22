@@ -2,9 +2,10 @@ export const templates = [
     {
         id: 'lecture',
         name: 'Конспект лекции',
-        icon: '🎓',
+        // SVG path для иконки — graduation cap
+        icon: 'lecture',
         content: `
-<h2>📚 Тема лекции</h2>
+<h2>Тема лекции</h2>
 <p></p>
 <h3>Основные тезисы</h3>
 <ul>
@@ -23,9 +24,9 @@ export const templates = [
     {
         id: 'book',
         name: 'Заметка к книге',
-        icon: '📖',
+        icon: 'book',
         content: `
-<h2>📖 Название книги</h2>
+<h2>Название книги</h2>
 <p><strong>Автор:</strong> </p>
 <p><strong>Глава:</strong> </p>
 <h3>Ключевые идеи</h3>
@@ -42,9 +43,9 @@ export const templates = [
     {
         id: 'article',
         name: 'Анализ статьи',
-        icon: '📰',
+        icon: 'article',
         content: `
-<h2>📰 Название статьи</h2>
+<h2>Название статьи</h2>
 <p><strong>Источник:</strong> </p>
 <h3>Краткое содержание</h3>
 <p></p>
@@ -60,9 +61,9 @@ export const templates = [
     {
         id: 'idea',
         name: 'Идея',
-        icon: '💡',
+        icon: 'idea',
         content: `
-<h2>💡 Название идеи</h2>
+<h2>Название идеи</h2>
 <h3>Суть</h3>
 <p></p>
 <h3>Зачем?</h3>
@@ -77,9 +78,9 @@ export const templates = [
     {
         id: 'project',
         name: 'План проекта',
-        icon: '🚀',
+        icon: 'project',
         content: `
-<h2>🚀 Название проекта</h2>
+<h2>Название проекта</h2>
 <h3>Цель</h3>
 <p></p>
 <h3>Задачи</h3>
@@ -95,7 +96,10 @@ export const templates = [
     {
         id: 'empty',
         name: 'Пустой',
-        icon: '📝',
+        icon: 'empty',
         content: '',
     },
 ];
+
+// Готовый массив без «Пустой» — не пересчитываем в рендере
+export const visibleTemplates = templates.filter((t) => t.id !== 'empty');

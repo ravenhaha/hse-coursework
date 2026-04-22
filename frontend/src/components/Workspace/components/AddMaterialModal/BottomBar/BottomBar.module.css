@@ -37,6 +37,11 @@
     background: rgba(67, 217, 220, 0.08);
 }
 
+.actionBtn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(67, 217, 220, 0.25);
+}
+
 .actionBtnActive {
     color: #3AD7D3;
     background: rgba(58, 215, 211, 0.1);
@@ -103,6 +108,11 @@
 
 .saveBtn:active {
     transform: translateY(0);
+}
+
+.saveBtn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(67, 217, 220, 0.35);
 }
 
 /* ── Tag popup ── */

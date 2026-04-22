@@ -1,313 +1,328 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
-import { Modal } from '../../../Ui/Modal/Modal';
-import { ModeSwitch } from './ModeSwitch/ModeSwitch';
-import { DropZone } from './DropZone/DropZone';
-import { Toolbar } from './Toolbar/Toolbar';
-import { AudioPlayer } from './AudioPlayer/AudioPlayer';
-import { BottomBar } from './BottomBar/BottomBar';
-import { FilesList } from './FilesList/FilesList';
-import { RecordingBar } from './RecordingBar/RecordingBar';
-import { CollectionPicker } from './CollectionPicker/CollectionPicker';
-import { TagPicker } from './TagPicker/TagPicker';
-import { useAudioRecorder } from '../../../../hooks/useAudioRecorder';
-import { useWordCount } from '../../../../hooks/useWordCount';
-import { useDraft } from '../../../../hooks/useDraft';
-import { editorExtensions } from './editorExtensions';
+import {
+  useReducer,
+  useCallback,
+  useRef,
+  useState,
+  useEffect,
+  lazy,
+  Suspense,
+} from 'react';
+import { reducer, initialState, ACTIONS } from './state';
+
 import styles from './AddMaterialModal.module.css';
 
-const MAX_FILES = 10;
-const MAX_FILE_SIZE = 50 * 1024 * 1024;
+import ModeSwitch from './ModeSwitch/ModeSwitch';
+import CollectionPicker from './CollectionPicker/CollectionPicker';
+import DropZone from './DropZone/DropZone';
+import FilesList from './FilesList/FilesList';
+import TagPicker from './TagPicker/TagPicker';
 
-export function AddMaterialModal({ isOpen, onClose }) {
-    const [title, setTitle] = useState('');
-    const [tags, setTags] = useState([]);
-    const [files, setFiles] = useState([]);
-    const [isImportant, setIsImportant] = useState(false);
-    const [mode, setMode] = useState('upload');
-    const [collection, setCollection] = useState(null);
-    const [showDropTags, setShowDropTags] = useState(false);
-    const [error, setError] = useState('');
+const EditorArea = lazy(() => import('./EditorArea/EditorArea'));
+const Toolbar = lazy(() => import('./Toolbar/Toolbar'));
 
-    const fileInputRef = useRef(null);
-    const draftRestored = useRef(false);
+function EditorFallback() {
+  return (
+    <div className={styles.editorFallback}>
+      <span>Загружаем редактор…</span>
+    </div>
+  );
+}
 
-    const editor = useEditor({
-        extensions: editorExtensions,
-        content: '',
+function pluralWords(n) {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'слово';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'слова';
+  return 'слов';
+}
+
+const BottomIcon = ({ children }) => (
+  <svg
+    width="18" height="18" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" strokeWidth="1.8"
+    strokeLinecap="round" strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    {children}
+  </svg>
+);
+
+const IconMic = () => (
+  <BottomIcon>
+    <rect x="9" y="3" width="6" height="12" rx="3" />
+    <path d="M5 11a7 7 0 0014 0" />
+    <line x1="12" y1="18" x2="12" y2="22" />
+    <line x1="8" y1="22" x2="16" y2="22" />
+  </BottomIcon>
+);
+
+const IconTag = () => (
+  <BottomIcon>
+    <path d="M20.5 12.5L12 21a2 2 0 01-2.8 0l-6.2-6.2a2 2 0 010-2.8L11.5 3.5A2 2 0 0113 3h6a2 2 0 012 2v6a2 2 0 01-.5 1.5z" />
+    <circle cx="16" cy="8" r="1.3" fill="currentColor" />
+  </BottomIcon>
+);
+
+const IconStar = ({ filled }) => (
+  <svg
+    width="18" height="18" viewBox="0 0 24 24"
+    fill={filled ? 'currentColor' : 'none'}
+    stroke="currentColor" strokeWidth="1.8"
+    strokeLinecap="round" strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <polygon points="12 2 15.1 8.6 22 9.6 17 14.5 18.2 21.5 12 18.2 5.8 21.5 7 14.5 2 9.6 8.9 8.6 12 2" />
+  </svg>
+);
+
+function EditorBottomBar({ tags, isImportant, wordCount, dispatch }) {
+  const [showTags, setShowTags] = useState(false);
+
+  return (
+    <div className={styles.bottomBar}>
+      <div className={styles.bottomBarRow}>
+        <div className={styles.bottomBarLeft}>
+          <button
+            className={styles.bottomBarBtn}
+            disabled
+            title="Запись голоса (скоро)"
+            type="button"
+          >
+            <IconMic />
+          </button>
+
+          <button
+            className={styles.bottomBarBtn}
+            onClick={() => setShowTags(!showTags)}
+            title="Теги"
+            type="button"
+          >
+            <IconTag />
+            {tags.length > 0 && (
+              <span className={styles.bottomBarBadge}>{tags.length}</span>
+            )}
+          </button>
+
+          <button
+            className={`${styles.bottomBarBtn} ${isImportant ? styles.importantActive : ''}`}
+            onClick={() => dispatch({ type: ACTIONS.TOGGLE_EDITOR_IMPORTANT })}
+            title={isImportant ? 'Убрать пометку' : 'Пометить важным'}
+            type="button"
+          >
+            <IconStar filled={isImportant} />
+          </button>
+        </div>
+
+        <div className={styles.bottomBarRight}>
+          <span className={styles.wordCount}>
+            {wordCount} {pluralWords(wordCount)}
+          </span>
+        </div>
+      </div>
+
+      {showTags && (
+        <div className={styles.bottomBarTags}>
+          <TagPicker
+            selectedTags={tags}
+            onChange={(newTags) =>
+              dispatch({ type: ACTIONS.SET_EDITOR_TAGS, payload: newTags })
+            }
+            onClose={() => setShowTags(false)}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================
+// Основной компонент
+// ============================================
+
+export default function AddMaterialModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  initialCollection = null,
+}) {
+  const [state, dispatch] = useReducer(reducer, initialState);
+
+  const [editor, setEditor] = useState(null);
+  const editorRef = useRef(null);
+
+  const [editorMounted, setEditorMounted] = useState(false);
+  const [wordCount, setWordCount] = useState(0);
+
+  // Подставляем предвыбранную коллекцию каждый раз при открытии модалки
+  useEffect(() => {
+    if (isOpen && initialCollection) {
+      dispatch({ type: ACTIONS.SET_COLLECTION, payload: initialCollection });
+    }
+  }, [isOpen, initialCollection]);
+
+  const handleEditorReady = useCallback((ed) => {
+    editorRef.current = ed;
+    setEditor(ed);
+
+    const updateWordCount = () => {
+      const { doc } = ed.state;
+      const text = doc.textBetween(0, doc.content.size, '\n', ' ').trim();
+      const count = text ? text.split(/\s+/).filter(Boolean).length : 0;
+      setWordCount(count);
+    };
+
+    updateWordCount();
+    ed.on('update', updateWordCount);
+    ed.on('destroy', () => {
+      setWordCount(0);
+      setEditor(null);
+      editorRef.current = null;
     });
+  }, []);
 
-    const {
-        isRecording, audioUrl,
-        recordingTime, start, stop, remove
-    } = useAudioRecorder();
-    const { words } = useWordCount(editor);
-    const { loadDraft, clearDraft, hasDraft } = useDraft({ editor, title, tags });
+  const handleModeChange = useCallback((mode) => {
+    dispatch({ type: ACTIONS.SET_MODE, payload: mode });
+    if (mode === 'editor') setEditorMounted(true);
+  }, []);
 
-    useEffect(() => {
-        if (!isOpen) {
-            draftRestored.current = false;
-            return;
-        }
-        if (!editor || draftRestored.current) return;
-        draftRestored.current = true;
+  const handleCollectionChange = useCallback((collection) => {
+    dispatch({ type: ACTIONS.SET_COLLECTION, payload: collection });
+  }, []);
 
-        if (hasDraft()) {
-            const draft = loadDraft();
-            if (draft) {
-                const hasContent = draft.content && draft.content !== '<p></p>' && draft.content.trim() !== '';
-                queueMicrotask(() => {
-                    setTitle(draft.title || '');
-                    setTags(draft.tags || []);
-                    editor.commands.setContent(draft.content || '');
-                    if (hasContent) setMode('editor');
-                });
-            }
-        }
-    }, [isOpen, editor, hasDraft, loadDraft]);
+  const handleFilesAdded = useCallback((fileList) => {
+    const filesArray = Array.from(fileList);
+    if (filesArray.length === 0) return;
+    dispatch({ type: ACTIONS.ADD_FILES, payload: filesArray });
+  }, []);
 
-    const resetAll = useCallback(() => {
-        editor?.commands.clearContent();
-        setTitle('');
-        setTags([]);
-        setFiles([]);
-        setIsImportant(false);
-        setMode('upload');
-        setShowDropTags(false);
-        setCollection(null);
-        setError('');
-        remove();
-        clearDraft();
-    }, [editor, remove, clearDraft]);
+  const handleTitleChange = useCallback((e) => {
+    dispatch({ type: ACTIONS.SET_TITLE, payload: e.target.value });
+  }, []);
 
-    const handleClose = useCallback(() => {
-        resetAll();
-        onClose();
-    }, [resetAll, onClose]);
+  const handleClose = useCallback(() => {
+    dispatch({ type: ACTIONS.RESET });
+    setEditorMounted(false);
+    setWordCount(0);
+    onClose();
+  }, [onClose]);
 
-    const handleTemplate = useCallback((template) => {
-        if (!editor) return;
-        setMode('editor');
-        editor.commands.setContent(template.content);
-        if (template.id !== 'empty' && !title) {
-            setTitle(template.name);
-        }
-        setTimeout(() => editor.commands.focus(), 50);
-    }, [editor, title]);
+  const handleSubmit = useCallback(() => {
+    if (!state.collection) {
+      dispatch({ type: ACTIONS.SET_ERROR, payload: 'Выберите коллекцию' });
+      return;
+    }
 
-    const handleManualCreate = useCallback(() => {
-        setMode('editor');
-        setTimeout(() => editor?.commands.focus(), 50);
-    }, [editor]);
+    if (state.mode === 'upload') {
+      if (state.files.length === 0) {
+        dispatch({ type: ACTIONS.SET_ERROR, payload: 'Добавьте хотя бы один файл' });
+        return;
+      }
 
-    const handleModeChange = useCallback((newMode) => {
-        setMode(newMode);
-        if (newMode === 'editor') {
-            setTimeout(() => editor?.commands.focus(), 50);
-        }
-    }, [editor]);
+      const finalFiles = state.files.map((item) => ({
+        file: item.file,
+        tags: item.tags,
+        isImportant: item.isImportant,
+      }));
 
-    const handleDropFiles = useCallback((droppedFiles) => {
-        setFiles(prev => [...prev, ...droppedFiles]);
-        setError('');
-    }, []);
+      onSubmit({
+        mode: 'upload',
+        collection: state.collection,
+        files: finalFiles,
+      });
+    }
 
-    const handleFileClick = useCallback(() => {
-        fileInputRef.current?.click();
-    }, []);
+    if (state.mode === 'editor') {
+      const ed = editorRef.current;
+      const content = ed ? ed.getHTML() : '';
+      const textLength = ed ? ed.state.doc.textContent.length : 0;
 
-    const handleFileSelect = useCallback((e) => {
-        const newFiles = Array.from(e.target.files);
-        if (newFiles.length > 0) {
-            setFiles(prev => [...prev, ...newFiles]);
-            setError('');
-        }
-        e.target.value = '';
-    }, []);
+      if (textLength === 0 && !state.title.trim()) {
+        dispatch({ type: ACTIONS.SET_ERROR, payload: 'Введите заголовок или текст' });
+        return;
+      }
 
-    const removeFile = useCallback((index) => {
-        setFiles(prev => prev.filter((_, i) => i !== index));
-    }, []);
+      onSubmit({
+        mode: 'editor',
+        collection: state.collection,
+        title: state.title,
+        content,
+        tags: state.editorTags,
+        isImportant: state.editorImportant,
+      });
+    }
 
-    const handleImportantToggle = useCallback(() => {
-        setIsImportant(prev => !prev);
-    }, []);
+    handleClose();
+  }, [state, onSubmit, handleClose]);
 
-    const handleSave = useCallback(() => {
-        if (mode === 'upload') {
-            if (files.length === 0) {
-                setError('Добавьте хотя бы один файл');
-                setTimeout(() => setError(''), 4000);
-                return;
-            }
-        } else {
-            const hasContent = editor && editor.getHTML() !== '<p></p>' && editor.getText().trim() !== '';
-            const hasAudio = !!audioUrl;
-            const hasFiles = files.length > 0;
+  if (!isOpen) return null;
 
-            if (!hasContent && !hasAudio && !hasFiles) {
-                setError('Добавьте контент: текст, аудио или файлы');
-                setTimeout(() => setError(''), 4000);
-                return;
-            }
-        }
+  return (
+    <div className={styles.overlay} onClick={handleClose}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.header}>
+          <ModeSwitch activeMode={state.mode} onChange={handleModeChange} />
+          <button className={styles.closeBtn} onClick={handleClose} type="button">
+            ✕
+          </button>
+        </div>
 
-        setError('');
+        <div className={styles.section}>
+          <CollectionPicker
+            selected={state.collection}
+            onChange={handleCollectionChange}
+          />
+        </div>
 
-        const material = {
-            type: mode,
-            title: mode === 'editor' ? (title || 'Без названия') : undefined,
-            content: mode === 'editor' ? (editor?.getHTML() || '') : undefined,
-            tags,
-            collection,
-            audioUrl: mode === 'editor' ? audioUrl : undefined,
-            isImportant,
-            files: files.map(f => ({ name: f.name, size: f.size, type: f.type })),
-            createdAt: new Date().toISOString(),
-        };
+        {state.error && <div className={styles.error}>{state.error}</div>}
 
-        console.log('Сохранённый материал:', material);
-        resetAll();
-        onClose();
-    }, [mode, editor, title, tags, collection, audioUrl, isImportant, files, resetAll, onClose]);
+        {state.mode === 'upload' && (
+          <div className={styles.modeContent}>
+            <DropZone onFilesAdded={handleFilesAdded} />
+            {state.files.length > 0 && (
+              <FilesList files={state.files} dispatch={dispatch} />
+            )}
+          </div>
+        )}
 
-    useEffect(() => {
-        if (!isOpen) return;
-        const onKeyDown = (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                e.preventDefault();
-                handleSave();
-            }
-        };
-        window.addEventListener('keydown', onKeyDown);
-        return () => window.removeEventListener('keydown', onKeyDown);
-    }, [isOpen, handleSave]);
+        {(state.mode === 'editor' || editorMounted) && (
+          <div
+            className={styles.modeContent}
+            style={{ display: state.mode === 'editor' ? 'flex' : 'none' }}
+          >
+            <Suspense fallback={<EditorFallback />}>
+              <input
+                className={styles.titleInput}
+                type="text"
+                placeholder="Название заметки..."
+                value={state.title}
+                onChange={handleTitleChange}
+              />
 
-    return (
-        <Modal isOpen={isOpen} onClose={handleClose} title="Добавление нового материала">
-            <div className={styles.content}>
+              <Toolbar editor={editor} />
 
-                <ModeSwitch activeMode={mode} onChange={handleModeChange} />
+              <div className={styles.editorWrap}>
+                <EditorArea onEditorReady={handleEditorReady} />
+              </div>
 
-                <CollectionPicker value={collection} onChange={setCollection} />
+              <EditorBottomBar
+                tags={state.editorTags}
+                isImportant={state.editorImportant}
+                wordCount={wordCount}
+                dispatch={dispatch}
+              />
+            </Suspense>
+          </div>
+        )}
 
-                <div className={styles.modeContent}>
-                    {/* ── Upload Mode ── */}
-                    <div className={`${styles.modePage} ${mode === 'upload' ? styles.modePageActive : styles.modePageHidden}`}>
-                        <FilesList files={files} onRemove={removeFile} />
-
-                        <DropZone
-                            onFiles={handleDropFiles}
-                            onManualCreate={handleManualCreate}
-                        />
-
-                        <div className={styles.dropActions}>
-                            <div className={styles.tagBtnWrapper}>
-                                <button
-                                    className={`${styles.dropActionBtn} ${showDropTags ? styles.dropActionBtnActive : ''}`}
-                                    onClick={() => setShowDropTags(prev => !prev)}
-                                    title="Добавить теги"
-                                >
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                        stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                                        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-                                        <line x1="7" y1="7" x2="7.01" y2="7" />
-                                    </svg>
-                                    <span>Теги</span>
-                                    {tags.length > 0 && (
-                                        <span className={styles.tagCount}>{tags.length}</span>
-                                    )}
-                                </button>
-
-                                {showDropTags && (
-                                    <>
-                                        <div className={styles.tagOverlay} onClick={() => setShowDropTags(false)} />
-                                        <div className={styles.tagPopup}>
-                                            <div className={styles.tagPopupHeader}>
-                                                <span className={styles.tagPopupTitle}>Теги</span>
-                                                {tags.length > 0 && (
-                                                    <button className={styles.tagClearBtn} onClick={() => setTags([])}>
-                                                        Очистить
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <TagPicker tags={tags} setTags={setTags} />
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-
-                            <button
-                                className={`${styles.dropActionBtn} ${isImportant ? styles.dropActionImportant : ''}`}
-                                onClick={handleImportantToggle}
-                                title={isImportant ? 'Убрать из важных' : 'Важное'}
-                            >
-                                <svg width="16" height="16" viewBox="0 0 24 24"
-                                    fill={isImportant ? 'currentColor' : 'none'}
-                                    stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                                </svg>
-                                <span>Важное</span>
-                            </button>
-                        </div>
-
-                        {error && <div className={styles.error}>{error}</div>}
-
-                        <button className={styles.saveBtn} onClick={handleSave}>
-                            Загрузить файлы
-                        </button>
-                    </div>
-
-                    {/* ── Editor Mode ── */}
-                    <div className={`${styles.modePage} ${mode === 'editor' ? styles.modePageActive : styles.modePageHidden}`}>
-                        <input
-                            className={styles.titleInput}
-                            value={title}
-                            onChange={e => { setTitle(e.target.value); setError(''); }}
-                            placeholder="Название материала"
-                        />
-
-                        <div className={styles.editor}>
-                            <Toolbar
-                                editor={editor}
-                                onTemplate={handleTemplate}
-                            />
-                            <div className={styles.editorBody}>
-                                <EditorContent className={styles.editorContent} editor={editor} />
-                            </div>
-                        </div>
-
-                        {audioUrl && <AudioPlayer src={audioUrl} onRemove={remove} />}
-
-                        <FilesList files={files} onRemove={removeFile} />
-
-                        {isRecording && <RecordingBar time={recordingTime} onStop={stop} />}
-
-                        {error && <div className={styles.error}>{error}</div>}
-
-                        <BottomBar
-                            onFileClick={handleFileClick}
-                            isRecording={isRecording}
-                            onRecordToggle={isRecording ? stop : start}
-                            tags={tags}
-                            setTags={setTags}
-                            isImportant={isImportant}
-                            onImportantToggle={handleImportantToggle}
-                            wordCount={words}
-                            onSave={handleSave}
-                        />
-                    </div>
-                </div>
-            </div>
-
-            <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                onChange={handleFileSelect}
-                tabIndex={-1}
-                className={styles.hiddenInput}
-            />
-        </Modal>
-    );
+        <div className={styles.footer}>
+          <button className={styles.cancelBtn} onClick={handleClose} type="button">
+            Отмена
+          </button>
+          <button className={styles.submitBtn} onClick={handleSubmit} type="button">
+            {state.mode === 'upload' ? 'Загрузить файлы' : 'Создать заметку'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }

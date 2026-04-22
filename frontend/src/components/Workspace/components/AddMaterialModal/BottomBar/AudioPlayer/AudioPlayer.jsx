@@ -8,7 +8,7 @@ function formatTime(s) {
     return `${m}:${sec.toString().padStart(2, '0')}`;
 }
 
-export function AudioPlayer({ src, onRemove }) {
+export default function AudioPlayer({ src, onRemove }) {
     const audioRef = useRef(null);
     const progressRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -82,9 +82,7 @@ export function AudioPlayer({ src, onRemove }) {
                 )}
             </button>
 
-            <span className={styles.time}>
-                {formatTime(currentTime)}
-            </span>
+            <span className={styles.time}>{formatTime(currentTime)}</span>
 
             <div
                 className={styles.progressBar}
@@ -103,9 +101,7 @@ export function AudioPlayer({ src, onRemove }) {
                 </div>
             </div>
 
-            <span className={styles.time}>
-                {formatTime(duration)}
-            </span>
+            <span className={styles.time}>{formatTime(duration)}</span>
 
             {onRemove && (
                 <button className={styles.removeBtn} onClick={onRemove} type="button" title="Удалить">

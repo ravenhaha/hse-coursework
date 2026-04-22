@@ -1,132 +1,78 @@
-.wrapper {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
 .zone {
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 6px;
     padding: 28px 20px;
-    border-radius: 14px;
     border: 2px dashed #1f4e67;
-    background: rgba(67, 217, 220, 0.02);
-    transition: border-color 0.2s, background-color 0.2s;
-    cursor: default;
-}
-
-.zone:not(.zoneDragging):hover {
-    border-color: #2a6b8a;
-    background: rgba(67, 217, 220, 0.03);
-}
-
-.zoneDragging {
-    border-color: #3AD7D3;
-    background: rgba(58, 215, 211, 0.06);
-}
-
-.icon {
-    color: #3d6a7e;
-    margin-bottom: 2px;
-    transition: color 0.2s;
-}
-
-.zoneDragging .icon {
-    color: #3AD7D3;
-}
-
-.title {
-    color: #c6e8f2;
-    font-size: 15px;
-    font-weight: 600;
-    margin: 0;
-}
-
-.subtitle {
-    color: #5a8899;
-    font-size: 14px;
-    margin: 0;
-}
-
-.browseBtn {
-    background: none;
-    border: none;
-    color: #3AD7D3;
-    font-size: 14px;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    padding: 0;
-    text-decoration: underline;
-    text-decoration-color: rgba(58, 215, 211, 0.3);
-    transition: color 0.15s;
-}
-
-.browseBtn:hover {
-    color: #5be8e5;
-}
-
-.hint {
-    color: #3d6a7e;
-    font-size: 11px;
-    margin: 2px 0 0;
-}
-
-.divider {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.dividerLine {
-    flex: 1;
-    height: 1px;
-    background: #1f4e67;
-}
-
-.dividerText {
-    color: #3d6a7e;
-    font-size: 11px;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.manualBtn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 12px 20px;
     border-radius: 12px;
-    border: 1px solid #1f4e67;
-    background: transparent;
-    color: #89aab7;
-    font-size: 13px;
-    font-weight: 600;
-    font-family: inherit;
     cursor: pointer;
-    transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+    transition: border-color 0.2s, background-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    background: rgba(58, 215, 211, 0.02);
 }
 
-.manualBtn:hover {
-    color: #3AD7D3;
-    border-color: rgba(58, 215, 211, 0.3);
+.zone:hover {
+    border-color: rgba(58, 215, 211, 0.35);
     background: rgba(58, 215, 211, 0.04);
 }
 
-.hiddenInput {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-    padding: 0;
-    margin: -1px;
+.zone:focus-visible {
+    outline: none;
+    border-color: #43d9dc;
+    box-shadow: 0 0 0 3px rgba(67, 217, 220, 0.25);
+}
+
+.dragging {
+    border-color: #3AD7D3;
+    background: rgba(58, 215, 211, 0.08);
+    transform: scale(1.01);
+    box-shadow: 0 0 24px rgba(58, 215, 211, 0.15);
+}
+
+.input {
+    display: none;
+}
+
+.content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+    pointer-events: none;
+}
+
+.icon {
+    font-size: 32px;
+    line-height: 1;
+}
+
+.text {
+    font-size: 14px;
+    color: #89aab7;
+    margin: 0;
+}
+
+.link {
+    color: #3AD7D3;
+    font-weight: 600;
+}
+
+.hint {
+    font-size: 12px;
+    color: #3d6a7e;
+    margin: 0;
+}
+
+@media (max-width: 480px) {
+    .zone {
+        padding: 20px 14px;
+    }
+
+    .icon {
+        font-size: 26px;
+    }
+
+    .text {
+        font-size: 13px;
+    }
 }

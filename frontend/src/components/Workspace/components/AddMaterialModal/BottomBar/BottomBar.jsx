@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { TagPicker } from '../TagPicker/TagPicker';
+import TagPicker from '../TagPicker';
 import styles from './BottomBar.module.css';
 
 function pluralize(n, one, few, many) {
@@ -12,12 +12,12 @@ function pluralize(n, one, few, many) {
     return many;
 }
 
-export function BottomBar({
+export default function BottomBar({
     onFileClick,
     isRecording,
     onRecordToggle,
     tags,
-    setTags,
+    onTagsChange,
     isImportant,
     onImportantToggle,
     wordCount,
@@ -26,7 +26,7 @@ export function BottomBar({
     const [showTags, setShowTags] = useState(false);
 
     const toggleTags = useCallback(() => {
-        setShowTags(prev => !prev);
+        setShowTags((prev) => !prev);
     }, []);
 
     const closeTags = useCallback(() => {
@@ -34,13 +34,14 @@ export function BottomBar({
     }, []);
 
     const clearTags = useCallback(() => {
-        setTags([]);
-    }, [setTags]);
+        onTagsChange([]);
+    }, [onTagsChange]);
 
     return (
         <div className={styles.bar}>
             <div className={styles.row}>
                 <div className={styles.actions}>
+                    {/* Прикрепить файл */}
                     <button
                         className={styles.actionBtn}
                         onClick={onFileClick}
@@ -53,6 +54,7 @@ export function BottomBar({
                         </svg>
                     </button>
 
+                    {/* Запись аудио */}
                     <button
                         className={`${styles.actionBtn} ${isRecording ? styles.recording : ''}`}
                         onClick={onRecordToggle}
@@ -68,6 +70,7 @@ export function BottomBar({
                         </svg>
                     </button>
 
+                    {/* Теги */}
                     <div className={styles.tagWrapper}>
                         <button
                             className={`${styles.actionBtn} ${showTags ? styles.actionBtnActive : ''}`}
@@ -101,12 +104,16 @@ export function BottomBar({
                                             </button>
                                         )}
                                     </div>
-                                    <TagPicker tags={tags} setTags={setTags} />
+                                    <TagPicker
+                                        selectedTags={tags}
+                                        onChange={onTagsChange}
+                                    />
                                 </div>
                             </>
                         )}
                     </div>
 
+                    {/* Важное */}
                     <button
                         className={`${styles.actionBtn} ${isImportant ? styles.important : ''}`}
                         onClick={onImportantToggle}
