@@ -1,57 +1,64 @@
-const API_URL = import.meta.env.VITE_API_URL;
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
-async function request(endpoint, options = {}) {
-  const token = localStorage.getItem('access_token');
+function getCsrfToken() {
+  const m = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
 
-  const headers = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
+let refreshPromise = null;
+async function tryRefresh() {
+  if (!refreshPromise) {
+    refreshPromise = fetch(`${API_BASE}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+      .then(r => r.ok)
+      .catch(() => false)
+      .finally(() => { refreshPromise = null; });
+  }
+  return refreshPromise;
+}
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+async function request(path, { method = 'GET', body, isForm = false, headers = {}, _retry = false } = {}) {
+  const opts = { method, credentials: 'include', headers: { ...headers } };
+
+  if (['POST', 'PATCH', 'PUT', 'DELETE'].includes(method)) {
+    const csrf = getCsrfToken();
+    if (csrf) opts.headers['X-CSRF-Token'] = csrf;
   }
 
-  // Если body — FormData, убираем Content-Type (браузер сам поставит)
-  if (options.body instanceof FormData) {
-    delete headers['Content-Type'];
+  if (body !== undefined) {
+    if (isForm) {
+      opts.body = body;
+    } else {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(body);
+    }
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  const res = await fetch(`${API_BASE}${path}`, opts);
 
-  // 401 — токен невалиден
-  if (response.status === 401) {
-    localStorage.removeItem('access_token');
-    window.location.href = '/login';
-    return;
+  if (res.status === 401 && !_retry && !path.startsWith('/auth/')) {
+    const ok = await tryRefresh();
+    if (ok) return request(path, { method, body, isForm, headers, _retry: true });
   }
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || `HTTP ${response.status}`);
+  if (res.status === 204) return null;
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(data.detail || `HTTP ${res.status}`);
+    err.status = res.status;
+    err.data = data;
+    throw err;
   }
-
-  // 204 No Content
-  if (response.status === 204) return null;
-
-  return response.json();
+  return data;
 }
 
 export const api = {
-  get: (endpoint) => request(endpoint, { method: 'GET' }),
-
-  post: (endpoint, body) => request(endpoint, {
-    method: 'POST',
-    body: body instanceof FormData ? body : JSON.stringify(body),
-  }),
-
-  put: (endpoint, body) => request(endpoint, {
-    method: 'PUT',
-    body: body instanceof FormData ? body : JSON.stringify(body),
-  }),
-
-  delete: (endpoint) => request(endpoint, { method: 'DELETE' }),
+  get:      (p)       => request(p),
+  post:     (p, body) => request(p, { method: 'POST', body }),
+  postForm: (p, form) => request(p, { method: 'POST', body: form, isForm: true }),
+  patch:    (p, body) => request(p, { method: 'PATCH', body }),
+  del:      (p)       => request(p, { method: 'DELETE' }),
 };

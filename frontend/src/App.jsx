@@ -1,3 +1,4 @@
+import AuthProvider from './context/AuthProvider';
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout/MainLayout';
@@ -49,9 +50,11 @@ function AppContent() {
 export default function App() {
     return (
         <BrowserRouter>
-            <DiveProvider>
-                <AppContent />
-            </DiveProvider>
+            <AuthProvider>
+                <DiveProvider>
+                    <AppContent />
+                </DiveProvider>
+            </AuthProvider>
         </BrowserRouter>
     );
 }
