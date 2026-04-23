@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage/HomePage.jsx';
 // import LumosCursor from './components/Effects/LumosCursor/LumosCursor.jsx';
 import BlurFade from './components/Effects/BlurFade/BlurFade.jsx';
 import DiveProvider from './context/DiveContext';
+import GraphProvider from './context/GraphContext';
 import useDive from './hooks/useDive';
 import DevNav from './components/DevNav/DevNav.jsx';
 import GrainOverlay from './components/Effects/GrainOverlay/GrainOverlay.jsx';
@@ -50,7 +51,9 @@ export default function App() {
     return (
         <BrowserRouter>
             <DiveProvider>
-                <AppContent />
+                <GraphProvider>
+                    <AppContent />
+                </GraphProvider>
             </DiveProvider>
         </BrowserRouter>
     );
