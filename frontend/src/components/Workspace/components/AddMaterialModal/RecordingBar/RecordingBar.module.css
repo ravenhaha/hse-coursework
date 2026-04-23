@@ -1,3 +1,5 @@
+/* ── Панель записи ── */
+
 .bar {
     display: flex;
     align-items: center;
@@ -9,24 +11,40 @@
     font-weight: 500;
 }
 
+/* ── Мигающая точка ── */
+
 .dot {
     width: 8px;
     height: 8px;
+    flex-shrink: 0;
     border-radius: 50%;
     background: #ff6b6b;
     animation: blink 1s ease infinite;
 }
 
 @keyframes blink {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.3;
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dot {
+        animation: none;
     }
 }
 
+/* ── Время ── */
+
+.time {
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Кнопка «Остановить» ── */
+
 .stop {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     margin-left: auto;
     padding: 4px 12px;
     border-radius: 8px;
@@ -35,11 +53,16 @@
     color: #ff6b6b;
     font-size: 12px;
     font-weight: 600;
-    cursor: pointer;
     font-family: inherit;
+    cursor: pointer;
     transition: background-color 0.15s;
 }
 
 .stop:hover {
     background: rgba(255, 107, 107, 0.15);
+}
+
+.stop:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.3);
 }

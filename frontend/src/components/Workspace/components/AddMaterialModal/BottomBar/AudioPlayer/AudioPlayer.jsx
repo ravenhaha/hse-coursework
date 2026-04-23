@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import styles from './AudioPlayer.module.css';
 
 function formatTime(s) {
@@ -8,7 +8,7 @@ function formatTime(s) {
     return `${m}:${sec.toString().padStart(2, '0')}`;
 }
 
-export function AudioPlayer({ src, onRemove }) {
+export default function AudioPlayer({ src, onRemove }) {
     const audioRef = useRef(null);
     const progressRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -19,7 +19,11 @@ export function AudioPlayer({ src, onRemove }) {
         const audio = audioRef.current;
         if (!audio) return;
 
-        const onLoaded = () => setDuration(audio.duration);
+        const onLoaded = () => {
+            setDuration(audio.duration);
+            setCurrentTime(0);
+            setIsPlaying(false);
+        };
         const onTime = () => setCurrentTime(audio.currentTime);
         const onEnded = () => setIsPlaying(false);
 
@@ -28,6 +32,7 @@ export function AudioPlayer({ src, onRemove }) {
         audio.addEventListener('ended', onEnded);
 
         return () => {
+            audio.pause();
             audio.removeEventListener('loadedmetadata', onLoaded);
             audio.removeEventListener('timeupdate', onTime);
             audio.removeEventListener('ended', onEnded);
@@ -40,10 +45,12 @@ export function AudioPlayer({ src, onRemove }) {
 
         if (isPlaying) {
             audio.pause();
+            setIsPlaying(false);
         } else {
-            audio.play();
+            audio.play()
+                .then(() => setIsPlaying(true))
+                .catch(() => setIsPlaying(false));
         }
-        setIsPlaying(prev => !prev);
     }, [isPlaying]);
 
     const handleProgressClick = useCallback((e) => {
@@ -52,7 +59,7 @@ export function AudioPlayer({ src, onRemove }) {
         if (!audio || !bar || !duration) return;
 
         const rect = bar.getBoundingClientRect();
-        const ratio = (e.clientX - rect.left) / rect.width;
+        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
         audio.currentTime = ratio * duration;
     }, [duration]);
 
@@ -62,7 +69,7 @@ export function AudioPlayer({ src, onRemove }) {
         <div className={styles.player}>
             <audio ref={audioRef} src={src} preload="metadata" />
 
-            <button className={styles.playBtn} onClick={togglePlay}>
+            <button className={styles.playBtn} onClick={togglePlay} type="button">
                 {isPlaying ? (
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                         <rect x="6" y="4" width="4" height="16" rx="1" />
@@ -75,9 +82,7 @@ export function AudioPlayer({ src, onRemove }) {
                 )}
             </button>
 
-            <span className={styles.time}>
-                {formatTime(currentTime)}
-            </span>
+            <span className={styles.time}>{formatTime(currentTime)}</span>
 
             <div
                 className={styles.progressBar}
@@ -96,12 +101,10 @@ export function AudioPlayer({ src, onRemove }) {
                 </div>
             </div>
 
-            <span className={styles.time}>
-                {formatTime(duration)}
-            </span>
+            <span className={styles.time}>{formatTime(duration)}</span>
 
             {onRemove && (
-                <button className={styles.removeBtn} onClick={onRemove} title="Удалить">
+                <button className={styles.removeBtn} onClick={onRemove} type="button" title="Удалить">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                         <line x1="18" y1="6" x2="6" y2="18" />

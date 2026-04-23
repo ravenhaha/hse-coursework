@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import styles from './CollectionPicker.module.css';
 
 const MOCK_COLLECTIONS = [
@@ -8,21 +8,39 @@ const MOCK_COLLECTIONS = [
     { id: '4', name: 'Разное', icon: '📁' },
 ];
 
-export function CollectionPicker({ value, onChange }) {
+export default function CollectionPicker({ selected, onChange }) {
     const [isOpen, setIsOpen] = useState(false);
 
-    const selected = MOCK_COLLECTIONS.find(c => c.id === value);
+    const current = useMemo(
+        () => MOCK_COLLECTIONS.find((c) => c.id === selected),
+        [selected]
+    );
+
+    const close = useCallback(() => setIsOpen(false), []);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleKey = (e) => {
+            if (e.key === 'Escape') close();
+        };
+        document.addEventListener('keydown', handleKey);
+        return () => document.removeEventListener('keydown', handleKey);
+    }, [isOpen, close]);
 
     return (
         <div className={styles.wrapper}>
             <button
                 className={`${styles.trigger} ${isOpen ? styles.triggerOpen : ''}`}
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => setIsOpen((prev) => !prev)}
+                aria-expanded={isOpen}
+                aria-haspopup="listbox"
+                aria-label={current ? `Коллекция: ${current.name}` : 'Выберите коллекцию'}
+                type="button"
             >
-                {selected ? (
+                {current ? (
                     <>
-                        <span className={styles.selectedIcon}>{selected.icon}</span>
-                        <span className={styles.selectedName}>{selected.name}</span>
+                        <span className={styles.selectedIcon}>{current.icon}</span>
+                        <span className={styles.selectedName}>{current.name}</span>
                     </>
                 ) : (
                     <>
@@ -33,31 +51,38 @@ export function CollectionPicker({ value, onChange }) {
                         <span className={styles.placeholder}>Выберите коллекцию</span>
                     </>
                 )}
-                <svg className={`${styles.chevron} ${isOpen ? styles.chevronOpen : ''}`}
+                <svg
+                    className={`${styles.chevron} ${isOpen ? styles.chevronOpen : ''}`}
                     width="12" height="12" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                    aria-hidden="true"
+                >
                     <polyline points="6 9 12 15 18 9" />
                 </svg>
             </button>
 
             {isOpen && (
                 <>
-                    <div className={styles.overlay} onClick={() => setIsOpen(false)} />
-                    <div className={styles.dropdown}>
-                        {MOCK_COLLECTIONS.map(col => (
+                    <div className={styles.overlay} onClick={close} />
+                    <div className={styles.dropdown} role="listbox">
+                        {MOCK_COLLECTIONS.map((col) => (
                             <button
                                 key={col.id}
-                                className={`${styles.option} ${value === col.id ? styles.optionActive : ''}`}
+                                role="option"
+                                type="button"
+                                aria-selected={selected === col.id}
+                                className={`${styles.option} ${selected === col.id ? styles.optionActive : ''}`}
                                 onClick={() => {
                                     onChange(col.id);
-                                    setIsOpen(false);
+                                    close();
                                 }}
                             >
                                 <span className={styles.optionIcon}>{col.icon}</span>
                                 <span className={styles.optionName}>{col.name}</span>
-                                {value === col.id && (
+                                {selected === col.id && (
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                        stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                                        stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                                        aria-hidden="true">
                                         <polyline points="20 6 9 17 4 12" />
                                     </svg>
                                 )}
