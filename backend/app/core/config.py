@@ -3,11 +3,13 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
+
 class Settings(BaseSettings):
     # База данных
     POSTGRES_DB: str
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
+    POSTGRES_HOST: str = "127.0.0.1"
     POSTGRES_PORT: str = "5432"
 
     # Безопасность
@@ -15,6 +17,9 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+
+    # CSRF
+    CSRF_ENABLED: bool = False  # ← включишь когда будет фронт
 
     # VK
     VK_CLIENT_ID: str = ""
@@ -35,7 +40,7 @@ class Settings(BaseSettings):
         return (
             f"postgresql+psycopg://"
             f"{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
-            f"@127.0.0.1:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
 
     @property

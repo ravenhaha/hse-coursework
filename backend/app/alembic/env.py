@@ -12,7 +12,7 @@ from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
-from models.base import Base
+from db.base import Base
 from models.user import User
 from models.collection import Collection
 from models.material import Material
