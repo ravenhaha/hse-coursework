@@ -5,60 +5,36 @@ function getCsrfToken() {
   return m ? decodeURIComponent(m[1]) : null;
 }
 
-let refreshPromise = null;
-async function tryRefresh() {
-  if (!refreshPromise) {
-    refreshPromise = fetch(`${API_BASE}/auth/refresh`, {
-      method: 'POST',
-      credentials: 'include',
-    })
-      .then(r => r.ok)
-      .catch(() => false)
-      .finally(() => { refreshPromise = null; });
+export async function apiFetch(path, options = {}) {
+  const { method = 'GET', body, headers = {}, ...rest } = options;
+  const finalHeaders = { ...headers };
+  let finalBody = body;
+
+  if (body && !(body instanceof FormData) && typeof body !== 'string') {
+    finalHeaders['Content-Type'] = 'application/json';
+    finalBody = JSON.stringify(body);
   }
-  return refreshPromise;
-}
 
-async function request(path, { method = 'GET', body, isForm = false, headers = {}, _retry = false } = {}) {
-  const opts = { method, credentials: 'include', headers: { ...headers } };
-
-  if (['POST', 'PATCH', 'PUT', 'DELETE'].includes(method)) {
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase())) {
     const csrf = getCsrfToken();
-    if (csrf) opts.headers['X-CSRF-Token'] = csrf;
+    if (csrf) finalHeaders['X-CSRF-Token'] = csrf;
   }
 
-  if (body !== undefined) {
-    if (isForm) {
-      opts.body = body;
-    } else {
-      opts.headers['Content-Type'] = 'application/json';
-      opts.body = JSON.stringify(body);
-    }
-  }
-
-  const res = await fetch(`${API_BASE}${path}`, opts);
-
-  if (res.status === 401 && !_retry && !path.startsWith('/auth/')) {
-    const ok = await tryRefresh();
-    if (ok) return request(path, { method, body, isForm, headers, _retry: true });
-  }
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    credentials: 'include',
+    headers: finalHeaders,
+    body: finalBody,
+    ...rest,
+  });
 
   if (res.status === 204) return null;
+  const data = await res.json().catch(() => null);
 
-  const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err = new Error(data.detail || `HTTP ${res.status}`);
+    const err = new Error(data?.detail || `Ошибка ${res.status}`);
     err.status = res.status;
-    err.data = data;
     throw err;
   }
   return data;
 }
-
-export const api = {
-  get:      (p)       => request(p),
-  post:     (p, body) => request(p, { method: 'POST', body }),
-  postForm: (p, form) => request(p, { method: 'POST', body: form, isForm: true }),
-  patch:    (p, body) => request(p, { method: 'PATCH', body }),
-  del:      (p)       => request(p, { method: 'DELETE' }),
-};

@@ -1,22 +1,22 @@
-import { api } from './client';
+import { apiFetch } from './client';
 
 export const materialsApi = {
-  listByCollection: (collectionId) =>
-    api.get(`/materials/?collection_id=${collectionId}`),
-
-  getOne: (id) => api.get(`/materials/${id}`),
-
-  createText: ({ collection_id, material_name, text_content }) =>
-    api.post('/materials/text', { collection_id, material_name, text_content }),
-
-  createFile: ({ collection_id, material_name, file }) => {
-    const fd = new FormData();
-    fd.append('collection_id', collection_id);
-    fd.append('material_name', material_name);
-    fd.append('file', file);
-    return api.postForm('/materials/file', fd);
+  list: (collectionId = null) => {
+    const params = collectionId ? `?collection_id=${collectionId}` : '';
+    return apiFetch(`/materials/${params}`);
   },
 
-  update: (id, patch) => api.patch(`/materials/${id}`, patch),
-  remove: (id) => api.del(`/materials/${id}`),
+  get: (id) => apiFetch(`/materials/${id}`),
+
+  create: (data) =>
+    apiFetch('/materials/', {
+      method: 'POST',
+      body: data,
+    }),
+
+  update: (id, data) =>
+    apiFetch(`/materials/${id}`, { method: 'PATCH', body: data }),
+
+  delete: (id) =>
+    apiFetch(`/materials/${id}`, { method: 'DELETE' }),
 };

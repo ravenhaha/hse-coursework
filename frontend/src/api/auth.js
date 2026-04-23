@@ -1,17 +1,13 @@
-import { api } from './client';
+import { apiFetch } from './client';
 
 export const authApi = {
-    register: (username, email, password) =>
-        api.post('/auth/register', { username, email, password }),
+  register: (email, password) =>
+    apiFetch('/auth/register', { method: 'POST', body: { email, password } }),
 
-    login: (username, password) => {
-        const formData = new FormData();
-        formData.append('username', username);
-        formData.append('password', password);
-        return api.postForm('/auth/token', formData);
-    },
+  login: (email, password) =>
+    apiFetch('/auth/login', { method: 'POST', body: { email, password } }),
 
-    logout: () => api.post('/auth/logout'),
+  logout: () => apiFetch('/auth/logout', { method: 'POST' }),
 
-    getMe: () => api.get('/auth/me'),
+  me: () => apiFetch('/auth/me'),
 };

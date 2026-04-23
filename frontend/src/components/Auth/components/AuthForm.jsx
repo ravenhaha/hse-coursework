@@ -1,71 +1,81 @@
 import { FaVk, FaYandex } from 'react-icons/fa';
-import styles from '../Auth.module.css';
+import styles from './AuthForm.module.css';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 export default function AuthForm({
-  mode, email, password, confirmPassword, errorText, loading, isFormReady,
-  onEmailChange, onPasswordChange, onConfirmChange, onSubmit,
+  mode,
+  email,
+  password,
+  confirmPassword,
+  errorText,
+  loading,
+  isFormReady,
+  onEmailChange,
+  onPasswordChange,
+  onConfirmChange,
+  onSubmit,
 }) {
-  const submitText = mode === 'register' ? 'Создать аккаунт' : 'Войти';
-
   return (
-    <form className={styles.form} onSubmit={onSubmit}>
+    <form onSubmit={onSubmit} className={styles.form}>
       <input
-        className={styles.input}
-        onChange={(e) => onEmailChange(e.target.value)}
-        placeholder="Электронная почта"
         type="email"
+        placeholder="Email"
         value={email}
-      />
-      <input
+        onChange={(e) => onEmailChange(e.target.value)}
         className={styles.input}
-        onChange={(e) => onPasswordChange(e.target.value)}
-        placeholder={mode === 'register' ? 'Пароль (минимум 8 символов)' : 'Пароль'}
-        type="password"
-        value={password}
+        required
       />
 
-      <div className={`${styles.confirmWrap} ${mode === 'register' ? styles.confirmWrapOpen : ''}`}>
-        <div className={styles.confirmInner}>
-          <input
-            className={styles.input}
-            disabled={mode !== 'register'}
-            onChange={(e) => onConfirmChange(e.target.value)}
-            placeholder="Подтвердите пароль"
-            tabIndex={mode === 'register' ? 0 : -1}
-            type="password"
-            value={confirmPassword}
-          />
-        </div>
-      </div>
+      <input
+        type="password"
+        placeholder="Пароль"
+        value={password}
+        onChange={(e) => onPasswordChange(e.target.value)}
+        className={styles.input}
+        required
+      />
+
+      {mode === 'register' && (
+        <input
+          type="password"
+          placeholder="Повторите пароль"
+          value={confirmPassword}
+          onChange={(e) => onConfirmChange(e.target.value)}
+          className={styles.input}
+          required
+        />
+      )}
 
       {errorText && <p className={styles.error}>{errorText}</p>}
 
-      <div className={styles.dividerWrap}>
-        <span className={styles.dividerText}>или</span>
-      </div>
-
-      <div className={styles.oauthRow}>
-        <button
-          aria-label="Войти через VK"
-          className={styles.oauthButton}
-          onClick={() => console.log('[mock-auth] vk')}
-          type="button"
-        >
-          <FaVk />
-        </button>
-        <button
-          aria-label="Войти через Яндекс"
-          className={styles.oauthButton}
-          onClick={() => console.log('[mock-auth] yandex')}
-          type="button"
-        >
-          <FaYandex />
-        </button>
-      </div>
-
-      <button className={styles.submitButton} disabled={loading || !isFormReady} type="submit">
-        {loading ? 'Загрузка...' : submitText}
+      <button
+        type="submit"
+        className={styles.submit}
+        disabled={!isFormReady || loading}
+      >
+        {loading
+          ? 'Подождите...'
+          : mode === 'register' ? 'Зарегистрироваться' : 'Войти'}
       </button>
+
+      <div className={styles.divider}>или</div>
+      <div className={styles.oauth}>
+        <button
+          type="button"
+          className={styles.oauthBtn}
+          onClick={() => { window.location.href = `${API_BASE}/auth/vk`; }}
+        >
+          <FaVk /> VK
+        </button>
+        <button
+          type="button"
+          className={styles.oauthBtn}
+          onClick={() => { window.location.href = `${API_BASE}/auth/yandex`; }}
+        >
+          <FaYandex /> Яндекс
+        </button>
+      </div>
     </form>
   );
 }

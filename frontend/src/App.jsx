@@ -1,15 +1,21 @@
-import AuthProvider from './context/AuthProvider';
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
-import MainLayout from './layouts/MainLayout/MainLayout';
-import HomePage from './pages/HomePage/HomePage.jsx';
-// import LumosCursor from './components/Effects/LumosCursor/LumosCursor.jsx';
-import BlurFade from './components/Effects/BlurFade/BlurFade.jsx';
+
+import { AuthProvider } from './context/AuthContext';
 import DiveProvider from './context/DiveContext';
 import useDive from './hooks/useDive';
-import DevNav from './components/DevNav/DevNav.jsx';
+
+import ProtectedRoute from './components/ProtectedRoute/ProtectedRoute.jsx';
+
+import MainLayout from './layouts/MainLayout/MainLayout';
+import HomePage from './pages/HomePage/HomePage.jsx';
+
+import BlurFade from './components/Effects/BlurFade/BlurFade.jsx';
 import GrainOverlay from './components/Effects/GrainOverlay/GrainOverlay.jsx';
 import AmbientParticles from './components/Effects/AmbientParticles/AmbientParticles.jsx';
+// import LumosCursor from './components/Effects/LumosCursor/LumosCursor.jsx';
+import DevNav from './components/DevNav/DevNav.jsx';
+
 import styles from './App.module.css';
 
 const AuthPage = lazy(() => import('./pages/AuthPage/AuthPage.jsx'));
@@ -30,16 +36,26 @@ function AppContent() {
             {/* {isHome && <LumosCursor />} */}
             <BlurFade active={blurActive} />
             <DevNav />
+
             <Suspense fallback={null}>
                 <Routes>
                     <Route element={<MainLayout />}>
                         <Route path="/" element={<HomePage />} />
                     </Route>
-                    <Route element={<WorkspaceLayout />}>
-                        <Route path="/workspace" element={<WorkspacePage />} />
-                    </Route>
+
                     <Route element={<AuthLayout />}>
                         <Route path="/auth" element={<AuthPage />} />
+                    </Route>
+
+                    <Route element={<WorkspaceLayout />}>
+                        <Route
+                            path="/workspace"
+                            element={
+                                <ProtectedRoute>
+                                    <WorkspacePage />
+                                </ProtectedRoute>
+                            }
+                        />
                     </Route>
                 </Routes>
             </Suspense>

@@ -1,107 +1,90 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import Sidebar from '../../components/Workspace/components/Sidebar/Sidebar';
 import Workspace from '../../components/Workspace/Workspace.jsx';
 import ProfileModal from '../../components/ProfileModal/ProfileModal';
+import { useAuth } from '../../context/useAuth';
+import useCollections from '../../hooks/useCollections';
+import useMaterials from '../../hooks/useMaterials';
 import { useModal } from '../../hooks/useModal.js';
 import styles from './WorkspacePage.module.css';
 
-const initialCollections = [
-  {
-    id: 1,
-    name: 'Проекты',
-    type: 'folder',
-    children: [
-      { id: 11, name: 'Веб-дизайн 2025', type: 'document' },
-      { id: 12, name: 'Исследования', type: 'document' },
-    ],
-  },
-  {
-    id: 2,
-    name: 'Обучение',
-    type: 'folder',
-    children: [],
-  },
-];
+export default function WorkspacePage() {
+  const { user, logout } = useAuth();
+  const {
+    collections,
+    create: createCollection,
+    rename: renameCollection,
+    remove: removeCollection,
+  } = useCollections();
+  const {
+    materials,
+    create: createMaterial,
+    rename: renameMaterial,
+    remove: removeMaterial,
+  } = useMaterials();
 
-const initialMaterials = [
-  { id: 3, name: 'Личные заметки', type: 'document' },
-  { id: 4, name: 'Избранное', type: 'document' },
-];
-
-// Универсальный апдейт узла в дереве коллекций
-const updateTree = (nodes, id, updater) =>
-  nodes.map((node) => {
-    if (node.id === id) return updater(node);
-    if (node.children?.length) {
-      return { ...node, children: updateTree(node.children, id, updater) };
-    }
-    return node;
-  });
-
-// Универсальное удаление по id (включая глубокие дочерние)
-const removeFromTree = (nodes, id) =>
-  nodes
-    .filter((node) => node.id !== id)
-    .map((node) =>
-      node.children?.length
-        ? { ...node, children: removeFromTree(node.children, id) }
-        : node
-    );
-
-export default function WorkspacePage({ user, settings, onUpdateSettings, onLogout }) {
-  const [collections, setCollections] = useState(initialCollections);
-  const [materials, setMaterials] = useState(initialMaterials);
   const [activeItemId, setActiveItemId] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const materialModal = useModal();
 
-  // Создать коллекцию (инлайн из сайдбара)
-  const handleCreateCollection = (name) => {
-    setCollections((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        name,
-        type: 'folder',
-        children: [],
-      },
-    ]);
-  };
+  // ── Коллекции ──
+  const handleCreateCollection = useCallback(async (name) => {
+    try {
+      await createCollection(name);
+    } catch (err) {
+      console.error('Не удалось создать коллекцию:', err.message);
+    }
+  }, [createCollection]);
 
-  // Добавить материал в корневой список
-  const handleAddMaterial = () => {
-    const id = crypto.randomUUID();
-    setMaterials((prev) => [
-      ...prev,
-      { id, name: `Материал ${prev.length + 1}`, type: 'document' },
-    ]);
-    setActiveItemId(id);
-  };
+  // ── Материалы ──
+  const handleAddMaterial = useCallback(async (data) => {
+    try {
+      const created = await createMaterial(data);
+      setActiveItemId(created.id);
+    } catch (err) {
+      console.error('Не удалось добавить материал:', err.message);
+    }
+  }, [createMaterial]);
 
-  // Добавить материал внутрь папки
-  const handleAddMaterialToFolder = (folderId, name) => {
-    if (!name) return;
-    const newItem = { id: crypto.randomUUID(), name, type: 'document' };
-    setCollections((prev) =>
-      updateTree(prev, folderId, (node) => ({
-        ...node,
-        children: [...(node.children || []), newItem],
-      }))
-    );
-  };
+  const handleAddMaterialToFolder = useCallback(async (folderId, data) => {
+    try {
+      await createMaterial({ ...data, collection_id: folderId });
+    } catch (err) {
+      console.error('Не удалось добавить материал в папку:', err.message);
+    }
+  }, [createMaterial]);
 
-  // Переименовать (работает и для коллекций, и для материалов)
-  const handleRenameItem = (id, name) => {
-    setCollections((prev) => updateTree(prev, id, (node) => ({ ...node, name })));
-    setMaterials((prev) => prev.map((m) => (m.id === id ? { ...m, name } : m)));
-  };
+  // ── Переименование (определяем, коллекция или материал) ──
+  const handleRenameItem = useCallback(async (id, newName) => {
+    try {
+      await renameCollection(id, newName);
+    } catch {
+      try {
+        await renameMaterial(id, newName);
+      } catch (err) {
+        console.error('Не удалось переименовать:', err.message);
+      }
+    }
+  }, [renameCollection, renameMaterial]);
 
-  // Удалить (из коллекций или корневых материалов)
-  const handleDeleteItem = (id) => {
-    setCollections((prev) => removeFromTree(prev, id));
-    setMaterials((prev) => prev.filter((m) => m.id !== id));
+  // ── Удаление ──
+  const handleDeleteItem = useCallback(async (id) => {
+    try {
+      await removeCollection(id);
+    } catch {
+      try {
+        await removeMaterial(id);
+      } catch (err) {
+        console.error('Не удалось удалить:', err.message);
+      }
+    }
     if (activeItemId === id) setActiveItemId(null);
-  };
+  }, [removeCollection, removeMaterial, activeItemId]);
+
+  // ── Logout ──
+  const handleLogout = useCallback(async () => {
+    await logout();
+  }, [logout]);
 
   const stats = {
     collections: collections.length,
@@ -123,8 +106,9 @@ export default function WorkspacePage({ user, settings, onUpdateSettings, onLogo
         onRenameItem={handleRenameItem}
         onDeleteItem={handleDeleteItem}
         onSettings={() => setSettingsOpen(true)}
-        onLogout={onLogout}
+        onLogout={handleLogout}
       />
+
       <main className={styles.content}>
         <Workspace materialModal={materialModal} />
       </main>
@@ -132,11 +116,9 @@ export default function WorkspacePage({ user, settings, onUpdateSettings, onLogo
       {settingsOpen && (
         <ProfileModal
           user={user}
-          settings={settings}
           stats={stats}
           onClose={() => setSettingsOpen(false)}
-          onUpdateSettings={onUpdateSettings}
-          onLogout={onLogout}
+          onLogout={handleLogout}
           onDeleteAccount={() => console.log('Удалить аккаунт')}
           onExportData={() => console.log('Экспорт данных')}
         />

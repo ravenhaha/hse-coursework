@@ -1,6 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/useAuth'; // поправь путь под свою структуру
 
 export default function useAuthForm() {
+  const navigate = useNavigate();
+  const { login, register } = useAuth();
+
   const [mode, setMode] = useState('register');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -12,7 +17,10 @@ export default function useAuthForm() {
   const hasPassword = password.trim().length > 0;
   const isFormReady = mode === 'login'
     ? hasEmail && hasPassword
-    : hasEmail && hasPassword && confirmPassword.trim().length > 0 && password.length >= 8 && password === confirmPassword;
+    : hasEmail && hasPassword
+      && confirmPassword.trim().length > 0
+      && password.length >= 8
+      && password === confirmPassword;
 
   const switchMode = (nextMode) => {
     setMode(nextMode);
@@ -29,12 +37,10 @@ export default function useAuthForm() {
       setErrorText('Заполните email и пароль.');
       return;
     }
-
     if (mode === 'register' && password.length < 8) {
       setErrorText('Пароль должен содержать минимум 8 символов.');
       return;
     }
-
     if (mode === 'register' && password !== confirmPassword) {
       setErrorText('Пароли не совпадают.');
       return;
@@ -42,8 +48,15 @@ export default function useAuthForm() {
 
     setLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      console.log(`[mock-auth] ${mode}`, { email });
+      const cleanEmail = email.trim().toLowerCase();
+      if (mode === 'register') {
+        await register(cleanEmail, password);
+      } else {
+        await login(cleanEmail, password);
+      }
+      navigate('/workspace'); // куда редиректить после входа — поменяй если надо
+    } catch (err) {
+      setErrorText(err.message || 'Ошибка авторизации.');
     } finally {
       setLoading(false);
     }
