@@ -10,7 +10,6 @@ from app.models.collection import Collection
 # ─────────────────────────────────────
 # READ
 # ─────────────────────────────────────
-
 async def get_collection_by_id(
     db: AsyncSession,
     collection_id: int,
@@ -122,7 +121,7 @@ async def is_descendant(
 
     while current_id is not None:
         if current_id in visited:
-            return True  # цикл уже есть в БД — считаем "потомком"
+            return True
         visited.add(current_id)
 
         if current_id == collection_id:
@@ -139,7 +138,6 @@ async def is_descendant(
 # ─────────────────────────────────────
 # CREATE / UPDATE / DELETE
 # ─────────────────────────────────────
-
 async def create_collection(
     db: AsyncSession,
     *,
@@ -159,9 +157,6 @@ async def create_collection(
     await db.flush()
     return collection
 
-
-# Whitelist разрешённых для PATCH полей.
-# Защищает от случайного редактирования user_id или created_at через PATCH.
 _UPDATABLE_COLLECTION_FIELDS = {"name", "parent_id", "icon"}
 
 

@@ -19,7 +19,6 @@ from app.models.material_tag import material_tags
 # ══════════════════════════════════════════════════════════
 # CRUD тегов
 # ══════════════════════════════════════════════════════════
-
 async def create_tag(
     db: AsyncSession,
     user_id: int,
@@ -96,7 +95,6 @@ async def delete_tag(db: AsyncSession, tag: Tag) -> None:
 # ══════════════════════════════════════════════════════════
 # Связка material_tags
 # ══════════════════════════════════════════════════════════
-
 async def get_material_tag_ids(
     db: AsyncSession,
     material_id: int,
@@ -162,17 +160,14 @@ async def set_material_tags(
     Возвращает фактически вставленные id (с дедупликацией),
     чтобы роут мог отдать клиенту итоговое состояние.
     """
-    # 1. Удаляем все текущие связи у этого материала.
     await db.execute(
         delete(material_tags).where(
             material_tags.c.material_id == material_id,
         ),
     )
 
-    # 2. Дедуплицируем входящие id, сохраняя порядок.
     unique_ids = list(dict.fromkeys(tag_ids))
 
-    # 3. Вставляем пачкой, если есть что вставлять.
     if unique_ids:
         await db.execute(
             material_tags.insert(),

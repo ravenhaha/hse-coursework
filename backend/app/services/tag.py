@@ -45,7 +45,6 @@ from app.services.material import get_owned_material
 # ══════════════════════════════════════════════════════════
 # Хелперы
 # ══════════════════════════════════════════════════════════
-
 async def _get_own_tag(db: AsyncSession, tag_id: int, user: User) -> Tag:
     """Достаёт тег с проверкой владельца."""
     tag = await get_tag_by_id(db, tag_id)
@@ -96,7 +95,6 @@ async def _check_unique_name(
 # ══════════════════════════════════════════════════════════
 # CRUD тегов
 # ══════════════════════════════════════════════════════════
-
 async def list_tags(db: AsyncSession, user: User) -> list[Tag]:
     """Все теги юзера."""
     return await get_tags_by_user(db, user.id)
@@ -123,8 +121,6 @@ async def create_new_tag(
         tag = await create_tag(db, user.id, tag_name)
         await db.commit()
     except IntegrityError:
-        # Параллельный запрос успел вставить такой же тег между нашим
-        # SELECT и INSERT. Откатываем и сообщаем юзеру.
         await db.rollback()
         tag_name_duplicate()
 
@@ -145,7 +141,6 @@ async def update_existing_tag(
     """
     tag = await _get_own_tag(db, tag_id, user)
 
-    # Имя не изменилось — нечего делать.
     if tag.tag_name == tag_name:
         return tag
 
@@ -174,7 +169,6 @@ async def delete_existing_tag(
 # ══════════════════════════════════════════════════════════
 # Привязка тегов к материалам
 # ══════════════════════════════════════════════════════════
-
 async def assign_tag(
     db: AsyncSession, user: User, material_id: int, tag_id: int,
 ) -> None:

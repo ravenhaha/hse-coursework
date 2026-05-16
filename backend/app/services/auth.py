@@ -66,7 +66,6 @@ from app.services.defaults import create_default_tags_for_user
 # ══════════════════════════════════════════════════════════
 # Утилиты
 # ══════════════════════════════════════════════════════════
-
 def _normalize_email(email: str) -> str:
     """Email → lowercase + strip.
 
@@ -108,7 +107,6 @@ def _oauth_error(detail: str) -> NoReturn:
 # ══════════════════════════════════════════════════════════
 # 1. Регистрация (email + password) с автологином
 # ══════════════════════════════════════════════════════════
-
 async def register_user(
     db: AsyncSession, payload: UserRegister,
 ) -> tuple[User, str, str]:
@@ -119,20 +117,17 @@ async def register_user(
     """
     email = _normalize_email(payload.email)
 
-    # Проверка уникальности ДО тяжёлой операции хеширования (~50ms).
     existing = await get_user_by_email(db, email)
     if existing:
         email_taken()
 
     try:
-        # 1. Сам юзер («личность»)
         user = await create_user(
             db,
             email=email,
             display_name=_default_display_name(email),
         )
 
-        # 2. Способ входа (email + password)
         password_hash_value = hash_password(payload.password)
         await create_auth_account(
             db,
@@ -142,17 +137,14 @@ async def register_user(
             password_hash=password_hash_value,
         )
 
-        # 3. Дефолтные теги
         await create_default_tags_for_user(db, user.id)
 
-        # 4. Один коммит на всю транзакцию
         await db.commit()
         await db.refresh(user)
     except Exception:
         await db.rollback()
         raise
 
-    # 5. Токены — вне транзакции (stateless)
     access, refresh = _issue_token_pair(user)
     return user, access, refresh
 
@@ -160,7 +152,6 @@ async def register_user(
 # ══════════════════════════════════════════════════════════
 # 2. Логин (email + password)
 # ══════════════════════════════════════════════════════════
-
 async def login_user(
     db: AsyncSession, payload: UserLogin,
 ) -> tuple[User, str, str]:
@@ -181,7 +172,6 @@ async def login_user(
     if not verify_password(payload.password, auth.password_hash):
         invalid_credentials()
 
-    # Ре-хеш при устаревших параметрах argon2.
     if needs_rehash(auth.password_hash):
         new_hash = hash_password(payload.password)
         await update_password_hash(db, auth, new_hash)
@@ -200,7 +190,6 @@ async def login_user(
 # ══════════════════════════════════════════════════════════
 # 3. Refresh
 # ══════════════════════════════════════════════════════════
-
 async def refresh_tokens(
     db: AsyncSession, refresh_token: str,
 ) -> tuple[User, str, str]:
@@ -239,7 +228,6 @@ async def refresh_tokens(
 # ══════════════════════════════════════════════════════════
 # 4. OAuth — общий "найти или создать"
 # ══════════════════════════════════════════════════════════
-
 async def get_or_create_oauth_user(
     db: AsyncSession,
     *,
@@ -258,7 +246,7 @@ async def get_or_create_oauth_user(
     Если провайдер не вернул email (бывает у VK без скоупа email) —
     создаём синтетический "vk_<id>@oauth.local".
     """
-    # ── Шаг 1: уже есть привязка? ──
+
     existing_auth = await get_auth_account(db, provider, provider_user_id)
     if existing_auth:
         user = await get_user_by_id(db, existing_auth.user_id)
@@ -269,7 +257,6 @@ async def get_or_create_oauth_user(
         access, refresh = _issue_token_pair(user)
         return user, access, refresh
 
-    # ── Шаг 2: есть юзер с таким email? Линкуем. ──
     if email:
         email = _normalize_email(email)
         existing_user = await get_user_by_email(db, email)
@@ -294,7 +281,6 @@ async def get_or_create_oauth_user(
     else:
         email = f"{provider.value}_{provider_user_id}@oauth.local"
 
-    # ── Шаг 3: создаём с нуля ──
     try:
         new_user = await create_user(
             db,
@@ -322,9 +308,6 @@ async def get_or_create_oauth_user(
 # ══════════════════════════════════════════════════════════
 # 5. OAuth: Yandex
 # ══════════════════════════════════════════════════════════
-
-# Эндпоинты Яндекса. Документация:
-# https://yandex.ru/dev/id/doc/ru/codes/code-url
 _YANDEX_TOKEN_URL = "https://oauth.yandex.ru/token"
 _YANDEX_USERINFO_URL = "https://login.yandex.ru/info"
 
@@ -342,7 +325,7 @@ async def oauth_yandex_login(
     Все сетевые сбои → 400 "OAuth: ...", чтобы фронт мог показать ошибку.
     """
     async with httpx.AsyncClient(timeout=10.0) as client:
-        # 1. code → access_token
+
         try:
             token_resp = await client.post(
                 _YANDEX_TOKEN_URL,
@@ -365,7 +348,6 @@ async def oauth_yandex_login(
         if not access_token:
             _oauth_error("Яндекс не вернул access_token")
 
-        # 2. access_token → профиль
         try:
             info_resp = await client.get(
                 _YANDEX_USERINFO_URL,
@@ -380,16 +362,12 @@ async def oauth_yandex_login(
 
         info = info_resp.json()
 
-    # 3. Распаковка профиля
-    # Документация: https://yandex.ru/dev/id/doc/ru/user-information
     provider_user_id = str(info.get("id") or "")
     if not provider_user_id:
         _oauth_error("Яндекс не вернул id пользователя")
 
-    # default_email — основной; emails[0] — фолбэк
     email = info.get("default_email") or (info.get("emails") or [None])[0]
 
-    # real_name → display_name; если нет — login
     display_name = info.get("real_name") or info.get("display_name") or info.get("login")
 
     return await get_or_create_oauth_user(
@@ -404,8 +382,6 @@ async def oauth_yandex_login(
 # ══════════════════════════════════════════════════════════
 # 6. OAuth: VK
 # ══════════════════════════════════════════════════════════
-
-# Документация: https://dev.vk.com/ru/api/access-token/authcode-flow-user
 _VK_TOKEN_URL = "https://oauth.vk.com/access_token"
 _VK_USERS_GET_URL = "https://api.vk.com/method/users.get"
 _VK_API_VERSION = "5.199"
@@ -425,7 +401,6 @@ async def oauth_vk_login(
     ⚠️ Требуется VK_CLIENT_SECRET в settings. Пока его нет — функция
     отвечает 501 Not Implemented с понятным сообщением.
     """
-    # Защита от запуска без секрета — чтобы не упасть с непонятной 500.
     if not getattr(settings, "VK_CLIENT_SECRET", None):
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
@@ -433,7 +408,6 @@ async def oauth_vk_login(
         )
 
     async with httpx.AsyncClient(timeout=10.0) as client:
-        # 1. code → access_token + email
         try:
             token_resp = await client.get(
                 _VK_TOKEN_URL,
@@ -453,12 +427,11 @@ async def oauth_vk_login(
         token_data = token_resp.json()
         access_token = token_data.get("access_token")
         vk_user_id = token_data.get("user_id")
-        email = token_data.get("email")   # может отсутствовать, если scope не запрашивал
+        email = token_data.get("email")
 
         if not access_token or not vk_user_id:
             _oauth_error("VK не вернул access_token или user_id")
 
-        # 2. access_token → профиль (имя/фамилия)
         try:
             users_resp = await client.get(
                 _VK_USERS_GET_URL,
@@ -477,7 +450,6 @@ async def oauth_vk_login(
 
         users_data = users_resp.json()
 
-    # 3. Распаковка профиля
     response = users_data.get("response") or []
     if not response:
         _oauth_error("VK вернул пустой профиль")

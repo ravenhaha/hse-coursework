@@ -26,8 +26,7 @@ from app.schemas.collection import CollectionTreeNode
 
 # ─────────────────────────────────────
 # Внутренние хелперы (приватные)
-# ─────────────────────────────────────
-
+# ────────────────────────────────────
 async def _get_owned_collection(
     db: AsyncSession,
     collection_id: int,
@@ -123,7 +122,6 @@ async def _ensure_name_unique(
 # ─────────────────────────────────────
 # Публичные сервисные функции
 # ─────────────────────────────────────
-
 async def get_collection(
     db: AsyncSession,
     collection_id: int,
@@ -215,8 +213,6 @@ async def build_tree(
             parent = nodes.get(node.parent_id)
             if parent is not None:
                 parent.children.append(node)
-            # Если parent не найден (сирота из-за бага) — игнорируем,
-            # чтобы не сломать рендеринг всего дерева.
 
     _sort_tree(roots)
     return roots
@@ -270,7 +266,6 @@ async def update_collection(
 
     fields_to_update: dict = {}
 
-    # Имя
     if new_name is not None:
         target_parent_id = (
             new_parent_id if parent_id_provided else collection.parent_id
@@ -284,7 +279,6 @@ async def update_collection(
         )
         fields_to_update["name"] = new_name
 
-    # Родитель (перемещение)
     if parent_id_provided:
         await _ensure_parent_valid(
             db,
@@ -302,7 +296,6 @@ async def update_collection(
             )
         fields_to_update["parent_id"] = new_parent_id
 
-    # Иконка — null означает "сбросить", сервис просто пишет в БД то, что пришло.
     if icon_provided:
         fields_to_update["icon"] = new_icon
 

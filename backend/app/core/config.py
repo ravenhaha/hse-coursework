@@ -10,9 +10,7 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# BASE_DIR = .../backend/
 BASE_DIR = Path(__file__).resolve().parents[2]
-# PROJECT_ROOT = на уровень выше backend/ (моно-репо: backend/ + frontend/)
 PROJECT_ROOT = BASE_DIR.parent
 
 
@@ -56,8 +54,6 @@ class Settings(BaseSettings):
     IS_PRODUCTION: bool = False
 
     # ── API ──
-    # Префикс всех API-роутов. Используется и в main.py при подключении
-    # роутеров, и в COOKIE-настройках (узкий path для refresh-токена).
     API_PREFIX: str = "/api"
 
     # ── Загрузка файлов ──

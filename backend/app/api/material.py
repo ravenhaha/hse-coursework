@@ -34,12 +34,7 @@ router = APIRouter(prefix="/materials", tags=["Materials"])
 # ══════════════════════════════════════════
 # Хелперы
 # ══════════════════════════════════════════
-
-# Запрещённые в именах файлов символы (Windows + Linux).
 _FILENAME_BAD_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
-
-# Размер чанка для стримингового чтения загружаемого файла.
-# 1 MB — компромисс между числом await'ов и памятью.
 _UPLOAD_CHUNK_SIZE = 1024 * 1024
 
 
@@ -132,8 +127,6 @@ async def create_file(
         unsupported_media_type(f"Расширение {ext!r} не поддерживается")
 
     # --- 2. Стриминговое чтение с inflight-проверкой размера ---
-    # Если юзер шлёт 1GB — мы не дочитаем до конца, а прервёмся
-    # как только превысим MAX_MATERIAL_FILE_SIZE.
     content = await _read_upload_with_limit(
         file, settings.MAX_MATERIAL_FILE_SIZE
     )
@@ -156,7 +149,6 @@ async def create_file(
             file_size=file_size,
         )
     except Exception:
-        # Чистим осиротевший файл, чтобы не было мусора на диске.
         await delete_file(relative_path)
         raise
 
@@ -220,7 +212,6 @@ async def update(
       - поле не передано в JSON → не трогаем
       - поле передано как null → пробуем установить (если бизнес-логика разрешит)
     """
-    # Берём только реально присланные поля (PATCH-семантика).
     changes = body.model_dump(include=body.model_fields_set)
 
     return await update_existing_material(
@@ -235,11 +226,9 @@ async def update(
 async def delete(material_id: int, db: DB, user: CurrentUser):
     """Удалить материал. Если есть файл — удаляем и его с диска."""
     mat = await get_material(db, material_id=material_id, user=user)
-    file_path = mat.file_path  # запоминаем до удаления из БД
+    file_path = mat.file_path
 
     await delete_existing_material(db, material_id=material_id, user=user)
-
-    # Чистим файл уже после успешного коммита в БД.
     if file_path:
         await delete_file(file_path)
 

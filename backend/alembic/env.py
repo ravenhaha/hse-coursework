@@ -8,27 +8,19 @@ from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
-# Добавляем backend/ в sys.path, чтобы работали импорты `from app.xxx`
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BACKEND_DIR))
 
-# Импортируем настройки и Base ПОСЛЕ правки sys.path
-from app.core.config import settings  # noqa: E402
-from app.db.base import Base  # noqa: E402
-
-# Импортируем все модели, чтобы они зарегистрировались в Base.metadata
-from app.models.user import User  # noqa: E402, F401
-from app.models.auth_account import AuthAccount  # noqa: E402, F401
-from app.models.collection import Collection  # noqa: E402, F401
-from app.models.material import Material  # noqa: E402, F401
-from app.models.tag import Tag  # noqa: E402, F401
-from app.models.material_tag import MaterialTag  # noqa: E402, F401
+from app.core.config import settings
+from app.db.base import Base
+from app.models.user import User
+from app.models.auth_account import AuthAccount
+from app.models.collection import Collection
+from app.models.material import Material
+from app.models.tag import Tag
+from app.models.material_tag import MaterialTag
 
 config = context.config
-
-# Для Alembic нужен СИНХРОННЫЙ URL.
-# settings.DATABASE_URL уже синхронный (postgresql+psycopg://...),
-# так что просто берём его как есть.
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 if config.config_file_name is not None:

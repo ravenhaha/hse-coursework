@@ -1,7 +1,7 @@
 """Auth-роуты: регистрация, логин, refresh, logout, OAuth (VK / Yandex).
 
 Контракт:
-    - POST /register  → создаёт юзера + СРАЗУ ставит cookies (автологин).
+    - POST /register  → создаёт юзера + ставит cookies (автологин).
     - POST /login     → ставит cookies.
     - POST /refresh   → перевыпускает пару токенов.
     - POST /logout    → чистит cookies.
@@ -38,10 +38,6 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 # ══════════════════════════════════════════
 # Cookie helpers
 # ══════════════════════════════════════════
-
-# Узкий path для refresh: браузер не будет слать его на /api/users, /api/tags и т.д.
-# Это уменьшает поверхность атаки и нагрузку. Путь синхронизирован
-# с API_PREFIX в settings — если префикс поменяется, cookie не сломается.
 REFRESH_COOKIE_PATH = settings.REFRESH_COOKIE_PATH
 
 
@@ -76,7 +72,7 @@ def _set_auth_cookies(
     response.set_cookie(
         key="csrf_token",
         value=generate_csrf_token(),
-        httponly=False,                       # фронт ДОЛЖЕН его читать
+        httponly=False,
         secure=settings.COOKIE_SECURE,
         samesite=settings.COOKIE_SAMESITE,
         path="/",

@@ -31,15 +31,12 @@ from app.core.security import decode_access_token
 from app.db.session import get_db
 from app.models.user import User
 
-
-# Методы, которые НЕ изменяют состояние → CSRF не нужен.
 _SAFE_METHODS: frozenset[str] = frozenset({"GET", "HEAD", "OPTIONS"})
 
 
 # ══════════════════════════════════════════
 # Внутренние хелперы (не для импорта снаружи)
 # ══════════════════════════════════════════
-
 def _extract_access_token(request: Request) -> str:
     """Достаёт access_token из cookie. Райзит 401, если его нет."""
     token = request.cookies.get("access_token")
@@ -58,7 +55,6 @@ def _user_id_from_access_token(token: str) -> int:
     """
     payload = decode_access_token(token)
     if payload is None:
-        # decode_access_token уже отсёк случаи "неверный тип" и "битый JWT".
         token_invalid()
 
     sub = payload.get("sub")
@@ -89,8 +85,6 @@ def _check_csrf(request: Request) -> None:
     header_token = request.headers.get("X-CSRF-Token")
 
     if not cookie_token or not header_token or cookie_token != header_token:
-        # 401, а не 403 — чтобы фронт мог общим обработчиком на 401
-        # дёрнуть /auth/refresh и заодно перевыдать csrf-cookie.
         token_invalid()
 
 
@@ -114,7 +108,6 @@ async def _load_active_user(db: AsyncSession, user_id: int) -> User:
 # ══════════════════════════════════════════
 # Публичные dependencies
 # ══════════════════════════════════════════
-
 async def get_current_user(
     request: Request,
     db: AsyncSession = Depends(get_db),
@@ -185,7 +178,6 @@ def get_refresh_token(request: Request) -> str:
 # ══════════════════════════════════════════
 # Annotated-алиасы (сахар для роутов)
 # ══════════════════════════════════════════
-
 DB = Annotated[AsyncSession, Depends(get_db)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 CurrentUserOptional = Annotated[User | None, Depends(get_current_user_optional)]

@@ -12,8 +12,6 @@ from typing import Final
 # ══════════════════════════════════════════
 # Sentinel для PATCH-операций
 # ══════════════════════════════════════════
-# Отличает "поле не передано" от "поле передано как None".
-# Пример: PATCH юзера может явно обнулить parent_id (None) или вообще не трогать его.
 UNSET: Final = object()
 
 
@@ -39,8 +37,6 @@ EXT_BY_MIME: Final[dict[str, str]] = {
 # ══════════════════════════════════════════
 # Материалы — расширения файлов
 # ══════════════════════════════════════════
-# Сгруппированы по категориям: фронт будет рендерить превью по-разному
-# (PDF.js / HTML-таблица / <img> / TipTap-редактор).
 
 MATERIAL_TEXT_EXT: Final[frozenset[str]] = frozenset({
     ".txt", ".md",
@@ -62,8 +58,6 @@ MATERIAL_IMAGE_EXT: Final[frozenset[str]] = frozenset({
 })
 """Картинки — превью <img> + скачивание (зум на фронте)."""
 
-# Объединение всех разрешённых расширений для материалов.
-# Используется в роутах для валидации загружаемых файлов.
 ALLOWED_MATERIAL_EXTENSIONS: Final[frozenset[str]] = (
     MATERIAL_TEXT_EXT
     | MATERIAL_DOC_EXT
@@ -75,9 +69,6 @@ ALLOWED_MATERIAL_EXTENSIONS: Final[frozenset[str]] = (
 # ══════════════════════════════════════════
 # Excel-превью — лимиты на парсинг
 # ══════════════════════════════════════════
-# Если таблица больше — превью обрезается, юзер видит плашку
-# "Файл слишком большой для превью, скачайте оригинал".
-
 EXCEL_PREVIEW_MAX_ROWS: Final[int] = 1000
 EXCEL_PREVIEW_MAX_COLS: Final[int] = 50
 
@@ -85,7 +76,6 @@ EXCEL_PREVIEW_MAX_COLS: Final[int] = 50
 # ══════════════════════════════════════════
 # Источники материала
 # ══════════════════════════════════════════
-
 SOURCE_TYPE_TEXT: Final[str] = "text"
 SOURCE_TYPE_FILE: Final[str] = "file"
 ALLOWED_SOURCE_TYPES: Final[set[str]] = {SOURCE_TYPE_TEXT, SOURCE_TYPE_FILE}

@@ -40,7 +40,6 @@ logger = logging.getLogger(__name__)
 # ══════════════════════════════════════════════════════════
 # Хелперы
 # ══════════════════════════════════════════════════════════
-
 async def get_owned_material(
     db: AsyncSession,
     material_id: int,
@@ -57,8 +56,6 @@ async def get_owned_material(
     if not mat:
         material_not_found()
 
-    # Проверка доступа: если коллекция чужая или удалена — пробрасываем
-    # исключение наверх. FastAPI вернёт корректный 403/404.
     await get_owned_collection(db, mat.collection_id, user)
     return mat
 
@@ -73,7 +70,6 @@ async def _persist_material(db: AsyncSession, mat: Material) -> Material:
 # ══════════════════════════════════════════════════════════
 # Чтение
 # ══════════════════════════════════════════════════════════
-
 async def list_materials(
     db: AsyncSession,
     user: User,
@@ -117,7 +113,6 @@ async def get_material(
 # ══════════════════════════════════════════════════════════
 # Создание
 # ══════════════════════════════════════════════════════════
-
 async def create_text_material(
     db: AsyncSession,
     user: User,
@@ -156,13 +151,10 @@ async def create_file_material(
     """
     await get_owned_collection(db, collection_id, user)
 
-    # Парсер НЕ должен ронять весь запрос — extracted_text опционален.
     extracted_text: str | None = None
     abs_path = get_full_path(file_path)
     if abs_path:
         try:
-            # to_thread.run_sync — выносим синхронный парсер в thread pool,
-            # чтобы не блокировать event loop FastAPI на 5-30 сек.
             extracted_text = await anyio.to_thread.run_sync(
                 extract_text_from_file, abs_path
             )
@@ -185,7 +177,6 @@ async def create_file_material(
 # ══════════════════════════════════════════════════════════
 # Обновление и удаление
 # ══════════════════════════════════════════════════════════
-
 async def update_existing_material(
     db: AsyncSession,
     material_id: int,
@@ -205,11 +196,9 @@ async def update_existing_material(
     """
     mat = await get_owned_material(db, material_id, user)
 
-    # text_content редактируется только для текстовых материалов.
     if "text_content" in changes and mat.source_type != "text":
         bad_request("text_content можно менять только для текстовых материалов")
 
-    # При переносе — проверяем доступ к целевой коллекции.
     if "collection_id" in changes:
         new_cid = changes["collection_id"]
         if new_cid is None:

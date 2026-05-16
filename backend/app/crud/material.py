@@ -12,8 +12,7 @@ from app.models.material_tag import material_tags
 
 # ─────────────────────────────────────
 # READ
-# ─────────────────────────────────────
-
+# ────────────────────────────────────
 async def get_material_by_id(
     db: AsyncSession,
     material_id: int,
@@ -109,7 +108,6 @@ async def search_materials(
 # ─────────────────────────────────────
 # CREATE / UPDATE / DELETE
 # ─────────────────────────────────────
-
 async def create_material(
     db: AsyncSession,
     *,
@@ -135,10 +133,6 @@ async def create_material(
     await db.flush()
     return material
 
-
-# Какие поля разрешено менять через PATCH.
-# file_path / file_size / extracted_text / source_type — НЕ редактируются:
-# файл загружается один раз и не меняется.
 _UPDATABLE_MATERIAL_FIELDS = {
     "material_name",
     "text_content",

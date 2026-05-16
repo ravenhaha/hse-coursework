@@ -15,7 +15,6 @@ from app.models.user import User
 # ══════════════════════════════════════════
 # READ
 # ══════════════════════════════════════════
-
 async def get_user_by_id(db: AsyncSession, user_id: int) -> User | None:
     """Возвращает пользователя по id или None."""
     result = await db.execute(select(User).where(User.id == user_id))
@@ -35,7 +34,6 @@ async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
 # ══════════════════════════════════════════
 # CREATE
 # ══════════════════════════════════════════
-
 async def create_user(
     db: AsyncSession,
     *,
@@ -64,11 +62,6 @@ async def create_user(
 # ══════════════════════════════════════════
 # UPDATE
 # ══════════════════════════════════════════
-
-# Whitelist разрешённых к обновлению полей через generic update_user().
-# id, email, created_at, is_active менять через эту функцию НЕЛЬЗЯ —
-# для них нужны отдельные сценарии (смена email с подтверждением,
-# блокировка через админку и т.п.).
 _UPDATABLE_USER_FIELDS: frozenset[str] = frozenset({
     "display_name",
     "avatar_path",
@@ -91,7 +84,6 @@ async def update_user(db: AsyncSession, user: User, **fields) -> User:
 # ══════════════════════════════════════════
 # DELETE
 # ══════════════════════════════════════════
-
 async def delete_user(db: AsyncSession, user: User) -> None:
     """Удаляет пользователя.
 

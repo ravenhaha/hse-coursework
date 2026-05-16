@@ -39,8 +39,6 @@ class AuthAccount(Base):
     __tablename__ = "auth_accounts"
 
     __table_args__ = (
-        # Глобальная уникальность связки "провайдер + id у провайдера".
-        # Имя совпадает с тем, что было в твоей текущей модели — миграция не нужна.
         UniqueConstraint(
             "provider_auth",
             "provider_user_id",
@@ -50,20 +48,16 @@ class AuthAccount(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
-    # ondelete="CASCADE" → при удалении юзера БД сама сносит все его auth-привязки.
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
         index=True,
         nullable=False,
     )
 
-    # "email" / "vk" / "yandex" — значения AuthProvider.
     provider_auth: Mapped[str] = mapped_column(String(50), nullable=False)
 
-    # Для email — сам email; для OAuth — id юзера у провайдера.
     provider_user_id: Mapped[str] = mapped_column(String(255), nullable=False)
 
-    # Хэш Argon2id. NULL для OAuth-провайдеров (там пароля нет).
     password_hash: Mapped[str | None] = mapped_column(String(255), default=None)
 
     created_at: Mapped[datetime] = mapped_column(

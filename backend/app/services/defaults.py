@@ -13,9 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crud.tag import create_tag, get_tags_by_user
 
-
-# Дефолтные теги. Порядок сохраняется → именно так появятся в БД.
-# tuple → константа неизменяема (защита от случайного .append() где-то в коде).
 DEFAULT_TAG_NAMES: tuple[str, ...] = (
     "лекция",
     "семинар",
@@ -42,12 +39,10 @@ async def create_default_tags_for_user(
     Регистрация юзера и создание тегов должны быть в ОДНОЙ транзакции,
     чтобы при сбое откатилось всё разом.
     """
-    # Один SQL вместо N: вытаскиваем все теги юзера и берём их имена.
+    
     existing_tags = await get_tags_by_user(db, user_id)
     existing_names = {t.tag_name for t in existing_tags}
 
-    # dict.fromkeys убирает возможные дубли в константе, СОХРАНЯЯ порядок.
-    # (set() порядок не сохраняет — поэтому не он.)
     for tag_name in dict.fromkeys(DEFAULT_TAG_NAMES):
         if tag_name in existing_names:
             continue

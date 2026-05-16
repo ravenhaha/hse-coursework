@@ -28,12 +28,8 @@ logger = logging.getLogger(__name__)
 # ══════════════════════════════════════════
 # Безопасность: валидация значений из docx
 # ══════════════════════════════════════════
-
-# Цвет — только hex (3 или 6 символов), регистр любой
 _HEX_COLOR_RE = re.compile(r"^[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?$")
-# Имя шрифта — буквы/цифры/пробел/тире
 _FONT_NAME_RE = re.compile(r"^[A-Za-zА-Яа-я0-9 \-]+$")
-# Стиль heading
 _HEADING_RE = re.compile(r"^heading\s*(\d)", re.IGNORECASE)
 
 
@@ -68,8 +64,6 @@ def _escape_html(text: str) -> str:
 # ══════════════════════════════════════════
 # Публичный API
 # ══════════════════════════════════════════
-
-# Карта парсеров по расширению (заполняется ниже после объявлений)
 _PARSERS: dict[str, callable] = {}
 
 
@@ -90,10 +84,8 @@ def extract_text_from_file(file_path: str | Path) -> Optional[str]:
 # ══════════════════════════════════════════
 # TXT / MD / RTF
 # ══════════════════════════════════════════
-
 def _parse_txt(path: Path) -> str:
     text = path.read_text(encoding="utf-8", errors="ignore")
-    # Каждый непустой абзац — в <p>
     paragraphs = [
         f"<p>{_escape_html(line)}</p>"
         for line in text.split("\n")
@@ -105,7 +97,6 @@ def _parse_txt(path: Path) -> str:
 # ══════════════════════════════════════════
 # PDF
 # ══════════════════════════════════════════
-
 try:
     import fitz  # PyMuPDF
     _PDF_AVAILABLE = True
@@ -131,18 +122,15 @@ def _parse_pdf(path: Path) -> str:
 # ══════════════════════════════════════════
 # DOCX
 # ══════════════════════════════════════════
-
 def _parse_docx(path: Path) -> str:
     doc = Document(str(path))
     images = _extract_images(doc)
     parts: list[str] = []
 
-    # Идём по xml-элементам в правильном порядке (параграфы и таблицы вперемешку)
     for element in doc.element.body:
         tag = element.tag.rsplit("}", 1)[-1]
 
         if tag == "p":
-            # Прямое оборачивание — O(1) вместо поиска через doc.paragraphs
             parts.append(_render_paragraph(Paragraph(element, doc), images))
 
         elif tag == "tbl":
@@ -165,9 +153,6 @@ def _extract_images(doc) -> dict[str, str]:
         logger.exception("Failed to extract images from docx")
     return images
 
-
-# ── Параграф ──
-
 _ALIGN_MAP = {
     WD_ALIGN_PARAGRAPH.LEFT: "left",
     WD_ALIGN_PARAGRAPH.CENTER: "center",
@@ -183,7 +168,6 @@ def _render_paragraph(para: Paragraph, images: dict[str, str]) -> str:
     if not content.strip():
         content = "<br>"
 
-    # Heading: H1..H4
     heading_level: int | None = None
     style_name = (para.style.name or "")
     m = _HEADING_RE.match(style_name)
@@ -192,7 +176,6 @@ def _render_paragraph(para: Paragraph, images: dict[str, str]) -> str:
         if 1 <= level <= 4:
             heading_level = level
 
-    # Выравнивание
     align = _ALIGN_MAP.get(para.alignment)
     style_attr = f' style="text-align: {align}"' if align and align != "left" else ""
 
@@ -214,7 +197,6 @@ def _render_runs(runs) -> str:
         opens: list[str] = []
         closes: list[str] = []
 
-        # Тэги форматирования: симметрично open/close
         if run.bold:               opens.append("<strong>"); closes.insert(0, "</strong>")
         if run.italic:             opens.append("<em>");     closes.insert(0, "</em>")
         if run.underline:          opens.append("<u>");      closes.insert(0, "</u>")
@@ -222,7 +204,6 @@ def _render_runs(runs) -> str:
         if run.font.subscript:     opens.append("<sub>");    closes.insert(0, "</sub>")
         if run.font.superscript:   opens.append("<sup>");    closes.insert(0, "</sup>")
 
-        # CSS-стили (только провалидированные значения!)
         styles: list[str] = []
         color = _get_run_color(run)
         if color:
@@ -245,15 +226,12 @@ def _render_runs(runs) -> str:
 
 
 def _get_run_color(run) -> str | None:
-    # Сначала через python-docx API
     try:
         rgb = run.font.color.rgb if run.font.color else None
         if rgb is not None:
             return _safe_color(str(rgb))
     except Exception:
         pass
-
-    # Fallback — прямо из XML
     try:
         rpr = run._element.find(qn("w:rPr"))
         if rpr is None:
@@ -281,9 +259,6 @@ def _extract_inline_images(para: Paragraph, images: dict[str, str]) -> str:
     except Exception:
         logger.exception("Failed to extract inline images")
     return "".join(html_parts)
-
-
-# ── Таблица ──
 
 _VALIGN_MAP = {"top": "top", "center": "middle", "bottom": "bottom"}
 
@@ -320,7 +295,6 @@ def _get_cell_styles(cell) -> str:
         if tcPr is None:
             return ""
 
-        # Background
         shd = tcPr.find(qn("w:shd"))
         if shd is not None:
             fill = shd.get(qn("w:fill"))
@@ -328,7 +302,6 @@ def _get_cell_styles(cell) -> str:
             if color:
                 styles.append(f"background-color: {color}")
 
-        # Borders
         borders = tcPr.find(qn("w:tcBorders"))
         if borders is not None:
             for side in ("top", "bottom", "left", "right"):
@@ -347,7 +320,6 @@ def _get_cell_styles(cell) -> str:
                     px = 1
                 styles.append(f"border-{side}: {px}px solid {color}")
 
-        # Vertical alignment
         vAlign = tcPr.find(qn("w:vAlign"))
         if vAlign is not None:
             mapped = _VALIGN_MAP.get(vAlign.get(qn("w:val"), ""))
@@ -378,7 +350,6 @@ def _get_cell_span(cell) -> str:
 # ══════════════════════════════════════════
 # Регистрируем парсеры
 # ══════════════════════════════════════════
-
 _PARSERS.update({
     ".txt":  _parse_txt,
     ".md":   _parse_txt,

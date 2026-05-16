@@ -11,11 +11,8 @@ import re
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field, field_validator
 
-# ── Параметры пароля ──
 PASSWORD_MIN_LENGTH = 8
 PASSWORD_MAX_LENGTH = 128
-
-# Компилируем регулярки один раз — быстрее на каждом запросе регистрации.
 _RE_LETTER = re.compile(r"[A-Za-zА-Яа-яЁё]")
 _RE_DIGIT = re.compile(r"\d")
 
@@ -44,7 +41,6 @@ def validate_password_strength(password: str) -> str:
 # ══════════════════════════════════════════
 # Запросы
 # ══════════════════════════════════════════
-
 class UserRegister(BaseModel):
     """Тело POST /auth/register."""
 
@@ -103,7 +99,6 @@ class UserUpdate(BaseModel):
 # ══════════════════════════════════════════
 # Ответы
 # ══════════════════════════════════════════
-
 class UserResponse(BaseModel):
     """Профиль пользователя в ответах API.
 
@@ -120,9 +115,6 @@ class UserResponse(BaseModel):
     display_name: str | None = None
     is_active: bool
 
-    # avatar_path подгружается из ORM (from_attributes=True), но НЕ
-    # появляется в JSON-ответе (exclude=True). Нужен только как
-    # источник для computed_field ниже.
     avatar_path: str | None = Field(default=None, exclude=True)
 
     model_config = ConfigDict(from_attributes=True)

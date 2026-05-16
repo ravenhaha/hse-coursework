@@ -25,14 +25,8 @@ from fastapi import HTTPException, Request, status
 
 from app.core.config import settings
 
-
-# HTTP-методы, для которых CSRF НЕ проверяется.
-# По RFC 7231 они должны быть safe & idempotent — не меняют состояние.
 _SAFE_METHODS: frozenset[str] = frozenset({"GET", "HEAD", "OPTIONS"})
 
-# Пути, исключённые из CSRF-проверки.
-# Логин/регистрация/OAuth-callback — это первый контакт юзера с системой,
-# у него ещё нет csrf-cookie. После успешного входа сервер сам её ставит.
 _EXEMPT_PATHS: frozenset[str] = frozenset({
     f"{settings.API_PREFIX}/auth/register",
     f"{settings.API_PREFIX}/auth/login",
@@ -40,8 +34,6 @@ _EXEMPT_PATHS: frozenset[str] = frozenset({
     f"{settings.API_PREFIX}/auth/logout",
 })
 
-# OAuth-callback'и идут как GET (значит и так safe), но на всякий случай —
-# их пути начинаются с этих префиксов и могут содержать query-параметры.
 _EXEMPT_PREFIXES: tuple[str, ...] = (
     f"{settings.API_PREFIX}/auth/vk",
     f"{settings.API_PREFIX}/auth/yandex",
@@ -75,9 +67,6 @@ async def verify_csrf(request: Request) -> None:
     cookie_token = request.cookies.get("csrf_token")
     header_token = request.headers.get("X-CSRF-Token")
 
-    # Все три условия должны выполниться. Если хоть одно нет — 403.
-    # Сравнение строк через == безопасно: токен криптослучайный 256 бит,
-    # timing-атака не даст полезной инфы (нет постепенного раскрытия).
     if not cookie_token or not header_token or cookie_token != header_token:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

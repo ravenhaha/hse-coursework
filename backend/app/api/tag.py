@@ -22,11 +22,6 @@ from app.services.tag import (
 
 router = APIRouter(prefix="/tags", tags=["Tags"])
 
-
-# ─── Привязка тегов к материалам (ВЫШЕ чем /{tag_id}) ───
-# Эти роуты должны быть объявлены РАНЬШЕ роутов вида /{tag_id},
-# иначе FastAPI попробует распарсить "materials" как tag_id и упадёт.
-
 @router.get("/materials/{material_id}", response_model=list[TagResponse])
 async def list_material_tags_route(
     material_id: int,
@@ -73,7 +68,6 @@ async def unassign_tag_route(
 
 
 # ─── CRUD тегов ───
-
 @router.get("", response_model=list[TagResponse])
 async def get_tags(
     db: DB,

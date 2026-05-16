@@ -12,15 +12,12 @@ from app.core.config import settings
 
 
 TokenType = Literal["access", "refresh"]
-
-# Один экземпляр на всё приложение — он thread-safe.
 _password_hasher = PasswordHasher()
 
 
 # ══════════════════════════════════════════
 # Пароли
 # ══════════════════════════════════════════
-
 def hash_password(password: str) -> str:
     """Хеширует пароль через Argon2id (рекомендованный стандарт OWASP)."""
     return _password_hasher.hash(password)
@@ -52,7 +49,6 @@ def needs_rehash(hashed: str) -> bool:
 # ══════════════════════════════════════════
 # JWT — создание
 # ══════════════════════════════════════════
-
 def _create_token(user_id: int, token_type: TokenType, expires_delta: timedelta) -> str:
     """Внутренний помощник: собирает payload и кодирует JWT.
     Используется create_access_token / create_refresh_token."""
@@ -60,8 +56,8 @@ def _create_token(user_id: int, token_type: TokenType, expires_delta: timedelta)
     payload = {
         "sub": str(user_id),
         "type": token_type,
-        "iat": now,                          # issued at — когда выдан
-        "exp": now + expires_delta,          # expires — когда протухнет
+        "iat": now,
+        "exp": now + expires_delta,
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
@@ -87,7 +83,6 @@ def create_refresh_token(user_id: int) -> str:
 # ══════════════════════════════════════════
 # JWT — декодирование
 # ══════════════════════════════════════════
-
 def decode_token(token: str) -> dict | None:
     """Декодирует JWT БЕЗ проверки типа. Возвращает payload или None.
 
@@ -103,8 +98,6 @@ def decode_token(token: str) -> dict | None:
             algorithms=[settings.ALGORITHM],
         )
     except jwt.PyJWTError:
-        # PyJWTError — корневой класс всех ошибок jwt:
-        # ExpiredSignature, InvalidToken, InvalidSignature и т.д.
         return None
 
 
@@ -145,7 +138,6 @@ def decode_refresh_token(token: str) -> dict | None:
 # ══════════════════════════════════════════
 # CSRF
 # ══════════════════════════════════════════
-
 def generate_csrf_token() -> str:
     """Генерирует криптостойкий CSRF-токен (256 бит)."""
     return secrets.token_hex(32)

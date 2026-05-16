@@ -7,8 +7,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 class TagBase(BaseModel):
     """Общие поля тега."""
 
-    # max_length=50 синхронизирован с моделью: Tag.tag_name = String(50).
-    # Если расширишь модель — не забудь поднять и здесь.
     tag_name: str = Field(..., min_length=1, max_length=50)
 
     @field_validator("tag_name")

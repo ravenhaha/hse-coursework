@@ -18,10 +18,8 @@ from app.core.csrf import verify_csrf
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Хуки старта/остановки приложения."""
-    # Startup: гарантируем, что директории для загрузок существуют.
     settings.ensure_upload_dirs()
     yield
-    # Shutdown: пока ничего.
 
 
 app = FastAPI(
@@ -35,14 +33,6 @@ app = FastAPI(
 # ══════════════════════════════════════════
 # CORS
 # ══════════════════════════════════════════
-# ВАЖНО про спеку CORS:
-#   - allow_credentials=True НЕСОВМЕСТИМ с allow_origins=["*"] и
-#     allow_headers=["*"]. Браузер не пропустит preflight.
-#   - Поэтому перечисляем origin и заголовки ЯВНО.
-#
-# X-CSRF-Token нужен для double-submit pattern (см. core/csrf.py):
-# фронт читает cookie csrf_token и шлёт значение в этом заголовке.
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.FRONTEND_URL],
@@ -69,12 +59,6 @@ app.mount(
 # ══════════════════════════════════════════
 # Роутеры с глобальной CSRF-защитой
 # ══════════════════════════════════════════
-# verify_csrf сам решает, что пропускать (см. core/csrf.py):
-#   - safe-методы (GET/HEAD/OPTIONS);
-#   - auth-эндпоинты (login/register/refresh/logout, OAuth);
-#   - если CSRF_ENABLED=false (dev) — пропускает всё.
-# Поэтому безопасно вешать dependency глобально, даже на auth.router.
-
 _csrf_dep = [Depends(verify_csrf)]
 
 app.include_router(auth_router,       prefix=settings.API_PREFIX, dependencies=_csrf_dep)
@@ -87,7 +71,6 @@ app.include_router(tag_router,        prefix=settings.API_PREFIX, dependencies=_
 # ══════════════════════════════════════════
 # Healthcheck / root
 # ══════════════════════════════════════════
-
 @app.get("/")
 async def root():
     return {"message": "Hello everyone! Good mood"}

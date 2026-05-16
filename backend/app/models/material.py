@@ -29,21 +29,17 @@ class Material(Base):
     __tablename__ = "materials"
 
     __table_args__ = (
-        # Допустимые значения source_type. CHECK вместо SQL ENUM —
-        # чтобы добавлять новые типы без болезненного ALTER TYPE в Postgres.
         CheckConstraint(
             "source_type IN ('text', 'file')",
             name="source_type_valid",
         ),
         CheckConstraint(
-            # Текстовый материал
             "(source_type = 'text' "
             " AND text_content IS NOT NULL "
             " AND file_path IS NULL "
             " AND file_size IS NULL "
             " AND extracted_text IS NULL) "
             "OR "
-            # Файловый материал (extracted_text может быть NULL, если парсер не сработал)
             "(source_type = 'file' "
             " AND file_path IS NOT NULL "
             " AND file_size IS NOT NULL "
@@ -61,10 +57,8 @@ class Material(Base):
     material_name: Mapped[str] = mapped_column(String(255))
     source_type: Mapped[str] = mapped_column(String(20))
 
-    # Содержимое — для source_type='text' (HTML от TipTap-редактора)
     text_content: Mapped[str | None] = mapped_column(Text, default=None)
 
-    # Файл — для source_type='file'
     file_path: Mapped[str | None] = mapped_column(String(500), default=None)
     file_size: Mapped[int | None] = mapped_column(BigInteger, default=None)
     extracted_text: Mapped[str | None] = mapped_column(Text, default=None)

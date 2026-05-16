@@ -32,11 +32,7 @@ logger = logging.getLogger(__name__)
 # ══════════════════════════════════════════
 # Белые списки расширений
 # ══════════════════════════════════════════
-# Для материалов — берём из constants.py (единый источник истины).
 _MATERIAL_SAFE_EXT: frozenset[str] = frozenset(ALLOWED_MATERIAL_EXTENSIONS)
-
-# Для аватаров — только картинки. Локальная константа,
-# т.к. для аватаров основная валидация по MIME-типу (в роуте).
 _AVATAR_SAFE_EXT: frozenset[str] = frozenset({
     ".png", ".jpg", ".jpeg", ".webp",
 })
@@ -94,7 +90,6 @@ async def _save_bytes(
 # ══════════════════════════════════════════
 # Публичный API: материалы
 # ══════════════════════════════════════════
-
 async def save_material(
     user_id: int,
     filename: str,
@@ -116,7 +111,6 @@ async def save_material(
 # ══════════════════════════════════════════
 # Публичный API: аватары
 # ══════════════════════════════════════════
-
 async def save_avatar(
     user_id: int,
     filename: str,
@@ -141,7 +135,6 @@ async def save_avatar(
 # ══════════════════════════════════════════
 # Общие операции
 # ══════════════════════════════════════════
-
 async def delete_file(relative_path: str | Path | None) -> bool:
     """Удаляет файл с диска по относительному пути.
 

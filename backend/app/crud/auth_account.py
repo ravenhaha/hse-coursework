@@ -17,7 +17,6 @@ from app.models.auth_account import AuthAccount, AuthProvider
 # ══════════════════════════════════════════
 # READ
 # ══════════════════════════════════════════
-
 async def get_auth_account(
     db: AsyncSession,
     provider: str | AuthProvider,
@@ -79,7 +78,6 @@ async def get_user_auth_accounts(
 # ══════════════════════════════════════════
 # CREATE
 # ══════════════════════════════════════════
-
 async def create_auth_account(
     db: AsyncSession,
     *,
@@ -113,7 +111,6 @@ async def create_auth_account(
 # ══════════════════════════════════════════
 # UPDATE
 # ══════════════════════════════════════════
-
 async def update_password_hash(
     db: AsyncSession,
     account: AuthAccount,
@@ -134,7 +131,6 @@ async def update_password_hash(
 # ══════════════════════════════════════════
 # DELETE
 # ══════════════════════════════════════════
-
 async def delete_auth_account(
     db: AsyncSession, account: AuthAccount,
 ) -> None:
