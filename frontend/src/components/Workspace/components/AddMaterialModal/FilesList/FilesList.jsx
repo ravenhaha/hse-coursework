@@ -1,12 +1,17 @@
 import { useCallback } from 'react';
 import { ACTIONS } from '../state';
+import { releaseFilePreview } from '../../../../../utils/filePreview';
 import FileItem from './FileItem';
 import styles from './FilesList.module.css';
 
 export default function FilesList({ files, dispatch }) {
     const handleRemove = useCallback((id) => {
+        // ✅ Освобождаем blob URL до удаления из state
+        const item = files.find((f) => f.id === id);
+        if (item?.file) releaseFilePreview(item.file);
+
         dispatch({ type: ACTIONS.REMOVE_FILE, payload: id });
-    }, [dispatch]);
+    }, [files, dispatch]);
 
     const handleToggleImportant = useCallback((id) => {
         dispatch({ type: ACTIONS.TOGGLE_FILE_IMPORTANT, payload: id });

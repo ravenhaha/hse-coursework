@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import TagPicker from '../TagPicker/TagPicker';
+import { getFilePreview } from '../../../../../utils/filePreview';
 import styles from './FilesList.module.css';
 
 /* ── Утилиты ── */
@@ -59,8 +60,14 @@ function FileIcon({ type }) {
 
 export default function FileItem({ item, onRemove, onToggleImportant, onUpdateTags }) {
     const [showTags, setShowTags] = useState(false);
+
     const { file, tags, isImportant } = item;
     const ext = getFileExt(file.name);
+
+    // ✅ Превью берётся из кеша. Один URL на один File за всё время жизни.
+    // StrictMode mount→unmount→mount не ломает: URL переиспользуется.
+    // Освобождение — в FilesList через releaseFilePreview при удалении.
+    const preview = getFilePreview(file);
 
     const toggleTags = useCallback(() => {
         setShowTags((prev) => !prev);
@@ -79,20 +86,6 @@ export default function FileItem({ item, onRemove, onToggleImportant, onUpdateTa
         document.addEventListener('keydown', handleKey);
         return () => document.removeEventListener('keydown', handleKey);
     }, [showTags, closeTags]);
-
-    // Превью для изображений — вычисляем напрямую через useMemo
-    const isImage = file.type?.startsWith('image/');
-
-    const preview = useMemo(
-        () => (isImage ? URL.createObjectURL(file) : null),
-        [file, isImage],
-    );
-
-    // Освобождаем object URL при размонтировании / смене файла
-    useEffect(() => {
-        if (!preview) return;
-        return () => URL.revokeObjectURL(preview);
-    }, [preview]);
 
     return (
         <div className={styles.itemWrapper}>

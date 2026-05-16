@@ -51,7 +51,8 @@ export function reducer(state, action) {
             return { ...state, mode: action.payload, error: '' };
 
         case ACTIONS.SET_COLLECTION:
-            return { ...state, collection: action.payload };
+            // 🆕 при смене коллекции сбрасываем ошибку
+            return { ...state, collection: action.payload, error: '' };
 
         case ACTIONS.SET_ERROR:
             return { ...state, error: action.payload };

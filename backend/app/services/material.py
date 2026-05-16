@@ -1,46 +1,89 @@
+"""Сервис материалов.
+
+Бизнес-правила:
+  - материал принадлежит коллекции, коллекция — юзеру;
+  - доступ к материалу = доступ к его коллекции;
+  - при загрузке файла извлекаем текст (для поиска и превью).
+
+Обработка ошибок:
+  - get_owned_material не оборачивает исключения get_owned_collection
+    в "доступ к материалу запрещён". Если коллекция недоступна (404/403),
+    исключение пробрасывается наружу как есть — FastAPI вернёт корректный
+    статус. Это и проще, и семантически правильнее.
+"""
+
+import logging
+
+import anyio
+
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
-from crud.material import (
-    get_material_by_id,
-    get_materials_by_collection,
+from app.core.exceptions import bad_request, material_not_found
+from app.core.file_parser import extract_text_from_file
+from app.core.file_storage import get_full_path
+from app.crud.material import (
     create_material,
-    update_material,
     delete_material,
-    search_materials_query,
+    get_material_by_id,
+    list_all_user_materials,
+    list_materials_by_collection,
+    search_materials as search_materials_query,
+    update_material,
 )
-from models.material import Material
-from models.collection import Collection
-from models.user import User
-from services.collection import _get_own_collection
-from core.exceptions import material_not_found, material_access_denied
-from core.file_parser import extract_text_from_file
+from app.models.material import Material
+from app.models.user import User
+from app.services.collection import get_owned_collection
+
+logger = logging.getLogger(__name__)
 
 
-async def _check_material_owner(
+# ══════════════════════════════════════════════════════════
+# Хелперы
+# ══════════════════════════════════════════════════════════
+
+async def get_owned_material(
     db: AsyncSession,
     material_id: int,
     user: User,
 ) -> Material:
-    """Проверяем владельца через коллекцию (material → collection → user)."""
+    """Достаёт материал и проверяет доступ через его коллекцию.
+
+    Если материала нет — бросит material_not_found (404).
+    Если коллекция недоступна — get_owned_collection сам бросит
+    подходящее исключение (404/403). Намеренно НЕ оборачиваем
+    в try/except, чтобы не маскировать настоящие ошибки.
+    """
     mat = await get_material_by_id(db, material_id)
     if not mat:
         material_not_found()
 
-    collection = await db.get(Collection, mat.collection_id)
-    if not collection or collection.user_id != user.id:
-        material_access_denied()
-
+    # Проверка доступа: если коллекция чужая или удалена — пробрасываем
+    # исключение наверх. FastAPI вернёт корректный 403/404.
+    await get_owned_collection(db, mat.collection_id, user)
     return mat
 
+
+async def _persist_material(db: AsyncSession, mat: Material) -> Material:
+    """Коммитит транзакцию и обновляет объект из БД."""
+    await db.commit()
+    await db.refresh(mat)
+    return mat
+
+
+# ══════════════════════════════════════════════════════════
+# Чтение
+# ══════════════════════════════════════════════════════════
 
 async def list_materials(
     db: AsyncSession,
     user: User,
-    collection_id: int,
+    collection_id: int | None = None,
 ) -> list[Material]:
-    await _get_own_collection(db, collection_id, user)
-    return await get_materials_by_collection(db, collection_id)
+    """Список материалов юзера, опционально по коллекции."""
+    if collection_id is not None:
+        await get_owned_collection(db, collection_id, user)
+        return await list_materials_by_collection(db, collection_id)
+    return await list_all_user_materials(db, user.id)
 
 
 async def search_materials(
@@ -50,11 +93,15 @@ async def search_materials(
     collection_id: int | None = None,
     tag_ids: list[int] | None = None,
 ) -> list[Material]:
+    """Поиск с проверкой доступа к коллекции (если задана)."""
     if collection_id is not None:
-        await _get_own_collection(db, collection_id, user)
-
+        await get_owned_collection(db, collection_id, user)
     return await search_materials_query(
-        db, user.id, query_str, collection_id, tag_ids,
+        db,
+        user.id,
+        query_str=query_str,
+        collection_id=collection_id,
+        tag_ids=tag_ids,
     )
 
 
@@ -63,8 +110,13 @@ async def get_material(
     material_id: int,
     user: User,
 ) -> Material:
-    return await _check_material_owner(db, material_id, user)
+    """Один материал юзера по id (с проверкой доступа)."""
+    return await get_owned_material(db, material_id, user)
 
+
+# ══════════════════════════════════════════════════════════
+# Создание
+# ══════════════════════════════════════════════════════════
 
 async def create_text_material(
     db: AsyncSession,
@@ -73,7 +125,8 @@ async def create_text_material(
     material_name: str,
     text_content: str,
 ) -> Material:
-    await _get_own_collection(db, collection_id, user)
+    """Текстовый материал (юзер вводит HTML через TipTap)."""
+    await get_owned_collection(db, collection_id, user)
 
     mat = await create_material(
         db,
@@ -82,9 +135,7 @@ async def create_text_material(
         source_type="text",
         text_content=text_content,
     )
-    await db.commit()
-    await db.refresh(mat)
-    return mat
+    return await _persist_material(db, mat)
 
 
 async def create_file_material(
@@ -93,11 +144,31 @@ async def create_file_material(
     collection_id: int,
     material_name: str,
     file_path: str,
+    file_size: int,
 ) -> Material:
-    await _get_own_collection(db, collection_id, user)
+    """Файловый материал.
 
-    # Парсим текст из файла
-    text_content = extract_text_from_file(file_path)
+    Парсер запускается в thread pool (anyio.to_thread.run_sync), чтобы
+    тяжёлая обработка PDF/DOCX не блокировала event loop. Если упадёт
+    или вернёт пустоту — ничего страшного: extracted_text останется NULL,
+    материал просто не будет находиться по содержимому файла
+    (поиск по названию работает).
+    """
+    await get_owned_collection(db, collection_id, user)
+
+    # Парсер НЕ должен ронять весь запрос — extracted_text опционален.
+    extracted_text: str | None = None
+    abs_path = get_full_path(file_path)
+    if abs_path:
+        try:
+            # to_thread.run_sync — выносим синхронный парсер в thread pool,
+            # чтобы не блокировать event loop FastAPI на 5-30 сек.
+            extracted_text = await anyio.to_thread.run_sync(
+                extract_text_from_file, abs_path
+            )
+        except Exception:
+            logger.exception("Failed to extract text from %s", file_path)
+            extracted_text = None
 
     mat = await create_material(
         db,
@@ -105,43 +176,51 @@ async def create_file_material(
         material_name=material_name,
         source_type="file",
         file_path=file_path,
-        text_content=text_content,
+        file_size=file_size,
+        extracted_text=extracted_text,
     )
-    await db.commit()
-    await db.refresh(mat)
-    return mat
+    return await _persist_material(db, mat)
 
+
+# ══════════════════════════════════════════════════════════
+# Обновление и удаление
+# ══════════════════════════════════════════════════════════
 
 async def update_existing_material(
     db: AsyncSession,
     material_id: int,
     user: User,
-    material_name: str | None = None,
-    text_content: str | None = None,
-    collection_id: int | None = None,       # ← НОВОЕ: перемещение
-    is_important: bool | None = None,        # ← НОВОЕ: пометка «важно»
+    *,
+    changes: dict,
 ) -> Material:
-    mat = await _check_material_owner(db, material_id, user)
+    """Частичное обновление материала с проверкой доступа.
 
-    # Если перемещаем — проверяем что целевая коллекция тоже принадлежит юзеру
-    if collection_id is not None:
-        await _get_own_collection(db, collection_id, user)
+    Параметр `changes` — это словарь только тех полей, которые юзер
+    реально передал в PATCH (формируется в роуте через model_fields_set).
+    Это позволяет различать "поле не передано" и "поле передано как null".
 
-    kwargs = {}
-    if material_name is not None:
-        kwargs["material_name"] = material_name
-    if text_content is not None:
-        kwargs["text_content"] = text_content
-    if collection_id is not None:
-        kwargs["collection_id"] = collection_id
-    if is_important is not None:
-        kwargs["is_important"] = is_important
+    Бизнес-правила:
+      - text_content редактируется ТОЛЬКО для source_type='text'.
+      - При переносе в другую коллекцию проверяем доступ к ней.
+    """
+    mat = await get_owned_material(db, material_id, user)
 
-    if kwargs:
-        await update_material(db, mat, **kwargs)
+    # text_content редактируется только для текстовых материалов.
+    if "text_content" in changes and mat.source_type != "text":
+        bad_request("text_content можно менять только для текстовых материалов")
 
-    await db.commit()
-    await db.refresh(mat)
+    # При переносе — проверяем доступ к целевой коллекции.
+    if "collection_id" in changes:
+        new_cid = changes["collection_id"]
+        if new_cid is None:
+            bad_request("collection_id не может быть null — материал должен быть в коллекции")
+        await get_owned_collection(db, new_cid, user)
+
+    if changes:
+        await update_material(db, mat, **changes)
+        await db.commit()
+        await db.refresh(mat)
+
     return mat
 
 
@@ -150,6 +229,7 @@ async def delete_existing_material(
     material_id: int,
     user: User,
 ) -> None:
-    mat = await _check_material_owner(db, material_id, user)
+    """Удаление материала. Файл с диска чистится отдельно (в роуте)."""
+    mat = await get_owned_material(db, material_id, user)
     await delete_material(db, mat)
     await db.commit()

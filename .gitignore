@@ -1,15 +1,49 @@
-# Env
+# === Env ===
 .env
+.env.local
+.env.*.local
+!.env.example
 
-# Python
+# === Python ===
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 .venv/
 venv/
+*.egg-info/
+.pytest_cache/
 
-# IDE
+# === IDE ===
 .idea/
 .vscode/
 
-# Alembic
+# === Alembic ===
 alembic/versions/__pycache__/
+
+# === Uploads ===
+uploads/
+backend/uploads/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === Logs ===
+*.log
+
+# === Frontend ===
+node_modules/
+dist/
+build/
+.next/
+
+# === Пользовательские загрузки — не коммитим содержимое, но папки оставляем ===
+backend/uploads/*
+!backend/uploads/.gitkeep
+!backend/uploads/avatars/
+!backend/uploads/materials/
+backend/uploads/avatars/*
+!backend/uploads/avatars/.gitkeep
+backend/uploads/materials/*
+!backend/uploads/materials/.gitkeep

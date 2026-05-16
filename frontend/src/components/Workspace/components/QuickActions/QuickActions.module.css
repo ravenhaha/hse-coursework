@@ -1,0 +1,113 @@
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.head {
+    text-align: left;
+}
+
+.title {
+    margin: 0 0 6px;
+    font-size: 22px;
+    font-weight: 600;
+    color: #F2FEFF;
+    letter-spacing: -0.01em;
+}
+
+.subtitle {
+    margin: 0;
+    font-size: 14px;
+    color: #6b8fa0;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+@media (max-width: 768px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 18px 20px;
+    border-radius: 14px;
+    background: #0e2236;
+    border: 1px solid #152a3f;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    transition: border-color 0.2s ease, transform 0.15s ease, background 0.2s ease;
+}
+
+.card:hover:not(:disabled) {
+    border-color: rgba(58, 215, 211, 0.4);
+    background: #122943;
+    transform: translateY(-1px);
+}
+
+.card:hover:not(:disabled) .arrow {
+    color: #3AD7D3;
+    transform: translateX(2px);
+}
+
+.card:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.card:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.iconWrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid;
+    flex-shrink: 0;
+}
+
+.iconWrap svg {
+    width: 20px;
+    height: 20px;
+}
+
+.cardBody {
+    flex: 1;
+    min-width: 0;
+}
+
+.cardTitle {
+    margin: 0 0 3px;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: #F2FEFF;
+}
+
+.cardText {
+    margin: 0;
+    font-size: 12.5px;
+    color: #8fb2c3;
+    line-height: 1.4;
+}
+
+.arrow {
+    width: 18px;
+    height: 18px;
+    color: #5a7a8c;
+    flex-shrink: 0;
+    transition: color 0.2s ease, transform 0.2s ease;
+}

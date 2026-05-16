@@ -1,7 +1,34 @@
-const cards = [
-    { id: 1, text: 'Импортировать файл', icon: 1 },
-    { id: 2, text: 'Вставить текст', icon: 2 },
-    { id: 3, text: 'Создать коллекцию', icon: 3 },
-]
+import {
+    IoAttachOutline,
+    IoDocumentTextOutline,
+    IoFolderOpenOutline,
+} from 'react-icons/io5';
 
-export default cards
+const cards = [
+    {
+        id: 'collection',
+        Icon: IoFolderOpenOutline,
+        color: '#b890ff',
+        title: 'Создать коллекцию',
+        text: 'Сгруппируйте материалы по теме',
+        handler: 'onCreateCollection',
+    },
+    {
+        id: 'import',
+        Icon: IoAttachOutline,
+        color: '#3AD7D3',
+        title: 'Импортировать файл',
+        text: 'PDF, DOCX, TXT, MD или картинка',
+        handler: 'onImportFile',
+    },
+    {
+        id: 'note',
+        Icon: IoDocumentTextOutline,
+        color: '#6bb6d6',
+        title: 'Создать заметку',
+        text: 'Напишите текст прямо в редакторе',
+        handler: 'onCreateNote',
+    },
+];
+
+export default cards;

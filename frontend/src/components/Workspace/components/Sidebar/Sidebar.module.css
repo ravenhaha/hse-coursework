@@ -1,8 +1,12 @@
+/* ============================================
+   SIDEBAR — главный контейнер
+   ============================================ */
 .sidebar {
     position: fixed;
     top: 0;
     left: 0;
-    width: 260px;
+    /* 🆕 Resizable: ширина из CSS-переменной */
+    width: var(--sidebar-width, 280px);
     height: 100vh;
     display: flex;
     flex-direction: column;
@@ -12,6 +16,31 @@
     z-index: var(--z-sticky);
 }
 
+/* 🆕 Resizer — drag-handle справа от сайдбара
+   ⚠️ ФИКС: z-index приведён к глобальной системе слоёв.
+   Использовалось z-index: 1000 — перекрывало модалки (--z-modal = 40).
+   Теперь ресайзер сидит на --z-sticky (10), как и сам сайдбар,
+   а любая модалка (--z-modal = 40) гарантированно его перекрывает. */
+.resizer {
+    position: fixed;
+    top: 0;
+    left: calc(var(--sidebar-width, 280px) - 4px);
+    width: 8px;
+    height: 100vh;
+    cursor: col-resize;
+    z-index: var(--z-sticky);
+    background: transparent;
+    transition: background 0.15s ease;
+}
+
+.resizer:hover,
+.resizer.resizerActive {
+    background: rgba(58, 215, 211, 0.4);
+}
+
+/* ============================================
+   SCROLL AREA
+   ============================================ */
 .scrollArea {
     flex: 1;
     min-height: 0;
@@ -32,6 +61,9 @@
     background: transparent;
 }
 
+/* ============================================
+   LOGO
+   ============================================ */
 .logo {
     display: flex;
     align-items: center;
@@ -50,8 +82,14 @@
     font-size: 18px;
     font-weight: 700;
     color: #F2FEFF;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
+/* ============================================
+   NAV (Главная)
+   ============================================ */
 .nav {
     margin-bottom: 6px;
 }
@@ -90,6 +128,9 @@
     flex-shrink: 0;
 }
 
+/* ============================================
+   SECTION
+   ============================================ */
 .section {
     padding-top: 2px;
 }
@@ -128,14 +169,21 @@
 .sectionTitle {
     flex: 1;
     text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .sectionChevron {
     width: 14px;
     height: 14px;
     color: #5a8a9e;
+    flex-shrink: 0;
 }
 
+/* ============================================
+   ACTION BUTTONS (add, collapse-all, kebab)
+   ============================================ */
 .addButton {
     display: flex;
     align-items: center;
@@ -143,8 +191,11 @@
     width: 28px;
     height: 28px;
     border-radius: 8px;
+    border: none;
+    background: transparent;
     color: #5a8a9e;
     flex-shrink: 0;
+    cursor: pointer;
     transition: background 0.15s ease, color 0.15s ease;
 }
 
@@ -158,10 +209,124 @@
     height: 18px;
 }
 
-.sectionBody {
-    padding: 6px 0 0;
+/* 🆕 Кнопка «Свернуть всё» */
+.collapseAllButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: transparent;
+    border: none;
+    color: #5a8a9e;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
 }
 
+.collapseAllButton:hover {
+    background: rgba(58, 215, 211, 0.12);
+    color: #3AD7D3;
+}
+
+.collapseAllButton:active {
+    background: rgba(58, 215, 211, 0.18);
+}
+
+.collapseAllButton svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* 🆕 ЭТАП 1: Kebab-кнопка (⋯) — открывает контекстное меню */
+.kebabButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: #5a8a9e;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.kebabButton:hover {
+    background: rgba(58, 215, 211, 0.12);
+    color: #3AD7D3;
+}
+
+.kebabButton:active {
+    background: rgba(58, 215, 211, 0.18);
+}
+
+.kebabButton svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* ============================================
+   SECTION BODY
+   ============================================ */
+.sectionBody {
+    padding: 6px 0 0;
+    position: relative;
+}
+
+/* 🆕 Sticky breadcrumb — локальный stacking внутри .scrollArea */
+.stickyBreadcrumb {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-local-above);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    margin: 0 0 4px;
+    background: linear-gradient(180deg,
+        #0b1929 85%,
+        rgba(11, 25, 41, 0));
+    font-size: 12px;
+    color: #8fb2c3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-bottom: 1px solid rgba(21, 42, 63, 0.5);
+    backdrop-filter: blur(4px);
+    pointer-events: none;
+}
+
+.stickyBreadcrumb svg {
+    width: 14px;
+    height: 14px;
+    color: #5a8a9e;
+    flex-shrink: 0;
+}
+
+.breadcrumbItem {
+    pointer-events: auto;
+    cursor: pointer;
+    transition: color 0.15s ease;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.breadcrumbItem:hover {
+    color: #3AD7D3;
+}
+
+.breadcrumbSeparator {
+    color: #3a5a6e;
+    flex-shrink: 0;
+}
+
+/* ============================================
+   SEARCH
+   ============================================ */
 .searchWrap {
     padding: 0 8px 8px;
 }
@@ -186,6 +351,9 @@
     border-color: #2a6a80;
 }
 
+/* ============================================
+   TREE
+   ============================================ */
 .tree {
     display: flex;
     flex-direction: column;
@@ -195,18 +363,56 @@
 .treeRow {
     display: flex;
     align-items: center;
+    position: relative;
+    transition: background 0.15s ease, outline 0.15s ease;
+}
+
+.treeItemWrap {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    position: relative;
+}
+
+/* Гайд-линии иерархии */
+.guideLines {
+    display: flex;
+    flex-shrink: 0;
+    align-self: stretch;
+}
+
+.guideLine {
+    width: 12px;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.guideLine::before {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(58, 215, 211, 0.12);
+}
+
+.treeRow:hover .guideLine::before {
+    background: rgba(58, 215, 211, 0.25);
 }
 
 .treeItem {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex: 1;
     min-width: 0;
-    padding: 7px 12px;
+    padding: 7px 8px 7px 4px;
     border-radius: 8px;
     font-size: 14px;
     color: #b0ccd8;
+    background: transparent;
     transition: background 0.15s ease, color 0.15s ease;
 }
 
@@ -228,6 +434,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    min-width: 0;
 }
 
 .treeChevron {
@@ -255,6 +462,9 @@
     color: #3AD7D3;
 }
 
+/* ============================================
+   USER PANEL
+   ============================================ */
 .userSection {
     flex-shrink: 0;
     border-top: 1px solid #152a3f;
@@ -281,6 +491,15 @@
     font-weight: 600;
     color: #3AD7D3;
     flex-shrink: 0;
+    overflow: hidden;
+    text-transform: uppercase;
+}
+
+.avatarImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
 
 .userText {
@@ -361,6 +580,9 @@
     height: 16px;
 }
 
+/* ============================================
+   NEW MATERIAL BUTTON / INLINE INPUT
+   ============================================ */
 .newMaterialBtn {
     display: flex;
     align-items: center;
@@ -409,4 +631,165 @@
 
 .inlineCreateInput::placeholder {
     color: #506a78;
+}
+
+/* ============================================
+   DnD
+   ============================================ */
+.treeRowDragging {
+    opacity: 0.4;
+}
+
+.treeRowDropOver {
+    background: rgba(99, 102, 241, 0.12);
+    outline: 2px solid rgba(99, 102, 241, 0.6);
+    outline-offset: -2px;
+    border-radius: 6px;
+}
+
+.sectionBodyDropOver {
+    background: rgba(99, 102, 241, 0.06);
+    outline: 2px dashed rgba(99, 102, 241, 0.4);
+    outline-offset: -4px;
+    border-radius: 8px;
+}
+
+.dragOverlay {
+    padding: 6px 12px;
+    background: var(--bg-elevated, #2a2a2e);
+    color: var(--text-primary, #fff);
+    border: 1px solid rgba(99, 102, 241, 0.5);
+    border-radius: 6px;
+    font-size: 14px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    cursor: grabbing;
+    pointer-events: none;
+    white-space: nowrap;
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ============================================
+   ROW ACTIONS (hover-блок с + и ⋯)
+   ============================================ */
+.rowActions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-right: 4px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.treeRow:hover .rowActions {
+    opacity: 1;
+}
+
+.treeRow:has(.treeItemActive) .rowActions {
+    opacity: 1;
+}
+
+/* 🆕 ЭТАП 1: пока внутри строки что-то в фокусе (в т.ч. меню) — держим actions видимыми */
+.treeRow:focus-within .rowActions {
+    opacity: 1;
+}
+
+/* 🆕 ЭТАП 1: на тач-устройствах hover не работает —
+   показываем кнопки действий постоянно */
+@media (hover: none) {
+    .rowActions {
+        opacity: 1;
+    }
+}
+
+/* ═══════════════════════════════════════════
+   🆕 Дата материала в секции "Все материалы"
+   ═══════════════════════════════════════════ */
+
+.treeLabelGroup {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    flex: 1;
+    min-width: 0;
+    line-height: 1.2;
+    gap: 2px;
+}
+
+.treeLabelGroup .treeLabel {
+    width: 100%;
+}
+
+.treeDate {
+    font-size: 10.5px;
+    color: #5a7a8c;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.treeItem:hover .treeDate {
+    color: #7a9aab;
+}
+
+.treeItemActive .treeDate {
+    color: #8ab8c9;
+}
+
+/* ───────────────────────────────────────────────
+   Inline-создание коллекции с выбором иконки
+   ─────────────────────────────────────────────── */
+
+/* Контейнер: [🎨 кнопка] [инпут........] */
+.inlineCreateRow {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+}
+
+/* Кнопка-триггер выбора иконки */
+.iconPickerTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: rgba(58, 215, 211, 0.08);
+  border: 1px solid rgba(58, 215, 211, 0.25);
+  border-radius: 8px;
+  color: #3ad7d3;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.iconPickerTrigger:hover {
+  background: rgba(58, 215, 211, 0.15);
+  border-color: rgba(58, 215, 211, 0.45);
+}
+
+.iconPickerTrigger:active {
+  transform: scale(0.94);
+}
+
+.iconPickerTrigger svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Инпут должен занять остаток ширины */
+.inlineCreateRow .inlineCreateInput {
+  flex: 1 1 auto;
+  min-width: 0;
 }

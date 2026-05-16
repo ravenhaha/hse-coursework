@@ -8,6 +8,14 @@ import {
 } from 'react-icons/io5';
 import styles from './ProfileModal.module.css';
 
+import { useAvatarUpload } from '../../hooks/useAvatarUpload';
+import { getAvatarUrl } from '../../utils/avatar';
+import AvatarEditor from '../AvatarEditor';
+import EditableField from '../ProfileModal/EditableField'; // 🆕
+
+import { usersApi } from '../../api/users';                 // 🆕
+import { useAuth } from '../../hooks/useAuth';              // 🆕
+
 const tabs = [
   { id: 'general', label: 'Общие', icon: IoSettingsOutline },
   { id: 'profile', label: 'Профиль', icon: IoPersonOutline },
@@ -29,7 +37,6 @@ export default function ProfileModal({
   onClose,
   onUpdateSettings,
   onLogout,
-  onDeleteAccount,
   onExportData,
 }) {
   const [activeTab, setActiveTab] = useState('general');
@@ -53,7 +60,9 @@ export default function ProfileModal({
               return (
                 <button
                   key={tab.id}
-                  className={`${styles.tabButton} ${activeTab === tab.id ? styles.tabButtonActive : ''}`}
+                  className={`${styles.tabButton} ${
+                    activeTab === tab.id ? styles.tabButtonActive : ''
+                  }`}
                   onClick={() => setActiveTab(tab.id)}
                 >
                   <Icon className={styles.tabIcon} />
@@ -71,11 +80,7 @@ export default function ProfileModal({
               />
             )}
             {activeTab === 'profile' && (
-              <ProfileTab
-                user={user}
-                onLogout={onLogout}
-                onDeleteAccount={onDeleteAccount}
-              />
+              <ProfileTab user={user} onLogout={onLogout} />
             )}
             {activeTab === 'data' && (
               <DataTab stats={stats} onExportData={onExportData} />
@@ -132,33 +137,111 @@ function GeneralTab({ settings, onUpdateSettings }) {
   );
 }
 
-function ProfileTab({ user, onLogout, onDeleteAccount }) {
+function ProfileTab({ user, onLogout }) {
+  const {
+    inputRef,
+    previewSrc,
+    busy,
+    error,
+    pickFile,
+    onFileChange,
+    cancelCrop,
+    confirmCrop,
+    removeAvatar,
+  } = useAvatarUpload();
+
+  // 🆕 Берём refreshUser напрямую из контекста.
+  // Альтернатива: patchUser({ name: newName }) — быстрее, но не подтянет
+  // другие поля, если их вдруг поменял бэк. refreshUser надёжнее.
+  const { refreshUser } = useAuth();
+
+  const avatarUrl = getAvatarUrl(user);
+  const initial = (user?.name || '?').trim().charAt(0).toUpperCase();
+
+  // 🆕 Сохранение имени.
+  // Бэк ждёт snake_case (display_name), фронт читает camel-like (user.name).
+  // Маппинг живёт в normalizeUser → refreshUser сам всё разрулит.
+  const handleSaveName = async (newName) => {
+    await usersApi.updateProfile({ display_name: newName });
+    await refreshUser();
+  };
+
   return (
     <>
+      {/* ===== Аватар ===== */}
+      <div className={styles.avatarBlock}>
+        <div className={styles.avatarBig}>
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="avatar" />
+          ) : (
+            <span className={styles.avatarInitial}>{initial}</span>
+          )}
+        </div>
+
+        <div className={styles.avatarActions}>
+          <button
+            type="button"
+            className={styles.outlineButton}
+            onClick={pickFile}
+            disabled={busy}
+          >
+            {avatarUrl ? 'Заменить' : 'Загрузить аватар'}
+          </button>
+          {avatarUrl && (
+            <button
+              type="button"
+              className={styles.dangerButton}
+              onClick={removeAvatar}
+              disabled={busy}
+            >
+              Удалить
+            </button>
+          )}
+        </div>
+
+        {error && <div className={styles.avatarError}>{error}</div>}
+
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={onFileChange}
+        />
+      </div>
+
+      {/* ===== Поля профиля ===== */}
       <div className={styles.row}>
         <span className={styles.rowLabel}>Имя</span>
-        <span className={styles.rowValue}>{user?.name || '—'}</span>
+        {/* 🆕 Inline-редактирование имени */}
+        <EditableField
+          value={user?.name || ''}
+          onSave={handleSaveName}
+          placeholder="—"
+          maxLength={100}
+        />
       </div>
       <div className={styles.row}>
         <span className={styles.rowLabel}>Email</span>
         <span className={styles.rowValue}>{maskEmail(user?.email)}</span>
       </div>
-      <div className={styles.row}>
-        <span className={styles.rowLabel}>Телефон</span>
-        <span className={styles.rowValue}>—</span>
-      </div>
+
       <div className={styles.row}>
         <span className={styles.rowLabel}>Выйти со всех устройств</span>
         <button className={styles.dangerButton} onClick={() => onLogout?.()}>
           Выйти
         </button>
       </div>
-      <div className={styles.row}>
-        <span className={styles.rowLabel}>Удалить аккаунт</span>
-        <button className={styles.dangerButton} onClick={() => onDeleteAccount?.()}>
-          Удалить
-        </button>
-      </div>
+
+      {/* ===== Модалка обрезки ===== */}
+      {previewSrc && (
+        <AvatarEditor
+          src={previewSrc}
+          busy={busy}
+          onCancel={cancelCrop}
+          onConfirm={confirmCrop}
+        />
+      )}
     </>
   );
 }

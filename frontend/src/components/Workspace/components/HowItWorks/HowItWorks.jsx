@@ -1,24 +1,40 @@
 import cards from './index.js';
+import styles from './HowItWorks.module.css';
 
 function HowItWorks() {
     return (
-        <div>
-            <h3>
-                Как это работает
-            </h3>
-            <div>
-                {cards.map((card) => (
-                    <div key={card.id}>
-                        <span>{card.number}</span>
-                        <h4>
-                            {card.title}
-                        </h4>
-                        <p>{card.text}</p>
-                    </div>
-                ))}
+        <section className={styles.section}>
+            <header className={styles.head}>
+                <h2 className={styles.title}>Как это работает</h2>
+                <p className={styles.subtitle}>
+                    Три простых шага чтобы превратить документы в живую базу знаний
+                </p>
+            </header>
+
+            <div className={styles.grid}>
+                {cards.map((card) => {
+                    const Icon = card.Icon;
+                    return (
+                        <article key={card.id} className={styles.card}>
+                            <div
+                                className={styles.iconWrap}
+                                style={{
+                                    color: card.color,
+                                    background: `${card.color}1a`,
+                                    borderColor: `${card.color}33`,
+                                }}
+                            >
+                                {Icon && <Icon />}
+                            </div>
+                            <span className={styles.number}>{card.number}</span>
+                            <h3 className={styles.cardTitle}>{card.title}</h3>
+                            <p className={styles.cardText}>{card.text}</p>
+                        </article>
+                    );
+                })}
             </div>
-        </div>
-    )
+        </section>
+    );
 }
 
 export default HowItWorks;

@@ -1,0 +1,258 @@
+/* ════════════════════════════════════════════
+   FILTER BAR — компактные иконки
+   ════════════════════════════════════════════ */
+
+.wrap {
+    position: relative;
+    padding: 6px 8px;
+    margin-bottom: 4px;
+}
+
+.bar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ── Подпись "Фильтры" ── */
+.label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #5a7a8c;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-right: 4px;
+    user-select: none;
+}
+
+/* ── Иконки-кнопки ── */
+.iconBtn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: 7px;
+    color: #7a96a8;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.iconBtn:hover {
+    background: rgba(67, 217, 220, 0.08);
+    color: #b7fcff;
+}
+
+.iconBtnActive {
+    background: rgba(58, 215, 211, 0.12);
+    border-color: rgba(58, 215, 211, 0.35);
+    color: #3AD7D3;
+}
+
+.iconBtnImportant {
+    background: rgba(245, 166, 35, 0.12);
+    border-color: rgba(245, 166, 35, 0.35);
+}
+
+/* Точка-индикатор активного фильтра */
+.dot {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #3AD7D3;
+    box-shadow: 0 0 4px rgba(58, 215, 211, 0.7);
+}
+
+.kindEmoji {
+    font-size: 14px;
+    line-height: 1;
+}
+
+/* ── Кнопка-счётчик "✕ 2" ── */
+.resetInline {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: auto;
+    padding: 3px 8px;
+    border: 1px solid rgba(255, 107, 107, 0.25);
+    background: rgba(255, 107, 107, 0.08);
+    border-radius: 12px;
+    color: #ff8a8a;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.resetInline:hover {
+    background: rgba(255, 107, 107, 0.15);
+    border-color: rgba(255, 107, 107, 0.4);
+}
+
+/* ════════════════════════════════════════════
+   POPUP — узкий, без перекрытий
+   ════════════════════════════════════════════ */
+
+.popup {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 8px;
+    z-index: 100;
+    width: 220px;
+    padding: 10px;
+    background: #0c2438;
+    border: 1px solid #1e3a4d;
+    border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    animation: slideDown 0.15s ease-out;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.popupTitle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #7a96a8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    padding: 0 2px;
+}
+
+/* ── Пресеты дат (2 колонки) ── */
+.presets {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+}
+
+.preset {
+    padding: 6px 8px;
+    border: 1px solid #1e3a4d;
+    background: transparent;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #c6e8f2;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    text-align: center;
+}
+
+.preset:hover {
+    background: rgba(67, 217, 220, 0.08);
+    border-color: rgba(58, 215, 211, 0.4);
+    color: #fff;
+}
+
+.presetActive {
+    background: rgba(58, 215, 211, 0.15);
+    border-color: #3AD7D3;
+    color: #b7fcff;
+}
+
+/* ── Date inputs ── */
+.dateField {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    font-size: 12px;
+    color: #89aab7;
+}
+
+.dateField span {
+    width: 24px;
+    flex-shrink: 0;
+}
+
+.dateField input {
+    flex: 1;
+    padding: 4px 6px;
+    border: 1px solid #1e3a4d;
+    background: #0a1f2c;
+    color: #e5edf2;
+    border-radius: 5px;
+    font-size: 12px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.dateField input:focus {
+    border-color: rgba(58, 215, 211, 0.5);
+}
+
+/* ── Список типов ── */
+.kindList {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.kindRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 8px;
+    border: 0;
+    background: transparent;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #c6e8f2;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+}
+
+.kindRow:hover {
+    background: rgba(67, 217, 220, 0.08);
+}
+
+.kindRowActive {
+    background: rgba(58, 215, 211, 0.12);
+    color: #b7fcff;
+}
+
+.check {
+    margin-left: auto;
+    color: #3AD7D3;
+    font-weight: 700;
+}
+
+/* ── Разделитель ── */
+.divider {
+    height: 1px;
+    background: #1e3a4d;
+    margin: 8px -10px;
+}
+
+/* ── Очистить ── */
+.clearBtn {
+    width: 100%;
+    padding: 6px;
+    border: 0;
+    background: transparent;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #ff8a8a;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.clearBtn:hover {
+    background: rgba(255, 107, 107, 0.08);
+}

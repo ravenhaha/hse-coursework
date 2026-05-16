@@ -1,0 +1,174 @@
+/* ════════════════════════════════
+   Режим просмотра
+   ════════════════════════════════ */
+.viewWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.viewValue {
+  font-size: 15px;
+  color: #F2FEFF;
+  font-weight: 500;
+  text-align: right;
+}
+
+.editBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #6b8fa0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  opacity: 0; /* по умолчанию скрыта, показываем на hover родительской строки */
+}
+
+/* 🆕 Иконка появляется при наведении на строку (.row из ProfileModal)
+   ИЛИ на саму обёртку поля. Селектор завязан на родителя через :has,
+   но также есть fallback — hover на самой обёртке. */
+.viewWrap:hover .editBtn,
+.editBtn:focus-visible {
+  opacity: 1;
+}
+
+.editBtn:hover {
+  background: rgba(58, 215, 211, 0.1);
+  border-color: rgba(58, 215, 211, 0.3);
+  color: #3AD7D3;
+}
+
+.editBtn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ════════════════════════════════
+   Режим редактирования
+   ════════════════════════════════ */
+.editWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  justify-content: flex-end;
+}
+
+.input {
+  flex: 1;
+  max-width: 260px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid #1f4e67;
+  background: #0f3246;
+  color: #F2FEFF;
+  font-size: 14px;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  text-align: right;
+}
+
+.input:focus {
+  border-color: #43d9dc;
+  box-shadow: 0 0 0 3px rgba(58, 215, 211, 0.12);
+}
+
+.input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.inputError {
+  border-color: #e05555;
+}
+
+.inputError:focus {
+  border-color: #e05555;
+  box-shadow: 0 0 0 3px rgba(224, 85, 85, 0.18);
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.actionBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.actionBtn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.confirmBtn {
+  color: #3AD7D3;
+  border-color: rgba(58, 215, 211, 0.3);
+}
+
+.confirmBtn:hover:not(:disabled) {
+  background: rgba(58, 215, 211, 0.12);
+  border-color: #3AD7D3;
+}
+
+.cancelBtn {
+  color: #8fb2c3;
+  border-color: rgba(143, 178, 195, 0.2);
+}
+
+.cancelBtn:hover:not(:disabled) {
+  background: rgba(224, 85, 85, 0.1);
+  border-color: #e05555;
+  color: #ff7a7a;
+}
+
+/* ════════════════════════════════
+   Spinner
+   ════════════════════════════════ */
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(58, 215, 211, 0.25);
+  border-top-color: #3AD7D3;
+  border-radius: 50%;
+  animation: editableSpin 0.8s linear infinite;
+}
+
+@keyframes editableSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ════════════════════════════════
+   Ошибка
+   ════════════════════════════════ */
+.errorText {
+  font-size: 12px;
+  color: #ff7a7a;
+  text-align: right;
+}

@@ -1,81 +1,88 @@
 import { FaVk, FaYandex } from 'react-icons/fa';
-import styles from './AuthForm.module.css';
+import styles from '../Auth.module.css';
+import PasswordInput from './PasswordInput';
+import PasswordHints from './PasswordHints';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 export default function AuthForm({
-  mode,
-  email,
-  password,
-  confirmPassword,
-  errorText,
-  loading,
-  isFormReady,
-  onEmailChange,
-  onPasswordChange,
-  onConfirmChange,
-  onSubmit,
+  mode, email, password, confirmPassword, errorText, loading, isFormReady,
+  onEmailChange, onPasswordChange, onConfirmChange, onSubmit,
 }) {
+  const submitText = mode === 'register' ? 'Создать аккаунт' : 'Войти';
+  const isRegister = mode === 'register';
+  const showHints = isRegister && password.length > 0;
+  const passwordsMatch =
+    isRegister && confirmPassword.length > 0
+      ? password === confirmPassword
+      : undefined;
+
   return (
-    <form onSubmit={onSubmit} className={styles.form}>
+    <form className={styles.form} onSubmit={onSubmit}>
       <input
-        type="email"
-        placeholder="Email"
-        value={email}
+        className={styles.input}
         onChange={(e) => onEmailChange(e.target.value)}
-        className={styles.input}
-        required
+        placeholder="Электронная почта"
+        type="email"
+        value={email}
+        autoComplete="email"
       />
 
-      <input
-        type="password"
-        placeholder="Пароль"
+      <PasswordInput
         value={password}
-        onChange={(e) => onPasswordChange(e.target.value)}
-        className={styles.input}
-        required
+        onChange={onPasswordChange}
+        placeholder={isRegister ? 'Пароль' : 'Пароль'}
+        autoComplete={isRegister ? 'new-password' : 'current-password'}
       />
 
-      {mode === 'register' && (
-        <input
-          type="password"
-          placeholder="Повторите пароль"
-          value={confirmPassword}
-          onChange={(e) => onConfirmChange(e.target.value)}
-          className={styles.input}
-          required
+      {showHints && (
+        <PasswordHints
+          password={password}
+          match={passwordsMatch}
         />
       )}
 
+      <div className={`${styles.confirmWrap} ${isRegister ? styles.confirmWrapOpen : ''}`}>
+        <div className={styles.confirmInner}>
+          <PasswordInput
+            value={confirmPassword}
+            onChange={onConfirmChange}
+            placeholder="Подтвердите пароль"
+            disabled={!isRegister}
+            tabIndex={isRegister ? 0 : -1}
+            autoComplete="new-password"
+          />
+        </div>
+      </div>
+
       {errorText && <p className={styles.error}>{errorText}</p>}
 
-      <button
-        type="submit"
-        className={styles.submit}
-        disabled={!isFormReady || loading}
-      >
-        {loading
-          ? 'Подождите...'
-          : mode === 'register' ? 'Зарегистрироваться' : 'Войти'}
-      </button>
+      <div className={styles.dividerWrap}>
+        <span className={styles.dividerText}>или</span>
+      </div>
 
-      <div className={styles.divider}>или</div>
-      <div className={styles.oauth}>
+      <div className={styles.oauthRow}>
         <button
-          type="button"
-          className={styles.oauthBtn}
+          aria-label="Войти через VK"
+          className={styles.oauthButton}
           onClick={() => { window.location.href = `${API_BASE}/auth/vk`; }}
+          type="button"
         >
-          <FaVk /> VK
+          <FaVk />
         </button>
         <button
-          type="button"
-          className={styles.oauthBtn}
+          aria-label="Войти через Яндекс"
+          className={styles.oauthButton}
           onClick={() => { window.location.href = `${API_BASE}/auth/yandex`; }}
+          type="button"
         >
-          <FaYandex /> Яндекс
+          <FaYandex />
         </button>
       </div>
+
+      <button className={styles.submitButton} disabled={loading || !isFormReady} type="submit">
+        {loading ? 'Загрузка...' : submitText}
+      </button>
     </form>
   );
 }

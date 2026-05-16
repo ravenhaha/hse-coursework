@@ -1,17 +1,35 @@
-import ButtonMain from '../../../Ui/ButtonMain/ButtonMain';
+import { IoSparkles, IoAdd } from 'react-icons/io5';
+import styles from './WelcomeBanner.module.css';
 
 function WelcomeBanner({ onAddMaterial }) {
     return (
-        <div>
-            <h2>Начните создавать свою базу знаний</h2>
-            <p>
-                Омут памяти поможет вам организовать материалы, извлечь ключевые идеи
-                и укрепить знания через интервальное повторение
+        <section className={styles.banner}>
+            <div className={styles.glow} aria-hidden="true" />
+
+            <div className={styles.badge}>
+                <IoSparkles />
+                <span>Добро пожаловать</span>
+            </div>
+
+            <h1 className={styles.title}>
+                Начните создавать свою <span className={styles.accent}>базу знаний</span>
+            </h1>
+
+            <p className={styles.subtitle}>
+                Омут памяти поможет организовать материалы, найти ключевые идеи
+                и закрепить знания. Загружайте документы, делайте заметки
+                и связывайте всё в единую систему.
             </p>
-            <ButtonMain onClick={onAddMaterial}>
-                Добавить первый материал +
-            </ButtonMain>
-        </div>
+
+            <button
+                type="button"
+                onClick={onAddMaterial}
+                className={styles.cta}
+            >
+                <IoAdd className={styles.ctaIcon} />
+                <span>Добавить первый материал</span>
+            </button>
+        </section>
     );
 }
 

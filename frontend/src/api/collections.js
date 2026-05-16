@@ -1,14 +1,23 @@
+// api/collections.js
 import { apiFetch } from './client';
 
 export const collectionsApi = {
-  list: () => apiFetch('/collections/'),
+  tree: () => apiFetch('/collections/tree'),
+
+  list: (parentId = null) => {
+    const qs = parentId !== null ? `?parent_id=${parentId}` : '';
+    return apiFetch(`/collections/${qs}`);
+  },
 
   get: (id) => apiFetch(`/collections/${id}`),
 
-  create: (name, parentId = null) =>
+  search: (query) =>
+    apiFetch(`/collections/search?q=${encodeURIComponent(query)}`),
+
+  create: (name, parentId = null, icon = null) =>
     apiFetch('/collections/', {
       method: 'POST',
-      body: { collection_name: name, parent_id: parentId },
+      body: { name, icon, parent_id: parentId },
     }),
 
   update: (id, data) =>

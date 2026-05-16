@@ -1,352 +1,388 @@
+"""Парсинг загружаемых файлов в HTML для редактора материалов.
+
+Поддерживаются:
+    .txt / .md / .rtf  — простой текст
+    .pdf               — через PyMuPDF (опционально)
+    .docx              — через python-docx (с inline-стилями, картинками, таблицами)
+
+Все возвращаемые HTML-строки безопасны для прямого рендера во фронте:
+    - текст экранирован
+    - значения CSS-стилей провалидированы по белому списку
+"""
+
+import base64
+import logging
+import re
 from pathlib import Path
+from typing import Optional
+
 from docx import Document
-from docx.shared import Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
-import base64
+from docx.table import Table
+from docx.text.paragraph import Paragraph
+
+logger = logging.getLogger(__name__)
 
 
-def extract_text_from_file(file_path: str) -> str | None:
+# ══════════════════════════════════════════
+# Безопасность: валидация значений из docx
+# ══════════════════════════════════════════
+
+# Цвет — только hex (3 или 6 символов), регистр любой
+_HEX_COLOR_RE = re.compile(r"^[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?$")
+# Имя шрифта — буквы/цифры/пробел/тире
+_FONT_NAME_RE = re.compile(r"^[A-Za-zА-Яа-я0-9 \-]+$")
+# Стиль heading
+_HEADING_RE = re.compile(r"^heading\s*(\d)", re.IGNORECASE)
+
+
+def _safe_color(value: str | None) -> str | None:
+    """Возвращает '#xxxxxx' если value — валидный hex-цвет, иначе None."""
+    if not value:
+        return None
+    if _HEX_COLOR_RE.match(value):
+        return f"#{value}"
+    return None
+
+
+def _safe_font_name(value: str | None) -> str | None:
+    """Пропускает только безопасные имена шрифтов."""
+    if not value:
+        return None
+    if _FONT_NAME_RE.match(value):
+        return value
+    return None
+
+
+def _escape_html(text: str) -> str:
+    """Экранирует символы, ломающие HTML."""
+    return (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
+# ══════════════════════════════════════════
+# Публичный API
+# ══════════════════════════════════════════
+
+# Карта парсеров по расширению (заполняется ниже после объявлений)
+_PARSERS: dict[str, callable] = {}
+
+
+def extract_text_from_file(file_path: str | Path) -> Optional[str]:
+    """Извлекает HTML-представление файла. Возвращает None при ошибке/неподдерж. формате."""
     path = Path(file_path)
-    ext = path.suffix.lower()
-
+    parser = _PARSERS.get(path.suffix.lower())
+    if parser is None:
+        logger.warning("Unsupported file extension: %s", path.suffix)
+        return None
     try:
-        if ext in (".txt", ".md", ".rtf"):
-            return _parse_txt(path)
-        elif ext == ".pdf":
-            return _parse_pdf(path)
-        elif ext == ".docx":
-            return _parse_docx(path)
-        else:
-            return None
-    except Exception as e:
-        print(f"[file_parser] Ошибка парсинга {file_path}: {e}")
+        return parser(path)
+    except Exception:
+        logger.exception("Failed to parse file %s", path)
         return None
 
 
+# ══════════════════════════════════════════
+# TXT / MD / RTF
+# ══════════════════════════════════════════
+
 def _parse_txt(path: Path) -> str:
-    with open(path, "r", encoding="utf-8", errors="ignore") as f:
-        return f"<p>{f.read()}</p>"
+    text = path.read_text(encoding="utf-8", errors="ignore")
+    # Каждый непустой абзац — в <p>
+    paragraphs = [
+        f"<p>{_escape_html(line)}</p>"
+        for line in text.split("\n")
+        if line.strip()
+    ]
+    return "\n".join(paragraphs) if paragraphs else "<p></p>"
+
+
+# ══════════════════════════════════════════
+# PDF
+# ══════════════════════════════════════════
+
+try:
+    import fitz  # PyMuPDF
+    _PDF_AVAILABLE = True
+except ImportError:
+    fitz = None
+    _PDF_AVAILABLE = False
+    logger.warning("PyMuPDF не установлен — парсинг PDF отключён. pip install PyMuPDF")
 
 
 def _parse_pdf(path: Path) -> str:
-    try:
-        import fitz
-    except ImportError:
-        print("[file_parser] Установи: pip install PyMuPDF")
+    if not _PDF_AVAILABLE:
         return ""
-
-    text_parts = []
+    paragraphs: list[str] = []
     with fitz.open(str(path)) as doc:
         for page in doc:
-            text_parts.append(page.get_text())
-    return "".join(f"<p>{line}</p>" for line in "\n".join(text_parts).split("\n") if line.strip())
+            for line in page.get_text().split("\n"):
+                line = line.strip()
+                if line:
+                    paragraphs.append(f"<p>{_escape_html(line)}</p>")
+    return "\n".join(paragraphs)
 
+
+# ══════════════════════════════════════════
+# DOCX
+# ══════════════════════════════════════════
 
 def _parse_docx(path: Path) -> str:
     doc = Document(str(path))
-    html_parts = []
-
-    # Парсим картинки из docx в base64
     images = _extract_images(doc)
+    parts: list[str] = []
 
+    # Идём по xml-элементам в правильном порядке (параграфы и таблицы вперемешку)
     for element in doc.element.body:
-        tag = element.tag.split("}")[-1] if "}" in element.tag else element.tag
+        tag = element.tag.rsplit("}", 1)[-1]
 
         if tag == "p":
-            para = _find_paragraph(doc, element)
-            if para is not None:
-                html_parts.append(_render_paragraph(para, images))
+            # Прямое оборачивание — O(1) вместо поиска через doc.paragraphs
+            parts.append(_render_paragraph(Paragraph(element, doc), images))
 
         elif tag == "tbl":
-            table = _find_table(doc, element)
-            if table is not None:
-                html_parts.append(_render_table(table, images))
+            parts.append(_render_table(Table(element, doc), images))
 
-    return "\n".join(html_parts)
+    return "\n".join(parts)
 
 
-def _find_paragraph(doc, element):
-    for para in doc.paragraphs:
-        if para._element is element:
-            return para
-    return None
-
-
-def _find_table(doc, element):
-    for table in doc.tables:
-        if table._element is element:
-            return table
-    return None
-
-
-def _extract_images(doc) -> dict:
-    """Извлекает картинки из docx, возвращает {rId: base64_data_url}"""
-    images = {}
+def _extract_images(doc) -> dict[str, str]:
+    """rId → data:image/...;base64,... — для inline-вставки в <img src>."""
+    images: dict[str, str] = {}
     try:
         for rel_id, rel in doc.part.rels.items():
-            if "image" in rel.reltype:
-                image_part = rel.target_part
-                content_type = image_part.content_type
-                image_data = image_part.blob
-                b64 = base64.b64encode(image_data).decode("utf-8")
-                images[rel_id] = f"data:{content_type};base64,{b64}"
+            if "image" not in rel.reltype:
+                continue
+            image_part = rel.target_part
+            b64 = base64.b64encode(image_part.blob).decode("ascii")
+            images[rel_id] = f"data:{image_part.content_type};base64,{b64}"
     except Exception:
-        pass
+        logger.exception("Failed to extract images from docx")
     return images
 
 
-# ── Paragraph ──
+# ── Параграф ──
 
-def _render_paragraph(para, images) -> str:
-    # Проверяем есть ли картинка в параграфе
-    img_html = _extract_inline_images(para, images)
+_ALIGN_MAP = {
+    WD_ALIGN_PARAGRAPH.LEFT: "left",
+    WD_ALIGN_PARAGRAPH.CENTER: "center",
+    WD_ALIGN_PARAGRAPH.RIGHT: "right",
+    WD_ALIGN_PARAGRAPH.JUSTIFY: "justify",
+}
 
-    style_name = (para.style.name or "").lower()
 
-    # Heading
-    heading_level = None
-    if style_name.startswith("heading"):
-        try:
-            heading_level = int(style_name.replace("heading", "").strip())
-            if heading_level > 4:
-                heading_level = None
-        except ValueError:
-            heading_level = None
-
-    # Alignment
-    align = _get_alignment(para)
-
-    # Собираем inline content
+def _render_paragraph(para: Paragraph, images: dict[str, str]) -> str:
     inline_html = _render_runs(para.runs)
+    img_html = _extract_inline_images(para, images)
     content = inline_html + img_html
-
     if not content.strip():
         content = "<br>"
 
-    # Атрибуты
-    attrs = ""
-    if align and align != "left":
-        attrs = f' style="text-align: {align}"'
+    # Heading: H1..H4
+    heading_level: int | None = None
+    style_name = (para.style.name or "")
+    m = _HEADING_RE.match(style_name)
+    if m:
+        level = int(m.group(1))
+        if 1 <= level <= 4:
+            heading_level = level
+
+    # Выравнивание
+    align = _ALIGN_MAP.get(para.alignment)
+    style_attr = f' style="text-align: {align}"' if align and align != "left" else ""
 
     if heading_level:
-        return f"<h{heading_level}{attrs}>{content}</h{heading_level}>"
-    else:
-        return f"<p{attrs}>{content}</p>"
-
-
-def _get_alignment(para) -> str | None:
-    alignment = para.alignment
-    if alignment is None:
-        return None
-    mapping = {
-        WD_ALIGN_PARAGRAPH.LEFT: "left",
-        WD_ALIGN_PARAGRAPH.CENTER: "center",
-        WD_ALIGN_PARAGRAPH.RIGHT: "right",
-        WD_ALIGN_PARAGRAPH.JUSTIFY: "justify",
-    }
-    return mapping.get(alignment)
+        return f"<h{heading_level}{style_attr}>{content}</h{heading_level}>"
+    return f"<p{style_attr}>{content}</p>"
 
 
 def _render_runs(runs) -> str:
-    parts = []
+    """Текст с инлайновыми стилями (bold/italic/colour/...)."""
+    parts: list[str] = []
+
     for run in runs:
         text = run.text
         if not text:
             continue
-
         text = _escape_html(text)
 
-        # Собираем стили
-        styles = []
-        tags_open = []
-        tags_close = []
+        opens: list[str] = []
+        closes: list[str] = []
 
-        # Bold
-        if run.bold:
-            tags_open.append("<strong>")
-            tags_close.insert(0, "</strong>")
+        # Тэги форматирования: симметрично open/close
+        if run.bold:               opens.append("<strong>"); closes.insert(0, "</strong>")
+        if run.italic:             opens.append("<em>");     closes.insert(0, "</em>")
+        if run.underline:          opens.append("<u>");      closes.insert(0, "</u>")
+        if run.font.strike:        opens.append("<s>");      closes.insert(0, "</s>")
+        if run.font.subscript:     opens.append("<sub>");    closes.insert(0, "</sub>")
+        if run.font.superscript:   opens.append("<sup>");    closes.insert(0, "</sup>")
 
-        # Italic
-        if run.italic:
-            tags_open.append("<em>")
-            tags_close.insert(0, "</em>")
-
-        # Underline
-        if run.underline:
-            tags_open.append("<u>")
-            tags_close.insert(0, "</u>")
-
-        # Strike
-        if run.font.strike:
-            tags_open.append("<s>")
-            tags_close.insert(0, "</s>")
-
-        # Subscript
-        if run.font.subscript:
-            tags_open.append("<sub>")
-            tags_close.insert(0, "</sub>")
-
-        # Superscript
-        if run.font.superscript:
-            tags_open.append("<sup>")
-            tags_close.insert(0, "</sup>")
-
-        # Color & Font — через <span style="...">
+        # CSS-стили (только провалидированные значения!)
+        styles: list[str] = []
         color = _get_run_color(run)
-        font_family = run.font.name
-        font_size = run.font.size
-
         if color:
             styles.append(f"color: {color}")
+
+        font_family = _safe_font_name(run.font.name)
         if font_family:
             styles.append(f"font-family: {font_family}")
-        if font_size:
-            size_pt = font_size.pt
-            styles.append(f"font-size: {size_pt}pt")
+
+        if run.font.size is not None:
+            styles.append(f"font-size: {run.font.size.pt}pt")
 
         if styles:
-            style_str = "; ".join(styles)
-            tags_open.insert(0, f'<span style="{style_str}">')
-            tags_close.append("</span>")
+            opens.insert(0, f'<span style="{"; ".join(styles)}">')
+            closes.append("</span>")
 
-        parts.append("".join(tags_open) + text + "".join(tags_close))
+        parts.append("".join(opens) + text + "".join(closes))
 
     return "".join(parts)
 
 
 def _get_run_color(run) -> str | None:
+    # Сначала через python-docx API
     try:
-        color = run.font.color
-        if color and color.rgb:
-            return f"#{color.rgb}"
+        rgb = run.font.color.rgb if run.font.color else None
+        if rgb is not None:
+            return _safe_color(str(rgb))
     except Exception:
         pass
 
-    # Fallback: проверяем XML напрямую
+    # Fallback — прямо из XML
     try:
         rpr = run._element.find(qn("w:rPr"))
-        if rpr is not None:
-            color_el = rpr.find(qn("w:color"))
-            if color_el is not None:
-                val = color_el.get(qn("w:val"))
-                if val and val != "auto":
-                    return f"#{val}"
+        if rpr is None:
+            return None
+        color_el = rpr.find(qn("w:color"))
+        if color_el is None:
+            return None
+        val = color_el.get(qn("w:val"))
+        if val and val != "auto":
+            return _safe_color(val)
     except Exception:
         pass
-
     return None
 
 
-def _extract_inline_images(para, images) -> str:
-    """Ищет inline картинки в параграфе"""
-    html = ""
+def _extract_inline_images(para: Paragraph, images: dict[str, str]) -> str:
+    """Inline-картинки внутри одного параграфа."""
+    html_parts: list[str] = []
     try:
         for run_elem in para._element.findall(qn("w:r")):
-            drawings = run_elem.findall(f".//{qn('w:drawing')}")
-            for drawing in drawings:
-                blips = drawing.findall(f".//{qn('a:blip')}")
-                for blip in blips:
-                    embed = blip.get(qn("r:embed"))
-                    if embed and embed in images:
-                        html += f'<img src="{images[embed]}" />'
+            for blip in run_elem.findall(f".//{qn('a:blip')}"):
+                embed = blip.get(qn("r:embed"))
+                if embed and embed in images:
+                    html_parts.append(f'<img src="{images[embed]}" />')
     except Exception:
-        pass
-    return html
+        logger.exception("Failed to extract inline images")
+    return "".join(html_parts)
 
 
-# ── Table ──
+# ── Таблица ──
 
-def _render_table(table, images) -> str:
-    html = '<table class="editor-table">'
+_VALIGN_MAP = {"top": "top", "center": "middle", "bottom": "bottom"}
 
-    for i, row in enumerate(table.rows):
-        html += "<tr>"
+
+def _render_table(table: Table, images: dict[str, str]) -> str:
+    rows_html: list[str] = ['<table class="editor-table">']
+
+    for row_idx, row in enumerate(table.rows):
+        rows_html.append("<tr>")
+        tag = "th" if row_idx == 0 else "td"
+
         for cell in row.cells:
-            tag = "th" if i == 0 else "td"
+            cell_lines = [
+                _render_runs(p.runs) + _extract_inline_images(p, images)
+                for p in cell.paragraphs
+            ]
+            content = "<br>".join(cell_lines) if cell_lines else ""
 
-            # Собираем содержимое ячейки
-            cell_content = []
-            for para in cell.paragraphs:
-                inline = _render_runs(para.runs)
-                img = _extract_inline_images(para, images)
-                cell_content.append(inline + img)
+            styles = _get_cell_styles(cell)
+            style_attr = f' style="{styles}"' if styles else ""
+            span_attr = _get_cell_span(cell)
 
-            content = "<br>".join(cell_content) if cell_content else ""
+            rows_html.append(f"<{tag}{span_attr}{style_attr}>{content}</{tag}>")
+        rows_html.append("</tr>")
 
-            # Стили ячейки
-            cell_styles = _get_cell_styles(cell)
-            style_attr = f' style="{cell_styles}"' if cell_styles else ""
-
-            # Colspan/rowspan
-            span_attrs = _get_cell_span(cell)
-
-            html += f"<{tag}{span_attrs}{style_attr}>{content}</{tag}>"
-        html += "</tr>"
-
-    html += "</table>"
-    return html
+    rows_html.append("</table>")
+    return "".join(rows_html)
 
 
 def _get_cell_styles(cell) -> str:
-    styles = []
-
+    styles: list[str] = []
     try:
-        tc = cell._element
-        tcPr = tc.find(qn("w:tcPr"))
-        if tcPr is not None:
-            # Background color
-            shd = tcPr.find(qn("w:shd"))
-            if shd is not None:
-                fill = shd.get(qn("w:fill"))
-                if fill and fill != "auto":
-                    styles.append(f"background-color: #{fill}")
+        tcPr = cell._element.find(qn("w:tcPr"))
+        if tcPr is None:
+            return ""
 
-            # Borders
-            borders = tcPr.find(qn("w:tcBorders"))
-            if borders is not None:
-                for side in ["top", "bottom", "left", "right"]:
-                    border = borders.find(qn(f"w:{side}"))
-                    if border is not None:
-                        val = border.get(qn("w:val"))
-                        if val and val != "none" and val != "nil":
-                            sz = border.get(qn("w:sz"), "4")
-                            color = border.get(qn("w:color"), "000000")
-                            px = max(1, int(sz) // 8)
-                            styles.append(f"border-{side}: {px}px solid #{color}")
+        # Background
+        shd = tcPr.find(qn("w:shd"))
+        if shd is not None:
+            fill = shd.get(qn("w:fill"))
+            color = _safe_color(fill) if fill and fill != "auto" else None
+            if color:
+                styles.append(f"background-color: {color}")
 
-            # Vertical align
-            vAlign = tcPr.find(qn("w:vAlign"))
-            if vAlign is not None:
-                val = vAlign.get(qn("w:val"))
-                mapping = {"top": "top", "center": "middle", "bottom": "bottom"}
-                if val in mapping:
-                    styles.append(f"vertical-align: {mapping[val]}")
+        # Borders
+        borders = tcPr.find(qn("w:tcBorders"))
+        if borders is not None:
+            for side in ("top", "bottom", "left", "right"):
+                border = borders.find(qn(f"w:{side}"))
+                if border is None:
+                    continue
+                val = border.get(qn("w:val"))
+                if not val or val in ("none", "nil"):
+                    continue
+                sz = border.get(qn("w:sz"), "4")
+                color_raw = border.get(qn("w:color"), "000000")
+                color = _safe_color(color_raw) or "#000000"
+                try:
+                    px = max(1, int(sz) // 8)
+                except ValueError:
+                    px = 1
+                styles.append(f"border-{side}: {px}px solid {color}")
+
+        # Vertical alignment
+        vAlign = tcPr.find(qn("w:vAlign"))
+        if vAlign is not None:
+            mapped = _VALIGN_MAP.get(vAlign.get(qn("w:val"), ""))
+            if mapped:
+                styles.append(f"vertical-align: {mapped}")
     except Exception:
-        pass
+        logger.exception("Failed to compute cell styles")
 
     return "; ".join(styles)
 
 
 def _get_cell_span(cell) -> str:
-    attrs = ""
     try:
-        tc = cell._element
-        tcPr = tc.find(qn("w:tcPr"))
-        if tcPr is not None:
-            gridSpan = tcPr.find(qn("w:gridSpan"))
-            if gridSpan is not None:
-                val = gridSpan.get(qn("w:val"))
-                if val and int(val) > 1:
-                    attrs += f' colspan="{val}"'
+        tcPr = cell._element.find(qn("w:tcPr"))
+        if tcPr is None:
+            return ""
+        gridSpan = tcPr.find(qn("w:gridSpan"))
+        if gridSpan is None:
+            return ""
+        val = gridSpan.get(qn("w:val"))
+        if val and val.isdigit() and int(val) > 1:
+            return f' colspan="{val}"'
     except Exception:
-        pass
-    return attrs
+        logger.exception("Failed to compute cell span")
+    return ""
 
 
-def _escape_html(text: str) -> str:
-    return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-    )
+# ══════════════════════════════════════════
+# Регистрируем парсеры
+# ══════════════════════════════════════════
+
+_PARSERS.update({
+    ".txt":  _parse_txt,
+    ".md":   _parse_txt,
+    ".rtf":  _parse_txt,
+    ".pdf":  _parse_pdf,
+    ".docx": _parse_docx,
+})

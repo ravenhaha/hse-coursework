@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext.jsx';
 import DiveProvider from './context/DiveContext';
 import useDive from './hooks/useDive';
 
@@ -15,6 +15,7 @@ import GrainOverlay from './components/Effects/GrainOverlay/GrainOverlay.jsx';
 import AmbientParticles from './components/Effects/AmbientParticles/AmbientParticles.jsx';
 // import LumosCursor from './components/Effects/LumosCursor/LumosCursor.jsx';
 import DevNav from './components/DevNav/DevNav.jsx';
+import NetworkStatusBanner from './components/NetworkStatusBanner/NetworkStatusBanner.jsx'; // 🆕
 
 import styles from './App.module.css';
 
@@ -31,6 +32,9 @@ function AppContent() {
 
     return (
         <div className={styles.root}>
+            {/* 🆕 Глобальный баннер "нет связи" — висит поверх всего на всех страницах */}
+            <NetworkStatusBanner />
+
             {!isAuth && <AmbientParticles />}
             <GrainOverlay />
             {/* {isHome && <LumosCursor />} */}

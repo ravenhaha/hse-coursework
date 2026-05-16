@@ -36,6 +36,19 @@ function pluralWords(n) {
   return 'слов';
 }
 
+function findCollectionById(nodes, id) {
+  if (id == null) return null;
+  for (const n of nodes) {
+    if (n.type && n.type !== 'folder') continue;
+    if (n.id === id) return n;
+    if (n.children?.length) {
+      const found = findCollectionById(n.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 const BottomIcon = ({ children }) => (
   <svg
     width="18" height="18" viewBox="0 0 24 24"
@@ -144,6 +157,8 @@ export default function AddMaterialModal({
   onClose,
   onSubmit,
   initialCollection = null,
+  initialMode = null, // 🆕 initialMode: 'upload' | 'editor' | null
+  collections = [],
 }) {
   const [state, dispatch] = useReducer(reducer, initialState);
 
@@ -152,13 +167,51 @@ export default function AddMaterialModal({
 
   const [editorMounted, setEditorMounted] = useState(false);
   const [wordCount, setWordCount] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Подставляем предвыбранную коллекцию каждый раз при открытии модалки
+  // 🆕 initialMode: при открытии переключаемся на нужный таб
   useEffect(() => {
-    if (isOpen && initialCollection) {
-      dispatch({ type: ACTIONS.SET_COLLECTION, payload: initialCollection });
+    if (isOpen && initialMode) {
+      dispatch({ type: ACTIONS.SET_MODE, payload: initialMode });
+      if (initialMode === 'editor') setEditorMounted(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, initialMode]);
+
+  useEffect(() => {
+    if (isOpen && initialCollection != null) {
+      const exists = findCollectionById(collections, initialCollection);
+      if (exists) {
+        dispatch({ type: ACTIONS.SET_COLLECTION, payload: initialCollection });
+      } else {
+        if (import.meta.env?.DEV) {
+          console.warn(
+            `⚠️ initialCollection=${initialCollection} больше не существует в дереве`
+          );
+        }
+        dispatch({ type: ACTIONS.SET_COLLECTION, payload: null });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialCollection]);
+
+  useEffect(() => {
+    if (!isOpen || state.collection == null) return;
+
+    const exists = findCollectionById(collections, state.collection);
+    if (!exists) {
+      if (import.meta.env?.DEV) {
+        console.warn(
+          `⚠️ Выбранная коллекция id=${state.collection} удалена — сбрасываем`
+        );
+      }
+      dispatch({ type: ACTIONS.SET_COLLECTION, payload: null });
+      dispatch({
+        type: ACTIONS.SET_ERROR,
+        payload: 'Выбранная коллекция была удалена. Выберите другую.',
+      });
+    }
+  }, [collections, state.collection, isOpen]);
 
   const handleEditorReady = useCallback((ed) => {
     editorRef.current = ed;
@@ -200,68 +253,119 @@ export default function AddMaterialModal({
   }, []);
 
   const handleClose = useCallback(() => {
+    if (submitting) return;
     dispatch({ type: ACTIONS.RESET });
     setEditorMounted(false);
     setWordCount(0);
     onClose();
-  }, [onClose]);
+  }, [onClose, submitting]);
 
-  const handleSubmit = useCallback(() => {
-    if (!state.collection) {
+  const handleSubmit = useCallback(async () => {
+    if (submitting) return;
+
+    if (state.collection == null) {
       dispatch({ type: ACTIONS.SET_ERROR, payload: 'Выберите коллекцию' });
       return;
     }
 
-    if (state.mode === 'upload') {
-      if (state.files.length === 0) {
-        dispatch({ type: ACTIONS.SET_ERROR, payload: 'Добавьте хотя бы один файл' });
-        return;
-      }
+    const exists = findCollectionById(collections, state.collection);
+    if (!exists) {
+      dispatch({
+        type: ACTIONS.SET_ERROR,
+        payload: 'Выбранная коллекция была удалена. Выберите другую.',
+      });
+      dispatch({ type: ACTIONS.SET_COLLECTION, payload: null });
+      return;
+    }
 
+    if (state.mode === 'upload' && state.files.length === 0) {
+      dispatch({ type: ACTIONS.SET_ERROR, payload: 'Добавьте хотя бы один файл' });
+      return;
+    }
+
+    let payload;
+    if (state.mode === 'upload') {
       const finalFiles = state.files.map((item) => ({
         file: item.file,
         tags: item.tags,
         isImportant: item.isImportant,
       }));
-
-      onSubmit({
+      payload = {
         mode: 'upload',
         collection: state.collection,
         files: finalFiles,
-      });
-    }
-
-    if (state.mode === 'editor') {
+      };
+    } else {
       const ed = editorRef.current;
       const content = ed ? ed.getHTML() : '';
       const textLength = ed ? ed.state.doc.textContent.length : 0;
 
       if (textLength === 0 && !state.title.trim()) {
-        dispatch({ type: ACTIONS.SET_ERROR, payload: 'Введите заголовок или текст' });
+        dispatch({
+          type: ACTIONS.SET_ERROR,
+          payload: 'Введите заголовок или текст',
+        });
         return;
       }
 
-      onSubmit({
+      payload = {
         mode: 'editor',
         collection: state.collection,
         title: state.title,
         content,
         tags: state.editorTags,
         isImportant: state.editorImportant,
-      });
+      };
     }
 
-    handleClose();
-  }, [state, onSubmit, handleClose]);
+    setSubmitting(true);
+    try {
+      await onSubmit(payload);
+      dispatch({ type: ACTIONS.RESET });
+      setEditorMounted(false);
+      setWordCount(0);
+      onClose();
+    } catch (err) {
+      const status = err?.status;
+      let message = 'Не удалось сохранить материал';
+
+      if (status === 404) {
+        message = 'Коллекция не найдена. Возможно, она была удалена.';
+        dispatch({ type: ACTIONS.SET_COLLECTION, payload: null });
+      } else if (status === 403) {
+        message = 'Нет доступа к этой коллекции';
+      } else if (status === 413) {
+        message = 'Файл слишком большой';
+      } else if (status === 400) {
+        message = err?.message || 'Некорректные данные';
+      } else if (status >= 500) {
+        message = 'Ошибка сервера. Попробуйте ещё раз.';
+      } else if (err?.message) {
+        message = err.message;
+      }
+
+      dispatch({ type: ACTIONS.SET_ERROR, payload: message });
+    } finally {
+      setSubmitting(false);
+    }
+  }, [state, onSubmit, onClose, submitting, collections]);
 
   if (!isOpen) return null;
 
   return (
-    <div className={styles.overlay} onClick={handleClose}>
+    <div
+      className={styles.overlay}
+      onClick={handleClose}
+    >
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
           <ModeSwitch activeMode={state.mode} onChange={handleModeChange} />
-          <button className={styles.closeBtn} onClick={handleClose} type="button">
+          <button
+            className={styles.closeBtn}
+            onClick={handleClose}
+            type="button"
+            disabled={submitting}
+          >
             ✕
           </button>
         </div>
@@ -270,6 +374,7 @@ export default function AddMaterialModal({
           <CollectionPicker
             selected={state.collection}
             onChange={handleCollectionChange}
+            collections={collections}
           />
         </div>
 
@@ -315,11 +420,25 @@ export default function AddMaterialModal({
         )}
 
         <div className={styles.footer}>
-          <button className={styles.cancelBtn} onClick={handleClose} type="button">
+          <button
+            className={styles.cancelBtn}
+            onClick={handleClose}
+            type="button"
+            disabled={submitting}
+          >
             Отмена
           </button>
-          <button className={styles.submitBtn} onClick={handleSubmit} type="button">
-            {state.mode === 'upload' ? 'Загрузить файлы' : 'Создать заметку'}
+          <button
+            className={styles.submitBtn}
+            onClick={handleSubmit}
+            type="button"
+            disabled={submitting}
+          >
+            {submitting
+              ? 'Сохраняем…'
+              : state.mode === 'upload'
+                ? 'Загрузить файлы'
+                : 'Создать заметку'}
           </button>
         </div>
       </div>

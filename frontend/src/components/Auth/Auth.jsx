@@ -3,6 +3,7 @@ import useAuthForm from './useAuthForm';
 import ModeSwitcher from './components/ModeSwitcher';
 import AuthForm from './components/AuthForm';
 import LegalText from './components/LegalText';
+import SessionExpiredBanner from '../SessionExpiredBanner/SessionExpiredBanner'; // 🆕
 import styles from './Auth.module.css';
 
 function Auth() {
@@ -30,6 +31,8 @@ function Auth() {
 
         <h1 className={styles.title}>Омут памяти</h1>
         <p className={styles.subtitle}>Войдите или создайте новый аккаунт</p>
+
+        <SessionExpiredBanner /> {/* 🆕 */}
 
         <ModeSwitcher mode={form.mode} onSwitch={form.switchMode} />
 

@@ -265,6 +265,22 @@
   box-shadow: 0 4px 12px rgba(224, 85, 85, 0.15);
 }
 
+.dangerButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  background: transparent;
+  color: #e05555;
+}
+
+.dangerButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  background: transparent;
+  color: #e05555;
+}
+
 /* ===== Outline button (cyan) ===== */
 .outlineButton {
   padding: 8px 20px;
@@ -281,6 +297,65 @@
 .outlineButton:hover {
   border-color: #3AD7D3;
   background: rgba(58, 215, 211, 0.08);
+}
+
+.outlineButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: #1f4e67;
+  background: transparent;
+}
+
+/* ===== Avatar block (вкладка «Профиль») ===== */
+.avatarBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 0 18px;
+  border-bottom: 1px solid #152a3f;
+  margin-bottom: 4px;
+}
+
+.avatarBig {
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #0f3246;
+  border: 2px solid #1f4e67;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.avatarBig img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.avatarInitial {
+  font-size: 52px;
+  font-weight: 700;
+  color: #3AD7D3;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.avatarActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.avatarError {
+  color: #ff7a7a;
+  font-size: 13px;
+  text-align: center;
 }
 
 /* ===== Responsive ===== */
@@ -307,4 +382,23 @@
   .content {
     max-height: 60vh;
   }
+
+  .avatarBig {
+    width: 104px;
+    height: 104px;
+  }
+
+  .avatarInitial {
+    font-size: 42px;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   🆕 Для строки с inline-редактируемым полем
+   ═══════════════════════════════════════════ */
+
+/* Когда наводим на строку — показываем иконку ✏️ внутри EditableField.
+   Селектор глобальный, потому что EditableField живёт в своём модуле. */
+.row:hover :global([class*="editBtn"]) {
+  opacity: 1;
 }

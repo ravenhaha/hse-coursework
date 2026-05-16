@@ -1,0 +1,53 @@
+.home {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 48px 32px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 56px;
+}
+
+@media (max-width: 768px) {
+    .home {
+        padding: 32px 20px 60px;
+        gap: 40px;
+    }
+}
+
+/* ═══════════════════════════════════════════
+   🆕 Кнопка закрытия "Главной/Справки"
+   ═══════════════════════════════════════════ */
+
+.home {
+    position: relative; /* нужно для абсолютного позиционирования кнопки */
+}
+
+.closeHomeBtn {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(140, 200, 230, 0.15);
+    border-radius: 10px;
+    color: #7a96a8;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.18s ease;
+}
+
+.closeHomeBtn:hover {
+    background: rgba(140, 200, 230, 0.1);
+    border-color: rgba(140, 200, 230, 0.3);
+    color: #d0e0ea;
+    transform: scale(1.05);
+}
+
+.closeHomeBtn:active {
+    transform: scale(0.95);
+}
