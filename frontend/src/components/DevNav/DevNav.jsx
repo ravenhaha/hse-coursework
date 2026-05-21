@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useGraph } from "../../context/GraphContext";
+import useGraph from "../../hooks/useGraph";
 import { mockGraphData } from "../Workspace/components/Graph/mockGraphData";
 
 function DevNav() {

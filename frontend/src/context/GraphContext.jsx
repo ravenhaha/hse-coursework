@@ -1,6 +1,5 @@
-import { createContext, useState, useContext, useCallback } from 'react';
-
-const GraphContext = createContext(null);
+import { useState, useCallback } from 'react';
+import { GraphContext } from './GraphContextValue';
 
 export default function GraphProvider({ children }) {
     const [tree, setTree] = useState(null);
@@ -13,10 +12,4 @@ export default function GraphProvider({ children }) {
             {children}
         </GraphContext.Provider>
     );
-}
-
-export function useGraph() {
-    const ctx = useContext(GraphContext);
-    if (!ctx) throw new Error('useGraph must be used inside GraphProvider');
-    return ctx;
 }

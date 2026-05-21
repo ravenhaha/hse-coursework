@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { IoChevronForward, IoChevronDown, IoAdd } from 'react-icons/io5';
 import styles from './Sidebar.module.css';
 
-export default function SidebarSection({ icon: Icon, title, addTitle, onAdd, children }) {
+export default function SidebarSection({ icon, title, addTitle, onAdd, children }) {
   const [open, setOpen] = useState(true);
   const [search, setSearch] = useState('');
+  const SectionIcon = icon;
 
   return (
     <div className={styles.section}>
@@ -13,7 +14,7 @@ export default function SidebarSection({ icon: Icon, title, addTitle, onAdd, chi
           className={styles.sectionHeader}
           onClick={() => setOpen(!open)}
         >
-          <Icon className={styles.sectionIcon} />
+          <SectionIcon className={styles.sectionIcon} />
           <span className={styles.sectionTitle}>{title}</span>
           {open ? (
             <IoChevronDown className={styles.sectionChevron} />

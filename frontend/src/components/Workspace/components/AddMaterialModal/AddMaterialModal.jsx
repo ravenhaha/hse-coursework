@@ -35,7 +35,12 @@ export function AddMaterialModal({ isOpen, onClose }) {
 
     const { isRecording, audioUrl, recordingTime, start, stop, remove } = useAudioRecorder();
     const { words } = useWordCount(editor);
-    const { loadDraft, clearDraft, hasDraft } = useDraft({ editor, title, tags });
+    const { loadDraft, clearDraft, hasDraft } = useDraft({
+        editor,
+        title,
+        tags,
+        isEnabled: isOpen,
+    });
 
     useEffect(() => {
         if (!isOpen) {

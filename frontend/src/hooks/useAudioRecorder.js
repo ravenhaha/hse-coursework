@@ -4,63 +4,114 @@ export function useAudioRecorder() {
     const [isRecording, setIsRecording] = useState(false);
     const [audioUrl, setAudioUrl] = useState(null);
     const [recordingTime, setRecordingTime] = useState(0);
+    const [error, setError] = useState(null);
 
     const mediaRecorderRef = useRef(null);
+    const streamRef = useRef(null);
     const chunksRef = useRef([]);
     const timerRef = useRef(null);
+    const audioUrlRef = useRef(null);
+
+    const clearTimer = useCallback(() => {
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+        }
+    }, []);
+
+    const stopStream = useCallback(() => {
+        streamRef.current?.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+    }, []);
+
+    const revokeAudioUrl = useCallback(() => {
+        if (audioUrlRef.current) {
+            URL.revokeObjectURL(audioUrlRef.current);
+            audioUrlRef.current = null;
+        }
+    }, []);
 
     const start = useCallback(async () => {
+        if (mediaRecorderRef.current?.state === 'recording') return;
+
         try {
+            clearTimer();
+            stopStream();
+            revokeAudioUrl();
+            setAudioUrl(null);
+            setError(null);
+            setRecordingTime(0);
+
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const recorder = new MediaRecorder(stream);
+
+            streamRef.current = stream;
             mediaRecorderRef.current = recorder;
             chunksRef.current = [];
 
-            recorder.ondataavailable = (e) => {
-                if (e.data.size > 0) chunksRef.current.push(e.data);
+            recorder.ondataavailable = (event) => {
+                if (event.data.size > 0) chunksRef.current.push(event.data);
             };
 
             recorder.onstop = () => {
-                const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-                setAudioUrl(URL.createObjectURL(blob));
-                stream.getTracks().forEach(t => t.stop());
-                clearInterval(timerRef.current);
-                timerRef.current = null;
+                if (chunksRef.current.length > 0) {
+                    const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+                    const nextAudioUrl = URL.createObjectURL(blob);
+                    audioUrlRef.current = nextAudioUrl;
+                    setAudioUrl(nextAudioUrl);
+                }
+
+                clearTimer();
+                stopStream();
+                setIsRecording(false);
                 setRecordingTime(0);
             };
 
             recorder.start();
             setIsRecording(true);
-            setAudioUrl(null);
             timerRef.current = setInterval(() => {
-                setRecordingTime(prev => prev + 1);
+                setRecordingTime((prev) => prev + 1);
             }, 1000);
-        } catch {
-            // Микрофон недоступен — молча игнорируем
+        } catch (err) {
+            clearTimer();
+            stopStream();
+            setIsRecording(false);
+            setError(err);
         }
-    }, []);
+    }, [clearTimer, revokeAudioUrl, stopStream]);
 
     const stop = useCallback(() => {
-        mediaRecorderRef.current?.stop();
-        setIsRecording(false);
-    }, []);
+        const recorder = mediaRecorderRef.current;
+        if (recorder?.state === 'recording') {
+            recorder.stop();
+        } else {
+            clearTimer();
+            stopStream();
+            setIsRecording(false);
+        }
+    }, [clearTimer, stopStream]);
 
     const remove = useCallback(() => {
-        if (audioUrl) URL.revokeObjectURL(audioUrl);
+        revokeAudioUrl();
         setAudioUrl(null);
-    }, [audioUrl]);
+    }, [revokeAudioUrl]);
 
-    // Cleanup таймера при unmount
     useEffect(() => {
         return () => {
-            if (timerRef.current) clearInterval(timerRef.current);
+            if (mediaRecorderRef.current?.state === 'recording') {
+                mediaRecorderRef.current.stop();
+            }
+            clearTimer();
+            stopStream();
+            revokeAudioUrl();
         };
-    }, []);
+    }, [clearTimer, revokeAudioUrl, stopStream]);
 
     return {
         isRecording,
         audioUrl,
         recordingTime,
+        error,
         start,
         stop,
         remove,

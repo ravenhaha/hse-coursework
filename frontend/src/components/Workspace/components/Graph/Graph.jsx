@@ -150,7 +150,7 @@ export default function Graph({ data }) {
                 }));
             };
 
-            const handleUp = (ev) => {
+            const handleUp = () => {
                 window.removeEventListener('pointermove', handleMove);
                 window.removeEventListener('pointerup', handleUp);
                 window.removeEventListener('pointercancel', handleUp);
