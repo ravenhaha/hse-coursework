@@ -59,7 +59,7 @@ async def get_graph_tree(
     collection_nodes = {
         collection.id: GraphNode(
             id=f"collection:{collection.id}",
-            name=collection.title,
+            name=collection.name,
             type="folder",
             children=[],
         )
@@ -85,7 +85,7 @@ async def get_graph_tree(
         parent.children.append(
             GraphNode(
                 id=f"material:{material.id}",
-                name=material.title,
+                name=material.material_name,
                 type="document",
                 tags=material_tags.get(material.id) or None,
                 content=material.text_content,
@@ -102,10 +102,10 @@ async def get_graph_tree(
 
 async def get_material_tags(db: AsyncSession, user_id: int) -> dict[int, list[str]]:
     result = await db.execute(
-        select(MaterialTag.material_id, Tag.name)
+        select(MaterialTag.material_id, Tag.tag_name)
         .join(Tag, MaterialTag.tag_id == Tag.id)
         .where(Tag.user_id == user_id)
-        .order_by(Tag.name)
+        .order_by(Tag.tag_name)
     )
 
     tags_by_material: dict[int, list[str]] = {}

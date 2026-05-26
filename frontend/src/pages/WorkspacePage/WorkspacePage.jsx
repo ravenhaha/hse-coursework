@@ -8,8 +8,10 @@ import DeleteAccountModal from '../../components/DeleteAccountModal/DeleteAccoun
 import { useAuth } from '../../hooks/useAuth';
 import useCollections from '../../hooks/useCollections';
 import useMaterials from '../../hooks/useMaterials';
+import useGraph from '../../hooks/useGraph';
 import { useModal } from '../../hooks/useModal.js';
 import { usersApi } from '../../api/users';
+import { graphApi } from '../../api/graph';
 import styles from './WorkspacePage.module.css';
 
 function mergeTree(collections, materials) {
@@ -57,6 +59,18 @@ export default function WorkspacePage() {
     move: moveMaterial,
     reload: reloadMaterials,
   } = useMaterials();
+
+  const { loadTree, clearTree } = useGraph();
+
+  useEffect(() => {
+    let cancelled = false;
+    graphApi.tree()
+      .then((data) => { if (!cancelled) loadTree(data); })
+      .catch((err) => console.error('Не удалось загрузить граф:', err.message));
+    return () => { cancelled = true; };
+  }, [loadTree, collections.length, materials.length]);
+
+  useEffect(() => clearTree, [clearTree]);
 
   const [activeItemId, setActiveItemId] = useState(null);
   const [previewMaterial, setPreviewMaterial] = useState(null);
