@@ -13,6 +13,6 @@
 
 Проверка установки:
 ```bash
-python --version    # должно быть 3.11 или выше
+python --versions
 docker --version
 git --version
