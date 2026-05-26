@@ -10,9 +10,10 @@ export function useAudioRecorder() {
     const streamRef = useRef(null);
     const chunksRef = useRef([]);
     const timerRef = useRef(null);
+    const audioUrlRef = useRef(null);
     const mountedRef = useRef(true);
 
-    // Отслеживаем mounted
+    // Track mounted state to avoid setState after unmount
     useEffect(() => {
         mountedRef.current = true;
         return () => {
@@ -27,18 +28,32 @@ export function useAudioRecorder() {
         }
     }, []);
 
-    const stopTracks = useCallback(() => {
-        streamRef.current?.getTracks().forEach((t) => t.stop());
+    const stopStream = useCallback(() => {
+        streamRef.current?.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
     }, []);
 
+    const revokeAudioUrl = useCallback(() => {
+        if (audioUrlRef.current) {
+            URL.revokeObjectURL(audioUrlRef.current);
+            audioUrlRef.current = null;
+        }
+    }, []);
+
     const start = useCallback(async () => {
-        setError(null);
+        if (mediaRecorderRef.current?.state === 'recording') return;
 
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                audio: true,
-            });
+            clearTimer();
+            stopStream();
+            revokeAudioUrl();
+            if (mountedRef.current) {
+                setAudioUrl(null);
+                setError(null);
+                setRecordingTime(0);
+            }
+
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
             // Если компонент уже unmounted пока ждали разрешение
             if (!mountedRef.current) {
@@ -46,39 +61,46 @@ export function useAudioRecorder() {
                 return;
             }
 
-            streamRef.current = stream;
             const recorder = new MediaRecorder(stream);
+
+            streamRef.current = stream;
             mediaRecorderRef.current = recorder;
             chunksRef.current = [];
 
-            recorder.ondataavailable = (e) => {
-                if (e.data.size > 0) chunksRef.current.push(e.data);
+            recorder.ondataavailable = (event) => {
+                if (event.data.size > 0) chunksRef.current.push(event.data);
             };
 
             recorder.onstop = () => {
-                const blob = new Blob(chunksRef.current, {
-                    type: 'audio/webm',
-                });
-                stopTracks();
-                clearTimer();
+                if (chunksRef.current.length > 0) {
+                    const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+                    const nextAudioUrl = URL.createObjectURL(blob);
+                    audioUrlRef.current = nextAudioUrl;
+                    if (mountedRef.current) {
+                        setAudioUrl(nextAudioUrl);
+                    }
+                }
 
+                clearTimer();
+                stopStream();
                 if (mountedRef.current) {
-                    setAudioUrl(URL.createObjectURL(blob));
+                    setIsRecording(false);
                     setRecordingTime(0);
                 }
             };
 
             recorder.start();
             setIsRecording(true);
-            setAudioUrl(null);
-
             timerRef.current = setInterval(() => {
                 if (mountedRef.current) {
                     setRecordingTime((prev) => prev + 1);
                 }
             }, 1000);
         } catch (err) {
+            clearTimer();
+            stopStream();
             if (mountedRef.current) {
+                setIsRecording(false);
                 setError(
                     err.name === 'NotAllowedError'
                         ? 'Доступ к микрофону запрещён'
@@ -86,37 +108,39 @@ export function useAudioRecorder() {
                 );
             }
         }
-    }, [clearTimer, stopTracks]);
+    }, [clearTimer, revokeAudioUrl, stopStream]);
 
     const stop = useCallback(() => {
-        if (
-            mediaRecorderRef.current &&
-            mediaRecorderRef.current.state !== 'inactive'
-        ) {
-            mediaRecorderRef.current.stop();
+        const recorder = mediaRecorderRef.current;
+        if (recorder?.state === 'recording') {
+            recorder.stop();
+        } else {
+            clearTimer();
+            stopStream();
+            if (mountedRef.current) {
+                setIsRecording(false);
+            }
         }
-        setIsRecording(false);
-    }, []);
+    }, [clearTimer, stopStream]);
 
     const remove = useCallback(() => {
-        if (audioUrl) URL.revokeObjectURL(audioUrl);
-        setAudioUrl(null);
-    }, [audioUrl]);
+        revokeAudioUrl();
+        if (mountedRef.current) {
+            setAudioUrl(null);
+        }
+    }, [revokeAudioUrl]);
 
     // Полный cleanup при unmount
     useEffect(() => {
         return () => {
-            clearTimer();
-            stopTracks();
-
-            if (
-                mediaRecorderRef.current &&
-                mediaRecorderRef.current.state !== 'inactive'
-            ) {
+            if (mediaRecorderRef.current?.state === 'recording') {
                 mediaRecorderRef.current.stop();
             }
+            clearTimer();
+            stopStream();
+            revokeAudioUrl();
         };
-    }, [clearTimer, stopTracks]);
+    }, [clearTimer, revokeAudioUrl, stopStream]);
 
     return {
         isRecording,

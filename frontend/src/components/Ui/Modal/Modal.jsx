@@ -1,97 +1,91 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useCallback, useId, useRef } from 'react';
 import styles from './Modal.module.css';
 
-const openModals = new Set();
+let openCount = 0;
+const FOCUSABLE_SELECTOR = [
+    'a[href]',
+    'button:not([disabled])',
+    'textarea:not([disabled])',
+    'input:not([disabled])',
+    'select:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])',
+].join(',');
 
-function updateBodyScroll() {
-    if (openModals.size > 0) {
-        document.body.classList.add('no-scroll');
-    } else {
-        document.body.classList.remove('no-scroll');
-    }
-}
-
-export function Modal({
-    isOpen,
-    onClose,
-    title,
-    children,
-}) {
+export function Modal({ isOpen, onClose, title, children }) {
+    const titleId = useId();
     const modalRef = useRef(null);
     const previousFocusRef = useRef(null);
-    const onCloseRef = useRef(onClose);
+    const wasOpenRef = useRef(false);
+
+    // Focus trap on Tab (no Escape close, no overlay close — by design)
+    const handleKeyDown = useCallback((e) => {
+        if (e.key !== 'Tab' || !modalRef.current) return;
+
+        const focusable = Array.from(modalRef.current.querySelectorAll(FOCUSABLE_SELECTOR));
+        if (focusable.length === 0) {
+            e.preventDefault();
+            return;
+        }
+
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+        }
+    }, []);
 
     useEffect(() => {
-        onCloseRef.current = onClose;
-    }, [onClose]);
-
-    // Scroll lock + focus management
-    useEffect(() => {
-        if (!isOpen) return;
-
-        const id = Symbol('modal');
-        openModals.add(id);
-        updateBodyScroll();
-
-        previousFocusRef.current = document.activeElement;
-
-        const raf = requestAnimationFrame(() => {
-            modalRef.current?.focus();
-        });
+        if (isOpen && !wasOpenRef.current) {
+            previousFocusRef.current = document.activeElement;
+            openCount++;
+            wasOpenRef.current = true;
+            document.body.classList.add('no-scroll');
+            document.addEventListener('keydown', handleKeyDown);
+            requestAnimationFrame(() => {
+                const firstFocusable = modalRef.current?.querySelector(FOCUSABLE_SELECTOR);
+                firstFocusable?.focus();
+            });
+        } else if (!isOpen && wasOpenRef.current) {
+            openCount = Math.max(0, openCount - 1);
+            wasOpenRef.current = false;
+            if (openCount === 0) {
+                document.body.classList.remove('no-scroll');
+            }
+            document.removeEventListener('keydown', handleKeyDown);
+            previousFocusRef.current?.focus?.();
+        }
 
         return () => {
-            cancelAnimationFrame(raf);
-            openModals.delete(id);
-            updateBodyScroll();
-            previousFocusRef.current?.focus?.();
-        };
-    }, [isOpen]);
-
-    // Keyboard: focus trap only (no Escape close)
-    useEffect(() => {
-        if (!isOpen) return;
-
-        const handleKeyDown = (e) => {
-            if (e.key === 'Tab' && modalRef.current) {
-                const focusable = modalRef.current.querySelectorAll(
-                    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-                );
-                if (focusable.length === 0) return;
-
-                const first = focusable[0];
-                const last = focusable[focusable.length - 1];
-
-                if (e.shiftKey && document.activeElement === first) {
-                    e.preventDefault();
-                    last.focus();
-                } else if (!e.shiftKey && document.activeElement === last) {
-                    e.preventDefault();
-                    first.focus();
+            if (wasOpenRef.current) {
+                openCount = Math.max(0, openCount - 1);
+                wasOpenRef.current = false;
+                if (openCount === 0) {
+                    document.body.classList.remove('no-scroll');
                 }
+                document.removeEventListener('keydown', handleKeyDown);
+                previousFocusRef.current?.focus?.();
             }
         };
-
-        document.addEventListener('keydown', handleKeyDown);
-        return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen]);
+    }, [isOpen, handleKeyDown]);
 
     if (!isOpen) return null;
 
     return (
-        <div
-            className={styles.overlay}
-            role="presentation"
-        >
+        <div className={styles.overlay} role="presentation">
             <div
                 ref={modalRef}
                 className={styles.modal}
                 role="dialog"
                 aria-modal="true"
-                aria-label={title}
-                tabIndex={-1}
+                aria-labelledby={titleId}
             >
                 <div className={styles.header}>
-                    <h2 className={styles.title}>{title}</h2>
+                    <h2 id={titleId} className={styles.title}>{title}</h2>
                     <button
                         type="button"
                         className={styles.close}

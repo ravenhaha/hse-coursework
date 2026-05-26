@@ -5,6 +5,8 @@ import WelcomeBanner from './components/WelcomeBanner/WelcomeBanner';
 import HowItWorks from './components/HowItWorks/HowItWorks.jsx';
 import QuickActions from './components/QuickActions/QuickActions.jsx';
 import GraphPlaceholder from '../Workspace/GraphPlaceholder/GraphPlaceholder.jsx';
+import Graph from './components/Graph/Graph.jsx';
+import useGraph from '../../hooks/useGraph';
 import styles from './Workspace.module.css';
 
 function Workspace({
@@ -20,6 +22,7 @@ function Workspace({
     onCloseHome,
 }) {
     const [modalInitialMode, setModalInitialMode] = useState(null);
+    const { tree } = useGraph();
 
     const openModalWith = useCallback(
         (mode) => {
@@ -48,9 +51,13 @@ function Workspace({
         setModalInitialMode(null);
     }, [materialModal]);
 
-    return (
-        <>
-            {homeOpen ? (
+    // Решаем, что показывать в основной зоне:
+    // 1) Если открыт домашний экран — показываем его (приоритет)
+    // 2) Иначе если есть данные графа — рендерим граф Кирилла
+    // 3) Иначе — старый плейсхолдер
+    const renderMainArea = () => {
+        if (homeOpen) {
+            return (
                 <div className={styles.home}>
                     {canCloseHome && (
                         <button
@@ -71,9 +78,19 @@ function Workspace({
                         onCreateNote={handleCreateNote}
                     />
                 </div>
-            ) : (
-                <GraphPlaceholder />
-            )}
+            );
+        }
+
+        if (tree) {
+            return <Graph data={tree} />;
+        }
+
+        return <GraphPlaceholder />;
+    };
+
+    return (
+        <>
+            {renderMainArea()}
 
             <AddMaterialModal
                 isOpen={materialModal.isOpen}

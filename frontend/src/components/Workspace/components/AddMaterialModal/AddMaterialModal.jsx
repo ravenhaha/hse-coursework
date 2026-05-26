@@ -148,16 +148,12 @@ function EditorBottomBar({ tags, isImportant, wordCount, dispatch }) {
   );
 }
 
-// ============================================
-// Основной компонент
-// ============================================
-
 export default function AddMaterialModal({
   isOpen,
   onClose,
   onSubmit,
   initialCollection = null,
-  initialMode = null, // 🆕 initialMode: 'upload' | 'editor' | null
+  initialMode = null,
   collections = [],
 }) {
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -169,13 +165,11 @@ export default function AddMaterialModal({
   const [wordCount, setWordCount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
-  // 🆕 initialMode: при открытии переключаемся на нужный таб
   useEffect(() => {
     if (isOpen && initialMode) {
       dispatch({ type: ACTIONS.SET_MODE, payload: initialMode });
       if (initialMode === 'editor') setEditorMounted(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialMode]);
 
   useEffect(() => {
