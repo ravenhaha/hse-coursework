@@ -13,3 +13,11 @@ venv/
 
 # Alembic
 alembic/versions/__pycache__/
+
+# Пользовательские загрузки
+backend/uploads/*
+!backend/uploads/.gitkeep
+!backend/uploads/avatars/
+!backend/uploads/avatars/.gitkeep
+!backend/uploads/materials/
+!backend/uploads/materials/.gitkeep
