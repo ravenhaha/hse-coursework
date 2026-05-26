@@ -2,15 +2,15 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.exceptions import token_invalid, token_missing, user_not_found
-from core.security import decode_token
-from db.session import get_db
-from models.collection import Collection
-from models.material import Material
-from models.material_tag import MaterialTag
-from models.tag import Tag
-from models.user import User
-from schemas.graph import GraphNode, GraphTreeResponse
+from app.core.exceptions import token_invalid, token_missing, user_not_found
+from app.core.security import decode_token
+from app.db.session import get_db
+from app.models.collection import Collection
+from app.models.material import Material
+from app.models.material_tag import MaterialTag
+from app.models.tag import Tag
+from app.models.user import User
+from app.schemas.graph import GraphNode, GraphTreeResponse
 
 router = APIRouter(prefix="/graph", tags=["Graph"])
 

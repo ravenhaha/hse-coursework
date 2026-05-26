@@ -11,7 +11,7 @@ from app.api.collection import router as collection_router
 from app.api.material import router as material_router
 from app.api.tag import router as tag_router
 from app.api.user import router as user_router
-from app.routers.graph import router as graph_router
+from app.api.graph import router as graph_router
 from app.core.config import settings
 from app.core.csrf import verify_csrf
 
