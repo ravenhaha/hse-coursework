@@ -15,15 +15,12 @@ function HowItWorks() {
                 {cards.map((card) => {
                     const Icon = card.Icon;
                     return (
-                        <article key={card.id} className={styles.card}>
-                            <div
-                                className={styles.iconWrap}
-                                style={{
-                                    color: card.color,
-                                    background: `${card.color}1a`,
-                                    borderColor: `${card.color}33`,
-                                }}
-                            >
+                        <article
+                            key={card.id}
+                            className={styles.card}
+                            style={{ '--accent': card.color }}
+                        >
+                            <div className={styles.iconWrap}>
                                 {Icon && <Icon />}
                             </div>
                             <span className={styles.number}>{card.number}</span>

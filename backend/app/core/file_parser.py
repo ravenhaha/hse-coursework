@@ -1,20 +1,20 @@
 """Парсинг загружаемых файлов в HTML для редактора материалов.
 
 Поддерживаются:
-    .txt / .md / .rtf  — простой текст
-    .pdf               — через PyMuPDF (опционально)
+    .txt / .md         — простой текст (по абзацам)
+    .pdf               — через PyMuPDF (если установлен)
     .docx              — через python-docx (с inline-стилями, картинками, таблицами)
 
 Все возвращаемые HTML-строки безопасны для прямого рендера во фронте:
-    - текст экранирован
-    - значения CSS-стилей провалидированы по белому списку
+    - текст экранирован;
+    - значения CSS-стилей провалидированы по белому списку.
 """
 
 import base64
 import logging
 import re
+from collections.abc import Callable
 from pathlib import Path
-from typing import Optional
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -31,6 +31,11 @@ logger = logging.getLogger(__name__)
 _HEX_COLOR_RE = re.compile(r"^[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?$")
 _FONT_NAME_RE = re.compile(r"^[A-Za-zА-Яа-я0-9 \-]+$")
 _HEADING_RE = re.compile(r"^heading\s*(\d)", re.IGNORECASE)
+
+# Максимум суммарного размера inline-картинок из одного docx (в байтах).
+# Картинки идут в БД base64 → "сырой" размер ×1.33. Лимит защищает от
+# раздутых рядов в Material.extracted_text и медленного ILIKE-поиска.
+_MAX_INLINE_IMAGES_BYTES = 2 * 1024 * 1024
 
 
 def _safe_color(value: str | None) -> str | None:
@@ -64,11 +69,20 @@ def _escape_html(text: str) -> str:
 # ══════════════════════════════════════════
 # Публичный API
 # ══════════════════════════════════════════
-_PARSERS: dict[str, callable] = {}
+_PARSERS: dict[str, Callable[[Path], str]] = {}
 
 
-def extract_text_from_file(file_path: str | Path) -> Optional[str]:
-    """Извлекает HTML-представление файла. Возвращает None при ошибке/неподдерж. формате."""
+def extract_text_from_file(file_path: str | Path) -> str | None:
+    """Извлекает HTML-представление файла.
+
+    Возвращает None при:
+      - неподдерживаемом расширении (не зарегистрирован парсер);
+      - ошибке парсинга (исключение залогировано).
+
+    Никогда не пробрасывает исключения наружу — это позволяет вызывающему
+    коду (services/material.py::create_file_material) безопасно засунуть
+    результат в БД, не оборачивая в try/except.
+    """
     path = Path(file_path)
     parser = _PARSERS.get(path.suffix.lower())
     if parser is None:
@@ -82,9 +96,16 @@ def extract_text_from_file(file_path: str | Path) -> Optional[str]:
 
 
 # ══════════════════════════════════════════
-# TXT / MD / RTF
+# TXT / MD
 # ══════════════════════════════════════════
 def _parse_txt(path: Path) -> str:
+    """Plain-текст по абзацам.
+
+    Используется для .txt и .md. Markdown НЕ рендерится — это сознательно:
+    юзер увидит в редакторе исходник Markdown и сможет дальше работать с
+    ним как с обычным текстом. Когда понадобится рендер MD, добавим
+    отдельный парсер (например, через `markdown-it-py`).
+    """
     text = path.read_text(encoding="utf-8", errors="ignore")
     paragraphs = [
         f"<p>{_escape_html(line)}</p>"
@@ -103,12 +124,18 @@ try:
 except ImportError:
     fitz = None
     _PDF_AVAILABLE = False
-    logger.warning("PyMuPDF не установлен — парсинг PDF отключён. pip install PyMuPDF")
+    logger.warning(
+        "PyMuPDF не установлен — парсинг PDF отключён. pip install PyMuPDF"
+    )
 
 
 def _parse_pdf(path: Path) -> str:
-    if not _PDF_AVAILABLE:
-        return ""
+    """Текст PDF по строкам.
+
+    Регистрируется в _PARSERS только если PyMuPDF доступен — иначе
+    extract_text_from_file отдаст None как для любого неподдерживаемого
+    формата. Это честнее, чем возвращать "" из мёртвой функции.
+    """
     paragraphs: list[str] = []
     with fitz.open(str(path)) as doc:
         for page in doc:
@@ -140,18 +167,34 @@ def _parse_docx(path: Path) -> str:
 
 
 def _extract_images(doc) -> dict[str, str]:
-    """rId → data:image/...;base64,... — для inline-вставки в <img src>."""
+    """rId → data:image/...;base64,... — для inline-вставки в <img src>.
+
+    Лимит _MAX_INLINE_IMAGES_BYTES: после превышения остальные картинки
+    пропускаются, в логи пишется warning. Это защита от случая, когда
+    юзер заливает docx с десятком фоток по 5 MB — без лимита их base64
+    раздул бы ряд в БД до 70+ MB.
+    """
     images: dict[str, str] = {}
+    total_bytes = 0
     try:
         for rel_id, rel in doc.part.rels.items():
             if "image" not in rel.reltype:
                 continue
             image_part = rel.target_part
-            b64 = base64.b64encode(image_part.blob).decode("ascii")
+            blob = image_part.blob
+            if total_bytes + len(blob) > _MAX_INLINE_IMAGES_BYTES:
+                logger.warning(
+                    "Inline images budget exceeded (%d bytes) — "
+                    "skipping the rest", _MAX_INLINE_IMAGES_BYTES,
+                )
+                break
+            total_bytes += len(blob)
+            b64 = base64.b64encode(blob).decode("ascii")
             images[rel_id] = f"data:{image_part.content_type};base64,{b64}"
     except Exception:
         logger.exception("Failed to extract images from docx")
     return images
+
 
 _ALIGN_MAP = {
     WD_ALIGN_PARAGRAPH.LEFT: "left",
@@ -185,7 +228,7 @@ def _render_paragraph(para: Paragraph, images: dict[str, str]) -> str:
 
 
 def _render_runs(runs) -> str:
-    """Текст с инлайновыми стилями (bold/italic/colour/...)."""
+    """Текст с инлайновыми стилями (bold/italic/color/...)."""
     parts: list[str] = []
 
     for run in runs:
@@ -259,6 +302,7 @@ def _extract_inline_images(para: Paragraph, images: dict[str, str]) -> str:
     except Exception:
         logger.exception("Failed to extract inline images")
     return "".join(html_parts)
+
 
 _VALIGN_MAP = {"top": "top", "center": "middle", "bottom": "bottom"}
 
@@ -350,10 +394,9 @@ def _get_cell_span(cell) -> str:
 # ══════════════════════════════════════════
 # Регистрируем парсеры
 # ══════════════════════════════════════════
-_PARSERS.update({
-    ".txt":  _parse_txt,
-    ".md":   _parse_txt,
-    ".rtf":  _parse_txt,
-    ".pdf":  _parse_pdf,
-    ".docx": _parse_docx,
-})
+_PARSERS[".txt"] = _parse_txt
+_PARSERS[".md"] = _parse_txt
+_PARSERS[".docx"] = _parse_docx
+
+if _PDF_AVAILABLE:
+    _PARSERS[".pdf"] = _parse_pdf

@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
+import styles from './Toast.module.css';
 
-const typeStyles = {
-  info:    { bg: '#1f2937', accent: '#3b82f6', icon: 'ℹ️' },
-  success: { bg: '#064e3b', accent: '#10b981', icon: '✅' },
-  error:   { bg: '#7f1d1d', accent: '#ef4444', icon: '⚠️' },
+const TYPE_META = {
+  info:    { icon: 'ℹ️', toastClass: styles.toastInfo,    progressClass: styles.progressInfo },
+  success: { icon: '✅', toastClass: styles.toastSuccess, progressClass: styles.progressSuccess },
+  error:   { icon: '⚠️', toastClass: styles.toastError,   progressClass: styles.progressError },
+  warning: { icon: '🟡', toastClass: styles.toastWarning, progressClass: styles.progressWarning },
 };
 
 export default function Toast({ toast, onAction, onClose }) {
   const [visible, setVisible] = useState(false);
   const [paused, setPaused] = useState(false);
-  const style = typeStyles[toast.type] ?? typeStyles.info;
+
+  const meta = TYPE_META[toast.type] ?? TYPE_META.info;
   const duration = toast.duration ?? 5000;
 
   const fillRef = useRef(null);
@@ -17,11 +20,13 @@ export default function Toast({ toast, onAction, onClose }) {
   const remainingRef = useRef(duration);
   const rafRef = useRef(null);
 
+  // Появление с задержкой для transition
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 10);
     return () => clearTimeout(t);
   }, []);
 
+  // Прогресс-бар
   useEffect(() => {
     if (duration <= 0) return;
 
@@ -50,92 +55,45 @@ export default function Toast({ toast, onAction, onClose }) {
     };
   }, [paused, duration]);
 
+  const toastClassName = [
+    styles.toast,
+    meta.toastClass,
+    visible ? styles.toastVisible : '',
+  ].filter(Boolean).join(' ');
+
   return (
     <div
+      className={toastClassName}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
-      style={{
-        position: 'relative',
-        overflow: 'hidden',
-        background: style.bg,
-        color: '#fff',
-        borderRadius: 8,
-        borderLeft: `4px solid ${style.accent}`,
-        minWidth: 280,
-        maxWidth: 400,
-        boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-        transform: visible ? 'translateX(0)' : 'translateX(120%)',
-        opacity: visible ? 1 : 0,
-        transition: 'transform .25s ease, opacity .25s ease',
-        marginBottom: 8,
-      }}
     >
       {duration > 0 && (
         <div
           ref={fillRef}
-          style={{
-            position: 'absolute',
-            top: 0,
-            right: 0,          // 🆕 прижато к ПРАВОМУ краю
-            bottom: 0,
-            // left убрали — теперь блок сжимается ВЛЕВО при уменьшении width
-            width: '100%',
-            background: style.accent,
-            opacity: 0.18,
-            pointerEvents: 'none',
-            transition: 'width 60ms linear',
-            zIndex: 0,
-          }}
+          className={`${styles.progress} ${meta.progressClass}`}
         />
       )}
 
-      <div
-        style={{
-          position: 'relative',
-          zIndex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          padding: '12px 16px',
-        }}
-      >
-        <span style={{ fontSize: 18 }}>{style.icon}</span>
-
-        <span style={{ flex: 1, fontSize: 14, lineHeight: 1.4 }}>
-          {toast.message}
-        </span>
+      <div className={styles.body}>
+        <span className={styles.icon}>{meta.icon}</span>
+        <span className={styles.message}>{toast.message}</span>
 
         {toast.actionLabel && (
           <button
+            type="button"
+            className={styles.actionButton}
             onClick={() => onAction(toast.id)}
-            style={{
-              background: 'transparent',
-              border: `1px solid ${style.accent}`,
-              color: '#fff',
-              padding: '4px 10px',
-              borderRadius: 4,
-              cursor: 'pointer',
-              fontSize: 13,
-              fontWeight: 600,
-              whiteSpace: 'nowrap',
-            }}
           >
             {toast.actionLabel}
           </button>
         )}
 
         <button
+          type="button"
+          className={styles.closeButton}
           onClick={() => onClose(toast.id)}
           title="Закрыть"
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: '#cbd5e1',
-            cursor: 'pointer',
-            fontSize: 18,
-            padding: 0,
-            lineHeight: 1,
-          }}
+          aria-label="Закрыть уведомление"
         >
           ×
         </button>

@@ -1,21 +1,21 @@
 """Сервис материалов.
 
 Бизнес-правила:
-  - материал принадлежит коллекции, коллекция — юзеру;
-  - доступ к материалу = доступ к его коллекции;
-  - при загрузке файла извлекаем текст (для поиска и превью).
+    - материал принадлежит коллекции, коллекция — юзеру;
+    - доступ к материалу = доступ к его коллекции;
+    - при загрузке файла извлекаем текст (для поиска и превью).
 
-Обработка ошибок:
-  - get_owned_material не оборачивает исключения get_owned_collection
-    в "доступ к материалу запрещён". Если коллекция недоступна (404/403),
-    исключение пробрасывается наружу как есть — FastAPI вернёт корректный
-    статус. Это и проще, и семантически правильнее.
+Транзакции:
+    CRUD-слой делает только flush() (чтобы получить server-generated
+    поля типа id и created_at). COMMIT — обязанность сервисного слоя:
+    каждая мутирующая публичная функция (create/update/delete) сама
+    вызывает `await db.commit()` после успешного выполнения всех
+    бизнес-проверок.
 """
 
 import logging
 
 import anyio
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import bad_request, material_not_found
@@ -30,7 +30,7 @@ from app.crud.material import (
     search_materials as search_materials_query,
     update_material,
 )
-from app.models.material import Material
+from app.models.material import Material, SourceType
 from app.models.user import User
 from app.services.collection import get_owned_collection
 
@@ -45,13 +45,7 @@ async def get_owned_material(
     material_id: int,
     user: User,
 ) -> Material:
-    """Достаёт материал и проверяет доступ через его коллекцию.
-
-    Если материала нет — бросит material_not_found (404).
-    Если коллекция недоступна — get_owned_collection сам бросит
-    подходящее исключение (404/403). Намеренно НЕ оборачиваем
-    в try/except, чтобы не маскировать настоящие ошибки.
-    """
+    """Достаёт материал (с tags) и проверяет доступ через его коллекцию."""
     mat = await get_material_by_id(db, material_id)
     if not mat:
         material_not_found()
@@ -60,10 +54,15 @@ async def get_owned_material(
     return mat
 
 
-async def _persist_material(db: AsyncSession, mat: Material) -> Material:
-    """Коммитит транзакцию и обновляет объект из БД."""
-    await db.commit()
-    await db.refresh(mat)
+async def _reload_with_tags(db: AsyncSession, material_id: int) -> Material:
+    """Перечитывает материал из БД, гарантируя подгруженный tags.
+
+    Используется ПОСЛЕ commit'а — чтобы вернуть свежий объект
+    с актуальными server-defaults и связями.
+    """
+    mat = await get_material_by_id(db, material_id)
+    if not mat:
+        material_not_found()
     return mat
 
 
@@ -73,25 +72,29 @@ async def _persist_material(db: AsyncSession, mat: Material) -> Material:
 async def list_materials(
     db: AsyncSession,
     user: User,
+    *,
     collection_id: int | None = None,
 ) -> list[Material]:
-    """Список материалов юзера, опционально по коллекции."""
+    """Список материалов юзера (с tags)."""
     if collection_id is not None:
         await get_owned_collection(db, collection_id, user)
         return await list_materials_by_collection(db, collection_id)
+
     return await list_all_user_materials(db, user.id)
 
 
 async def search_materials(
     db: AsyncSession,
     user: User,
+    *,
     query_str: str = "",
     collection_id: int | None = None,
     tag_ids: list[int] | None = None,
 ) -> list[Material]:
-    """Поиск с проверкой доступа к коллекции (если задана)."""
+    """Поиск с фильтрами + проверка доступа к коллекции (если задана)."""
     if collection_id is not None:
         await get_owned_collection(db, collection_id, user)
+
     return await search_materials_query(
         db,
         user.id,
@@ -106,7 +109,7 @@ async def get_material(
     material_id: int,
     user: User,
 ) -> Material:
-    """Один материал юзера по id (с проверкой доступа)."""
+    """Один материал по id, с проверкой владения."""
     return await get_owned_material(db, material_id, user)
 
 
@@ -120,17 +123,23 @@ async def create_text_material(
     material_name: str,
     text_content: str,
 ) -> Material:
-    """Текстовый материал (юзер вводит HTML через TipTap)."""
+    """Текстовый материал (HTML из TipTap-редактора).
+
+    После создания делаем commit и перечитываем материал, чтобы
+    вернуть фронту объект с подгруженными tags (пустой список,
+    но фронт ожидает поле в JSON).
+    """
     await get_owned_collection(db, collection_id, user)
 
     mat = await create_material(
         db,
         collection_id=collection_id,
         material_name=material_name,
-        source_type="text",
+        source_type=SourceType.TEXT,
         text_content=text_content,
     )
-    return await _persist_material(db, mat)
+    await db.commit()
+    return await _reload_with_tags(db, mat.id)
 
 
 async def create_file_material(
@@ -141,13 +150,11 @@ async def create_file_material(
     file_path: str,
     file_size: int,
 ) -> Material:
-    """Файловый материал.
+    """Файловый материал. Парсер текста уходит в thread pool.
 
-    Парсер запускается в thread pool (anyio.to_thread.run_sync), чтобы
-    тяжёлая обработка PDF/DOCX не блокировала event loop. Если упадёт
-    или вернёт пустоту — ничего страшного: extracted_text останется NULL,
-    материал просто не будет находиться по содержимому файла
-    (поиск по названию работает).
+    Если парсер упал — логируем и сохраняем материал без
+    extracted_text. Сам факт неудачи парсинга не должен ломать
+    создание материала: файл уже загружен, юзер его видит.
     """
     await get_owned_collection(db, collection_id, user)
 
@@ -156,7 +163,7 @@ async def create_file_material(
     if abs_path:
         try:
             extracted_text = await anyio.to_thread.run_sync(
-                extract_text_from_file, abs_path
+                extract_text_from_file, abs_path,
             )
         except Exception:
             logger.exception("Failed to extract text from %s", file_path)
@@ -166,12 +173,13 @@ async def create_file_material(
         db,
         collection_id=collection_id,
         material_name=material_name,
-        source_type="file",
+        source_type=SourceType.FILE,
         file_path=file_path,
         file_size=file_size,
         extracted_text=extracted_text,
     )
-    return await _persist_material(db, mat)
+    await db.commit()
+    return await _reload_with_tags(db, mat.id)
 
 
 # ══════════════════════════════════════════════════════════
@@ -184,33 +192,51 @@ async def update_existing_material(
     *,
     changes: dict,
 ) -> Material:
-    """Частичное обновление материала с проверкой доступа.
+    """Частичное обновление материала.
 
-    Параметр `changes` — это словарь только тех полей, которые юзер
-    реально передал в PATCH (формируется в роуте через model_fields_set).
-    Это позволяет различать "поле не передано" и "поле передано как null".
+    Проверки против невалидных PATCH-полей:
+      - text_content редактируется только у TEXT-материалов
+      - text_content не может быть null (нарушит CheckConstraint в БД)
+      - collection_id не может быть null
+      - is_important не может быть null (NOT NULL в БД)
 
-    Бизнес-правила:
-      - text_content редактируется ТОЛЬКО для source_type='text'.
-      - При переносе в другую коллекцию проверяем доступ к ней.
+    Commit делаем только если реально что-то меняли —
+    нет смысла фиксировать пустую транзакцию.
     """
     mat = await get_owned_material(db, material_id, user)
 
-    if "text_content" in changes and mat.source_type != "text":
-        bad_request("text_content можно менять только для текстовых материалов")
+    # text_content: только для TEXT и только строка (не null)
+    if "text_content" in changes:
+        if mat.source_type != SourceType.TEXT:
+            bad_request(
+                "text_content можно менять только для текстовых материалов",
+            )
+        if changes["text_content"] is None:
+            bad_request(
+                "text_content не может быть null для текстового материала",
+            )
 
+    # collection_id: не null, и юзер должен владеть новой коллекцией
     if "collection_id" in changes:
         new_cid = changes["collection_id"]
         if new_cid is None:
-            bad_request("collection_id не может быть null — материал должен быть в коллекции")
+            bad_request(
+                "collection_id не может быть null — "
+                "материал должен быть в коллекции",
+            )
         await get_owned_collection(db, new_cid, user)
+
+    # is_important: не null (в БД NOT NULL)
+    if "is_important" in changes and changes["is_important"] is None:
+        bad_request("is_important не может быть null")
 
     if changes:
         await update_material(db, mat, **changes)
         await db.commit()
-        await db.refresh(mat)
 
-    return mat
+    # Перечитываем — чтобы tags подгрузились свежим запросом
+    # (особенно важно если меняли collection_id).
+    return await _reload_with_tags(db, mat.id)
 
 
 async def delete_existing_material(
@@ -218,7 +244,11 @@ async def delete_existing_material(
     material_id: int,
     user: User,
 ) -> None:
-    """Удаление материала. Файл с диска чистится отдельно (в роуте)."""
+    """Удаление материала.
+
+    Commit фиксирует удаление; refresh не нужен — объект больше
+    не существует в БД.
+    """
     mat = await get_owned_material(db, material_id, user)
     await delete_material(db, mat)
     await db.commit()

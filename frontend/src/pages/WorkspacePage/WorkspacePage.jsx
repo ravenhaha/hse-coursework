@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/Workspace/components/Sidebar/Sidebar';
 import Workspace from '../../components/Workspace/Workspace.jsx';
@@ -14,6 +14,8 @@ import { usersApi } from '../../api/users';
 import { graphApi } from '../../api/graph';
 import styles from './WorkspacePage.module.css';
 
+const HINT_FIRST_COLLECTION_KEY = 'omut_hint_first_collection_shown';
+
 function mergeTree(collections, materials) {
   const byCollection = {};
   for (const m of materials) {
@@ -22,7 +24,6 @@ function mergeTree(collections, materials) {
     if (!byCollection[cid]) byCollection[cid] = [];
     byCollection[cid].push(m);
   }
-
   function walk(nodes) {
     return nodes.map((node) => ({
       ...node,
@@ -32,8 +33,39 @@ function mergeTree(collections, materials) {
       ],
     }));
   }
-
   return walk(collections);
+}
+
+function buildCollectionsSignature(nodes) {
+  const parts = [];
+  const walk = (list, parentId = 0) => {
+    for (const n of list) {
+      parts.push(`${n.id}:${parentId}:${n.name ?? ''}`);
+      if (n.children?.length) walk(n.children, n.id);
+    }
+  };
+  walk(nodes);
+  return parts.join('|');
+}
+
+function buildMaterialsSignature(materials) {
+  return materials
+    .map(
+      (m) =>
+        `${m.id}:${m.collectionId ?? m.raw?.collection_id ?? 0}:${m.name ?? ''}`,
+    )
+    .join('|');
+}
+
+// 🆕 ИСПРАВЛЕНИЕ БАГА №3
+// Граф присылает id в формате "material:9" / "collection:3".
+// Достаём из строки число.
+function parseGraphMaterialId(rawId) {
+  if (rawId == null) return null;
+  if (typeof rawId === 'number') return rawId;
+  const s = String(rawId);
+  const m = s.match(/(\d+)$/);
+  return m ? Number(m[1]) : null;
 }
 
 export default function WorkspacePage() {
@@ -62,50 +94,77 @@ export default function WorkspacePage() {
 
   const { loadTree, clearTree } = useGraph();
 
+  const collectionsSig = useMemo(
+    () => buildCollectionsSignature(collections),
+    [collections],
+  );
+  const materialsSig = useMemo(
+    () => buildMaterialsSignature(materials),
+    [materials],
+  );
+
   useEffect(() => {
     let cancelled = false;
-    graphApi.tree()
+    graphApi
+      .tree()
       .then((data) => { if (!cancelled) loadTree(data); })
       .catch((err) => console.error('Не удалось загрузить граф:', err.message));
     return () => { cancelled = true; };
-  }, [loadTree, collections.length, materials.length]);
+  }, [loadTree, collectionsSig, materialsSig]);
 
   useEffect(() => clearTree, [clearTree]);
 
+  // ── UI state ──
   const [activeItemId, setActiveItemId] = useState(null);
   const [previewMaterial, setPreviewMaterial] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const [homeOpen, setHomeOpen] = useState(true);
   const materialModal = useModal();
 
-  // 🆕 ЭТАП 5: soft-delete — карта отложенных удалений
-  // id → { type, hiddenCollectionIds, hiddenMaterialIds }
+  const homeAutoInitedRef = useRef(false);
+  const sidebarRef = useRef(null);
+
+  const [hintShown, setHintShown] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem(HINT_FIRST_COLLECTION_KEY) === '1';
+  });
+
+  const markHintShown = useCallback(() => {
+    if (!hintShown) {
+      window.localStorage.setItem(HINT_FIRST_COLLECTION_KEY, '1');
+      setHintShown(true);
+    }
+  }, [hintShown]);
+
+  // ── SOFT-DELETE ──
   const [pendingDeletes, setPendingDeletes] = useState(() => new Map());
 
-  // 🆕 Собирает все ID коллекций в ветке (рекурсивно)
-  const collectCollectionBranch = useCallback((rootId, nodes = collections) => {
-    const ids = [];
-    const walk = (list) => {
-      for (const n of list) {
-        if (n.id === rootId) {
-          const collectAll = (x) => {
-            ids.push(x.id);
-            (x.children || []).forEach((c) => {
-              if (c.type === 'folder') collectAll(c);
-            });
-          };
-          collectAll(n);
-          return true;
+  const collectCollectionBranch = useCallback(
+    (rootId, nodes = collections) => {
+      const ids = [];
+      const walk = (list) => {
+        for (const n of list) {
+          if (n.id === rootId) {
+            const collectAll = (x) => {
+              ids.push(x.id);
+              (x.children || []).forEach((c) => {
+                if (c.type === 'folder') collectAll(c);
+              });
+            };
+            collectAll(n);
+            return true;
+          }
+          if (n.children?.length && walk(n.children)) return true;
         }
-        if (n.children?.length && walk(n.children)) return true;
-      }
-      return false;
-    };
-    walk(nodes);
-    return ids;
-  }, [collections]);
+        return false;
+      };
+      walk(nodes);
+      return ids;
+    },
+    [collections],
+  );
 
-  // 🆕 Множества скрытых ID (для быстрых проверок)
   const hiddenIds = useMemo(() => {
     const hiddenColl = new Set();
     const hiddenMat = new Set();
@@ -116,7 +175,6 @@ export default function WorkspacePage() {
     return { hiddenColl, hiddenMat };
   }, [pendingDeletes]);
 
-  // 🆕 Видимые коллекции (рекурсивный фильтр)
   const visibleCollections = useMemo(() => {
     const { hiddenColl } = hiddenIds;
     if (hiddenColl.size === 0) return collections;
@@ -127,7 +185,6 @@ export default function WorkspacePage() {
     return walk(collections);
   }, [collections, hiddenIds]);
 
-  // 🆕 Видимые материалы (плоский фильтр)
   const visibleMaterials = useMemo(() => {
     const { hiddenColl, hiddenMat } = hiddenIds;
     if (hiddenColl.size === 0 && hiddenMat.size === 0) return materials;
@@ -138,46 +195,61 @@ export default function WorkspacePage() {
     );
   }, [materials, hiddenIds]);
 
-  // ❗ дерево строим из ВИДИМЫХ
   const collectionsTree = useMemo(
     () => mergeTree(visibleCollections, visibleMaterials),
     [visibleCollections, visibleMaterials],
   );
 
-  // ── Главная-как-справка ──
-  const [homeOpen, setHomeOpen] = useState(true);
-  const [homeAutoInited, setHomeAutoInited] = useState(false);
-
   useEffect(() => {
     if (collectionsLoading) return;
-    if (homeAutoInited) return;
-    setHomeOpen(collections.length === 0);
-    setHomeAutoInited(true);
-  }, [collectionsLoading, collections.length, homeAutoInited]);
+    if (homeAutoInitedRef.current) return;
+    homeAutoInitedRef.current = true;
+    if (collections.length > 0) setHomeOpen(false);
+  }, [collectionsLoading, collections.length]);
 
   useEffect(() => {
     if (!homeOpen) return;
     const onKey = (e) => {
-      if (e.key === 'Escape' && collections.length > 0) {
-        setHomeOpen(false);
-      }
+      if (e.key === 'Escape' && collections.length > 0) setHomeOpen(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [homeOpen, collections.length]);
 
-  const handleSelectItem = useCallback((id, type = 'document') => {
-    setActiveItemId(id);
-    setHomeOpen(false);
+  // ── Навигация ──
+  const handleSelectItem = useCallback(
+    (id, type = 'document') => {
+      setActiveItemId(id);
+      setHomeOpen(false);
+      if (type === 'folder') { setPreviewMaterial(null); return; }
+      const mat = materials.find((m) => m.id === id);
+      if (mat) setPreviewMaterial(mat);
+    },
+    [materials],
+  );
 
-    if (type === 'folder') {
-      setPreviewMaterial(null);
-      return;
-    }
-
-    const mat = materials.find((m) => m.id === id);
-    if (mat) setPreviewMaterial(mat);
-  }, [materials]);
+  // 🆕 ИСПРАВЛЕНИЕ БАГА №3
+  // Открытие материала из графа.
+  // Graph даёт id в виде "material:9" — чистим до integer
+  // и ищем материал в локальном состоянии.
+  const handleOpenMaterialFromGraph = useCallback(
+    (rawId) => {
+      const numId = parseGraphMaterialId(rawId);
+      if (numId == null) {
+        console.warn('Не удалось распарсить id материала из графа:', rawId);
+        return;
+      }
+      const mat = materials.find((m) => Number(m.id) === numId);
+      if (!mat) {
+        console.warn('Материал из графа не найден в локальном состоянии:', numId);
+        return;
+      }
+      setActiveItemId(mat.id);
+      setHomeOpen(false);
+      setPreviewMaterial(mat);
+    },
+    [materials],
+  );
 
   const handleNavigateHome = useCallback(() => {
     setHomeOpen(true);
@@ -185,123 +257,133 @@ export default function WorkspacePage() {
     setPreviewMaterial(null);
   }, []);
 
-  const handleCloseHome = useCallback(() => {
-    setHomeOpen(false);
+  const handleCloseHome = useCallback(() => setHomeOpen(false), []);
+
+  // ── КОЛЛЕКЦИИ ──
+  const handleCreateCollection = useCallback(
+    async (name) => {
+      try {
+        await createCollection(name);
+        markHintShown();
+      } catch (err) {
+        console.error('Не удалось создать коллекцию:', err.message);
+        throw err;
+      }
+    },
+    [createCollection, markHintShown],
+  );
+
+  const handleStartCreateCollection = useCallback(() => {
+    sidebarRef.current?.startCreateCollection?.();
   }, []);
 
-  // ── Коллекции ──
-  const handleCreateCollection = useCallback(async (name) => {
-    try {
-      await createCollection(name);
-    } catch (err) {
-      console.error('Не удалось создать коллекцию:', err.message);
-      throw err;
-    }
-  }, [createCollection]);
+  const handleCreateSubcollection = useCallback(
+    async (parentId, name) => {
+      try {
+        await createCollection(name, parentId);
+      } catch (err) {
+        console.error('Не удалось создать подколлекцию:', err.message);
+        if (err?.status === 404) await reloadCollections();
+        throw err;
+      }
+    },
+    [createCollection, reloadCollections],
+  );
 
-  const handleCreateSubcollection = useCallback(async (parentId, name) => {
-    try {
-      await createCollection(name, parentId);
-    } catch (err) {
-      console.error('Не удалось создать подколлекцию:', err.message);
-      if (err?.status === 404) {
-        await reloadCollections();
+  // ── МАТЕРИАЛЫ ──
+  const handleAddMaterial = useCallback(
+    async (data) => {
+      try {
+        const created = await createMaterial(data);
+        if (created?.id) {
+          setActiveItemId(created.id);
+          setHomeOpen(false);
+        }
+        return created;
+      } catch (err) {
+        console.error('Не удалось добавить материал:', err.message, err);
+        if (err?.status === 404 || err?.status === 403) {
+          await reloadCollections();
+          await reloadMaterials();
+        }
+        throw err;
       }
-      throw err;
-    }
-  }, [createCollection, reloadCollections]);
+    },
+    [createMaterial, reloadCollections, reloadMaterials],
+  );
 
-  // ── Материалы ──
-  const handleAddMaterial = useCallback(async (data) => {
-    try {
-      const created = await createMaterial(data);
-      if (created?.id) {
-        setActiveItemId(created.id);
-        setHomeOpen(false);
+  const handleAddMaterialToFolder = useCallback(
+    async (folderId, data) => {
+      try {
+        const created = await createMaterial({ ...data, collection: folderId });
+        if (created?.id) {
+          setActiveItemId(created.id);
+          setHomeOpen(false);
+        }
+        return created;
+      } catch (err) {
+        console.error('Не удалось добавить материал в папку:', err.message, err);
+        if (err?.status === 404 || err?.status === 403) {
+          await reloadCollections();
+          await reloadMaterials();
+        }
+        throw err;
       }
-      return created;
-    } catch (err) {
-      console.error('Не удалось добавить материал:', err.message, err);
-      if (err?.status === 404 || err?.status === 403) {
-        await reloadCollections();
-        await reloadMaterials();
-      }
-      throw err;
-    }
-  }, [createMaterial, reloadCollections, reloadMaterials]);
+    },
+    [createMaterial, reloadCollections, reloadMaterials],
+  );
 
-  const handleAddMaterialToFolder = useCallback(async (folderId, data) => {
-    try {
-      const created = await createMaterial({ ...data, collection: folderId });
-      if (created?.id) {
-        setActiveItemId(created.id);
-        setHomeOpen(false);
+  const handleRenameItem = useCallback(
+    async (id, newName, type) => {
+      try {
+        if (type === 'folder') await renameCollection(id, newName);
+        else await renameMaterial(id, newName);
+      } catch (err) {
+        console.error('Не удалось переименовать:', err.message);
       }
-      return created;
-    } catch (err) {
-      console.error('Не удалось добавить материал в папку:', err.message, err);
-      if (err?.status === 404 || err?.status === 403) {
-        await reloadCollections();
-        await reloadMaterials();
-      }
-      throw err;
-    }
-  }, [createMaterial, reloadCollections, reloadMaterials]);
+    },
+    [renameCollection, renameMaterial],
+  );
 
-  // ── Переименование ──
-  const handleRenameItem = useCallback(async (id, newName, type) => {
-    try {
+  // ── SOFT-DELETE ──
+  const handleDeleteItem = useCallback(
+    (id, type) => {
+      const numId = Number(id);
       if (type === 'folder') {
-        await renameCollection(id, newName);
+        const branch = collectCollectionBranch(numId);
+        const branchSet = new Set(branch.map(Number));
+        const hiddenMaterialIds = materials
+          .filter((m) =>
+            branchSet.has(Number(m.collectionId ?? m.raw?.collection_id)),
+          )
+          .map((m) => m.id);
+        setPendingDeletes((prev) => {
+          const next = new Map(prev);
+          next.set(numId, {
+            type: 'folder',
+            hiddenCollectionIds: branch,
+            hiddenMaterialIds,
+          });
+          return next;
+        });
       } else {
-        await renameMaterial(id, newName);
+        setPendingDeletes((prev) => {
+          const next = new Map(prev);
+          next.set(numId, {
+            type: 'document',
+            hiddenCollectionIds: [],
+            hiddenMaterialIds: [numId],
+          });
+          return next;
+        });
       }
-    } catch (err) {
-      console.error('Не удалось переименовать:', err.message);
-    }
-  }, [renameCollection, renameMaterial]);
+      if (activeItemId === id) setActiveItemId(null);
+      if (previewMaterial?.id === id) setPreviewMaterial(null);
+    },
+    [collectCollectionBranch, materials, activeItemId, previewMaterial],
+  );
 
-  // ── 🆕 ЭТАП 5: SOFT-DELETE ──
-
-  // 1) Юзер нажал «Удалить» → прячем в UI, ждём решения
-  const handleDeleteItem = useCallback((id, type) => {
-    const numId = Number(id);
-
-    if (type === 'folder') {
-      const branch = collectCollectionBranch(numId);
-      const branchSet = new Set(branch.map(Number));
-      const hiddenMaterialIds = materials
-        .filter((m) => branchSet.has(Number(m.collectionId ?? m.raw?.collection_id)))
-        .map((m) => m.id);
-
-      setPendingDeletes((prev) => {
-        const next = new Map(prev);
-        next.set(numId, {
-          type: 'folder',
-          hiddenCollectionIds: branch,
-          hiddenMaterialIds,
-        });
-        return next;
-      });
-    } else {
-      setPendingDeletes((prev) => {
-        const next = new Map(prev);
-        next.set(numId, {
-          type: 'document',
-          hiddenCollectionIds: [],
-          hiddenMaterialIds: [numId],
-        });
-        return next;
-      });
-    }
-
-    // Сбросить активный/превью, если удалили его
-    if (activeItemId === id) setActiveItemId(null);
-    if (previewMaterial?.id === id) setPreviewMaterial(null);
-  }, [collectCollectionBranch, materials, activeItemId, previewMaterial]);
-
-  // 2) Юзер нажал «Отменить» → возвращаем
-  const handleRestoreItem = useCallback((item /*, type */) => {
+  const handleRestoreItem = useCallback((item) => {
     setPendingDeletes((prev) => {
       const next = new Map(prev);
       next.delete(Number(item.id));
@@ -309,65 +391,57 @@ export default function WorkspacePage() {
     });
   }, []);
 
-  // 3) Тост закрылся сам → реально удаляем на бэке
-  const handleCommitDelete = useCallback(async (id, type) => {
-    const numId = Number(id);
-
-    setPendingDeletes((prev) => {
-      const next = new Map(prev);
-      next.delete(numId);
-      return next;
-    });
-
-    try {
-      if (type === 'folder') {
-        const affectedIds = await removeCollection(numId);
-        removeByCollectionIds(affectedIds);
-      } else {
-        await removeMaterial(numId);
-      }
-    } catch (err) {
-      console.error('Не удалось удалить на сервере:', err);
-      if (err?.status !== 404) {
-        await reloadCollections();
-        await reloadMaterials();
-      }
-    }
-  }, [
-    removeCollection,
-    removeMaterial,
-    removeByCollectionIds,
-    reloadCollections,
-    reloadMaterials,
-  ]);
-
-  // ── Перемещение (DnD) ──
-  const handleMoveItem = useCallback(async (id, type, newParentId) => {
-    console.log('[DnD] handleMoveItem:', { id, type, newParentId });
-    try {
-      if (type === 'folder') {
-        await moveCollection(id, newParentId);
-      } else {
-        if (newParentId == null) {
-          console.warn('[DnD] Отмена: материал нельзя в корень');
-          return;
+  const handleCommitDelete = useCallback(
+    async (id, type) => {
+      const numId = Number(id);
+      setPendingDeletes((prev) => {
+        const next = new Map(prev);
+        next.delete(numId);
+        return next;
+      });
+      try {
+        if (type === 'folder') {
+          const affectedIds = await removeCollection(numId);
+          removeByCollectionIds(affectedIds);
+        } else {
+          await removeMaterial(numId);
         }
-        await moveMaterial(id, newParentId);
-        console.log('[DnD] Материал перемещён ✅');
+      } catch (err) {
+        console.error('Не удалось удалить на сервере:', err);
+        if (err?.status !== 404) {
+          await reloadCollections();
+          await reloadMaterials();
+        }
       }
-    } catch (err) {
-      console.error('Не удалось переместить:', err.message, err);
-      if (err?.status === 404 || err?.status === 409) {
-        await reloadCollections();
-        await reloadMaterials();
+    },
+    [
+      removeCollection,
+      removeMaterial,
+      removeByCollectionIds,
+      reloadCollections,
+      reloadMaterials,
+    ],
+  );
+
+  const handleMoveItem = useCallback(
+    async (id, type, newParentId) => {
+      try {
+        if (type === 'folder') {
+          await moveCollection(id, newParentId);
+        } else {
+          if (newParentId == null) return;
+          await moveMaterial(id, newParentId);
+        }
+      } catch (err) {
+        console.error('Не удалось переместить:', err.message, err);
+        if (err?.status === 404 || err?.status === 409) {
+          await reloadCollections();
+          await reloadMaterials();
+        }
       }
-    }
-  }, [
-    moveCollection,
-    moveMaterial,
-    reloadCollections,
-    reloadMaterials,
-  ]);
+    },
+    [moveCollection, moveMaterial, reloadCollections, reloadMaterials],
+  );
 
   const handleLogout = useCallback(async () => {
     await logout();
@@ -377,7 +451,11 @@ export default function WorkspacePage() {
     await usersApi.deleteAccount();
     setDeleteAccountOpen(false);
     setSettingsOpen(false);
-    try { await logout(); } catch { /* игнор */ }
+    try {
+      await logout();
+    } catch {
+      /* игнор */
+    }
     navigate('/login', { replace: true });
   }, [logout, navigate]);
 
@@ -394,21 +472,24 @@ export default function WorkspacePage() {
   };
 
   const stats = {
-    collections: countCollections(visibleCollections),  // 🆕 считаем по видимым
-    materials: visibleMaterials.length,                  // 🆕
+    collections: countCollections(visibleCollections),
+    materials: visibleMaterials.length,
   };
 
+  const isFirstCollection = collections.length === 0 && !hintShown;
   const canCloseHome = collections.length > 0;
 
   return (
     <div className={styles.layout}>
       <Sidebar
+        ref={sidebarRef}
         collections={collectionsTree}
-        pureCollections={visibleCollections}   // 🆕 видимые
-        materials={visibleMaterials}            // 🆕 видимые
+        pureCollections={visibleCollections}
+        materials={visibleMaterials}
         user={user}
         activeItemId={activeItemId}
         homeOpen={homeOpen}
+        isFirstCollection={isFirstCollection}
         onSelectItem={handleSelectItem}
         onNavigateHome={handleNavigateHome}
         onCreateCollection={handleCreateCollection}
@@ -416,9 +497,9 @@ export default function WorkspacePage() {
         onAddMaterial={handleAddMaterial}
         onAddMaterialToFolder={handleAddMaterialToFolder}
         onRenameItem={handleRenameItem}
-        onDeleteItem={handleDeleteItem}         // 🆕 soft
-        onRestoreItem={handleRestoreItem}       // 🆕
-        onCommitDelete={handleCommitDelete}     // 🆕
+        onDeleteItem={handleDeleteItem}
+        onRestoreItem={handleRestoreItem}
+        onCommitDelete={handleCommitDelete}
         onMoveItem={handleMoveItem}
         onSettings={() => setSettingsOpen(true)}
         onLogout={handleLogout}
@@ -427,12 +508,14 @@ export default function WorkspacePage() {
       <main className={styles.content}>
         <Workspace
           materialModal={materialModal}
-          collections={visibleCollections}     // 🆕 чтобы модалка добавления не предлагала удалённые
+          collections={visibleCollections}
           onAddMaterial={handleAddMaterial}
+          onCreateCollection={handleStartCreateCollection}
           activeItemId={activeItemId}
           homeOpen={homeOpen}
           canCloseHome={canCloseHome}
           onCloseHome={handleCloseHome}
+          onOpenMaterialFromGraph={handleOpenMaterialFromGraph}
         />
       </main>
 

@@ -1,8 +1,23 @@
+"""Модель Collection — иерархическая коллекция материалов пользователя.
+
+Структура: дерево произвольной глубины (parent_id ссылается на ту же таблицу).
+Корневые коллекции имеют parent_id=NULL.
+
+Целостность дерева:
+    - Циклы (A→B→A) на уровне БД НЕ запрещены — проверяются в сервисе
+      при изменении parent_id.
+    - Принадлежность parent.user_id == self.user_id тоже проверяется
+      в сервисе (можно усилить композитным FK, но это усложняет миграции).
+"""
+
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 from datetime import datetime
+
 from sqlalchemy import String, DateTime, ForeignKey, Index, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.db.base import Base
 
 if TYPE_CHECKING:
@@ -15,11 +30,13 @@ class Collection(Base):
 
     __table_args__ = (
         Index(
-            "uq_collections_user_id_parent_id_name",
+            None,
             "user_id", "parent_id", "name",
             unique=True,
             postgresql_nulls_not_distinct=True,
         ),
+
+        Index(None, "user_id", "parent_id"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -28,7 +45,7 @@ class Collection(Base):
         index=True,
     )
     name: Mapped[str] = mapped_column(String(100))
-    icon: Mapped[str | None] = mapped_column(String(10), default=None)
+    icon: Mapped[str | None] = mapped_column(String(16), default=None)
     parent_id: Mapped[int | None] = mapped_column(
         ForeignKey("collections.id", ondelete="CASCADE"),
         default=None,

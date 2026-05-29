@@ -1,16 +1,19 @@
-"""
-Сервис тегов.
+"""Сервис тегов.
 
-Бизнес-правила:
-  - тег принадлежит юзеру (поле user_id);
-  - имя тега уникально внутри юзера;
-  - присвоение/снятие тега — m2m через таблицу material_tags;
-  - все теги в bulk-операциях должны принадлежать тому же юзеру.
+Транзакции:
+    Сервисный слой явно делает commit после успешных мутаций.
+    CRUD-слой делает только flush() для получения server-generated
+    полей. При IntegrityError (нарушение UNIQUE-индекса в БД)
+    делаем rollback() — иначе сессия попадает в "failed" state.
+    После rollback() райзим доменное исключение, и get_db просто
+    завершит уже откаченную транзакцию.
 
-Защита от race condition:
-  - все операции, нарушающие UniqueConstraint, защищены try/except
-    IntegrityError. Это нужно потому, что между check и insert может
-    проскочить параллельный запрос (двойной клик, два таба).
+Идемпотентные операции (assign/unassign) НЕ ловят IntegrityError:
+    Соответствующие CRUD-функции (link_material_tag /
+    unlink_material_tag) делают атомарные ON CONFLICT DO NOTHING /
+    DELETE ... RETURNING и возвращают bool — «вставили / удалили
+    на самом деле или нет». Это убирает race condition между
+    pre-check и записью без try/except.
 """
 
 from sqlalchemy.exc import IntegrityError
@@ -26,9 +29,8 @@ from app.core.exceptions import (
 from app.crud.tag import (
     create_tag,
     delete_tag,
-    get_material_tag_ids,
     get_tag_by_id,
-    get_tag_by_name,
+    get_tag_by_name_ci,
     get_tags_by_ids,
     get_tags_by_user,
     get_tags_for_material,
@@ -46,7 +48,15 @@ from app.services.material import get_owned_material
 # Хелперы
 # ══════════════════════════════════════════════════════════
 async def _get_own_tag(db: AsyncSession, tag_id: int, user: User) -> Tag:
-    """Достаёт тег с проверкой владельца."""
+    """Достаёт тег и проверяет, что он принадлежит юзеру.
+
+    Два разных исключения (404 vs 403) специально:
+        - tag_not_found — тега вообще нет в системе;
+        - tag_access_denied — тег есть, но чужой.
+    Для конечного API это можно унифицировать в 404 (чтобы не утекало
+    «такой id существует»), но на уровне сервиса разделение полезно
+    для логов и тестов.
+    """
     tag = await get_tag_by_id(db, tag_id)
     if not tag:
         tag_not_found()
@@ -58,9 +68,10 @@ async def _get_own_tag(db: AsyncSession, tag_id: int, user: User) -> Tag:
 async def _ensure_tags_belong_to_user(
     db: AsyncSession, tag_ids: list[int], user: User,
 ) -> None:
-    """
-    Батч-проверка владельца для списка тегов.
-    Один SQL вместо N. Райзит на первой проблеме.
+    """Проверка для bulk-операций: ВСЕ переданные теги существуют и НАШИ.
+
+    Один SELECT вместо N — оптимизация для set_material_tags_bulk,
+    где tag_ids может быть длинным.
     """
     unique_ids = list(set(tag_ids))
     if not unique_ids:
@@ -70,7 +81,6 @@ async def _ensure_tags_belong_to_user(
 
     if len(tags) != len(unique_ids):
         tag_not_found()
-
     if any(t.user_id != user.id for t in tags):
         tag_access_denied()
 
@@ -81,13 +91,13 @@ async def _check_unique_name(
     name: str,
     exclude_id: int | None = None,
 ) -> None:
-    """Проверяет, что имя тега ещё не занято у этого юзера.
+    """Проверяет уникальность имени тега у юзера (case-insensitive).
 
-    Это "оптимистичная" проверка — между ней и INSERT может проскочить
-    параллельный запрос. Поэтому в caller'ах есть страховка через
-    try/except IntegrityError.
+    Реальная защита от race condition — UNIQUE INDEX на
+    (user_id, lower(tag_name)) в БД. Эта проверка нужна только для
+    дружелюбного UX-сообщения вместо «упс, IntegrityError».
     """
-    dup = await get_tag_by_name(db, user_id, name)
+    dup = await get_tag_by_name_ci(db, user_id, name)
     if dup and dup.id != exclude_id:
         tag_name_duplicate()
 
@@ -96,36 +106,33 @@ async def _check_unique_name(
 # CRUD тегов
 # ══════════════════════════════════════════════════════════
 async def list_tags(db: AsyncSession, user: User) -> list[Tag]:
-    """Все теги юзера."""
     return await get_tags_by_user(db, user.id)
 
 
 async def get_tag(db: AsyncSession, tag_id: int, user: User) -> Tag:
-    """Один тег по ID."""
     return await _get_own_tag(db, tag_id, user)
 
 
 async def create_new_tag(
     db: AsyncSession, user: User, tag_name: str,
 ) -> Tag:
-    """Создаёт тег с уникальным именем в рамках юзера.
+    """Создание тега с двойной защитой от дублей.
 
-    Двойная защита от дублей:
-      1. Быстрая проверка через SELECT (UX: понятная ошибка сразу).
-      2. try/except IntegrityError — на случай race condition между
-         SELECT и INSERT (двойной клик, два таба).
+    Сначала pre-check для красивой ошибки. Если две параллельные
+    транзакции прошли pre-check одновременно — вторая упадёт на
+    UNIQUE-индексе → ловим IntegrityError, делаем rollback и
+    райзим то же доменное исключение.
     """
     await _check_unique_name(db, user.id, tag_name)
 
     try:
         tag = await create_tag(db, user.id, tag_name)
         await db.commit()
+        await db.refresh(tag)
+        return tag
     except IntegrityError:
         await db.rollback()
         tag_name_duplicate()
-
-    await db.refresh(tag)
-    return tag
 
 
 async def update_existing_tag(
@@ -136,31 +143,33 @@ async def update_existing_tag(
 ) -> Tag:
     """Переименование тега.
 
-    Если имя не меняется — early return, не дёргаем БД зря.
-    Защита от race condition аналогична create_new_tag.
+    Кейсы:
+        1. Имя не изменилось — возвращаем как есть, без UPDATE и commit'а.
+        2. Изменился только регистр — UPDATE без проверки уникальности.
+        3. Изменилось имя — проверяем уникальность.
     """
     tag = await _get_own_tag(db, tag_id, user)
 
     if tag.tag_name == tag_name:
         return tag
 
-    await _check_unique_name(db, user.id, tag_name, exclude_id=tag.id)
+    if tag.tag_name.casefold() != tag_name.casefold():
+        await _check_unique_name(db, user.id, tag_name, exclude_id=tag.id)
 
     try:
         await update_tag(db, tag, tag_name=tag_name)
         await db.commit()
+        await db.refresh(tag)
     except IntegrityError:
         await db.rollback()
         tag_name_duplicate()
 
-    await db.refresh(tag)
     return tag
 
 
 async def delete_existing_tag(
     db: AsyncSession, tag_id: int, user: User,
 ) -> None:
-    """Удаление тега. Связи в material_tags падают каскадом из БД."""
     tag = await _get_own_tag(db, tag_id, user)
     await delete_tag(db, tag)
     await db.commit()
@@ -172,47 +181,42 @@ async def delete_existing_tag(
 async def assign_tag(
     db: AsyncSession, user: User, material_id: int, tag_id: int,
 ) -> None:
-    """Привязывает тег к материалу. Райзит, если уже привязан.
+    """Привязать тег к материалу.
 
-    Защита от race condition: между SELECT существующих связей
-    и INSERT может проскочить параллельный запрос (двойной клик).
-    Composite PK (material_id, tag_id) в material_tags поймает его
-    через IntegrityError.
+    Если link уже существовал (CRUD вернул False) — НЕ коммитим,
+    райзим доменную ошибку. Иначе фиксируем вставку.
     """
     await get_owned_material(db, material_id, user)
     await _get_own_tag(db, tag_id, user)
 
-    existing_ids = await get_material_tag_ids(db, material_id)
-    if tag_id in existing_ids:
+    created = await link_material_tag(db, material_id, tag_id)
+    if not created:
         tag_already_assigned()
 
-    try:
-        await link_material_tag(db, material_id, tag_id)
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        tag_already_assigned()
+    await db.commit()
 
 
 async def unassign_tag(
     db: AsyncSession, user: User, material_id: int, tag_id: int,
 ) -> None:
-    """Снимает тег с материала. Райзит, если не был привязан."""
+    """Отвязать тег от материала.
+
+    Зеркально assign_tag: коммитим только если реально удалили строку.
+    """
     await get_owned_material(db, material_id, user)
     await _get_own_tag(db, tag_id, user)
 
-    existing_ids = await get_material_tag_ids(db, material_id)
-    if tag_id not in existing_ids:
+    deleted = await unlink_material_tag(db, material_id, tag_id)
+    if not deleted:
         tag_not_assigned()
 
-    await unlink_material_tag(db, material_id, tag_id)
     await db.commit()
 
 
 async def get_material_tags(
     db: AsyncSession, user: User, material_id: int,
 ) -> list[Tag]:
-    """Все теги, привязанные к материалу."""
+    """Все теги конкретного материала."""
     await get_owned_material(db, material_id, user)
     return await get_tags_for_material(db, material_id)
 
@@ -223,13 +227,19 @@ async def set_material_tags_bulk(
     material_id: int,
     tag_ids: list[int],
 ) -> list[int]:
-    """
-    Полная замена тегов у материала.
-    Проверяет владельца материала и всех тегов одним батчем.
+    """Полностью заменить набор тегов у материала.
+
+    Стратегия в CRUD: удалить все существующие связи → вставить новые
+    (после дедупликации). Поэтому возвращаемый список — это
+    ИТОГОВЫЙ НАБОР tag_id у материала, в порядке поступления
+    (с убранными повторами).
+
+    Фронт может использовать этот результат, чтобы синхронизировать
+    локальное состояние без дополнительного GET.
     """
     await get_owned_material(db, material_id, user)
     await _ensure_tags_belong_to_user(db, tag_ids, user)
 
-    result_ids = await set_material_tags(db, material_id, tag_ids)
+    result = await set_material_tags(db, material_id, tag_ids)
     await db.commit()
-    return result_ids
+    return result

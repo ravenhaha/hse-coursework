@@ -8,6 +8,7 @@
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
 }
 
+/* Главный glow — бирюза, правый верх. */
 .glow {
     position: absolute;
     top: -160px;
@@ -15,6 +16,20 @@
     width: 420px;
     height: 420px;
     background: radial-gradient(circle, rgba(58, 215, 211, 0.22), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* 🆕 Второй glow — лаванда, левый низ.
+   Двухцветная атмосфера — приём из Vercel/Linear/Arc. */
+.banner::after {
+    content: '';
+    position: absolute;
+    bottom: -180px;
+    left: -120px;
+    width: 380px;
+    height: 380px;
+    background: radial-gradient(circle, rgba(167, 139, 250, 0.18), transparent 70%);
     pointer-events: none;
     z-index: 0;
 }
@@ -28,7 +43,12 @@
     padding: 5px 12px;
     margin-bottom: 18px;
     border-radius: 100px;
-    background: rgba(58, 215, 211, 0.14);
+    /* 🆕 Двойной градиент в фоне бейджа: бирюза → лаванда. */
+    background: linear-gradient(
+        90deg,
+        rgba(58, 215, 211, 0.16),
+        rgba(167, 139, 250, 0.14)
+    );
     border: 1px solid rgba(58, 215, 211, 0.3);
     font-size: 12px;
     font-weight: 600;
@@ -53,8 +73,15 @@
     letter-spacing: -0.02em;
 }
 
+/* 🆕 Текст "база знаний" — переливающийся трёхцветный градиент.
+   Все три акцента системы в одной фразе → знакомим юзера с палитрой. */
 .accent {
-    background: linear-gradient(120deg, #3AD7D3, #6bb6d6);
+    background: linear-gradient(
+        120deg,
+        #3AD7D3 0%,
+        #A78BFA 55%,
+        #FB923C 100%
+    );
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -70,6 +97,8 @@
     color: #a3c1d0;
 }
 
+/* CTA-кнопка остаётся бирюзовой — это primary action,
+   "якорный" цвет системы. */
 .cta {
     position: relative;
     z-index: 1;

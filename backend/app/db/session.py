@@ -26,17 +26,23 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """FastAPI-зависимость: выдаёт асинхронную сессию БД.
 
     Поведение транзакции:
-      - при успешном завершении запроса делает commit;
-      - при любом исключении — rollback и пробрасывает дальше;
+      - сервисный слой САМ управляет commit/rollback;
+      - при необработанном исключении делаем rollback как safety net;
       - сессия закрывается автоматически через `async with`.
 
-    Это позволяет CRUD-слою использовать только `flush()` —
-    финальный коммит централизованно происходит здесь.
+    Почему не делаем auto-commit здесь:
+      - сервисы часто делают НЕСКОЛЬКО транзакций в одном запросе
+        (например, OAuth: создать юзера → commit → потом ещё операции);
+      - явный commit в сервисе нагляднее показывает границы транзакций;
+      - после commit может потребоваться `db.refresh(obj)` — это удобно
+        делать в сервисе.
+
+    CRUD-слой использует `flush()` для получения server-generated полей
+    (id, created_at), а commit делает сервис.
     """
     async with AsyncSessionLocal() as session:
         try:
             yield session
-            await session.commit()
         except Exception:
             await session.rollback()
             raise

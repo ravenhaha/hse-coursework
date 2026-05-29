@@ -7,6 +7,7 @@
 
 from functools import lru_cache
 from pathlib import Path
+from pydantic import field_validator, model_validator
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -51,6 +52,7 @@ class Settings(BaseSettings):
 
     # ── Фронтенд и режим работы ──
     FRONTEND_URL: str = "http://localhost:5173"
+    BACKEND_URL: str = "http://localhost:8000"
     IS_PRODUCTION: bool = False
 
     # ── API ──
@@ -60,6 +62,41 @@ class Settings(BaseSettings):
     UPLOADS_SUBDIR: str = "uploads"
     MAX_AVATAR_SIZE: int = 8 * 1024 * 1024          # 8 MB
     MAX_MATERIAL_FILE_SIZE: int = 50 * 1024 * 1024  # 50 MB
+
+    # ──────────────────────────────────────────
+    # Валидаторы безопасности
+    # ──────────────────────────────────────────
+
+    @field_validator("SECRET_KEY")
+    @classmethod
+    def _validate_secret_key(cls, v: str) -> str:
+        """SECRET_KEY должен быть достаточно длинным для HS256.
+
+        OWASP рекомендует минимум 256 бит энтропии для HMAC-SHA256.
+        В hex-представлении это 64 символа, в base64 — ~43. Берём 32
+        как разумный нижний порог: всё, что короче — почти наверняка
+        тестовая заглушка, которой нельзя оказаться в проде.
+        """
+        if len(v) < 32:
+            raise ValueError(
+                "SECRET_KEY must be at least 32 characters "
+                "(use `openssl rand -hex 32` to generate one)"
+            )
+        return v
+    
+    @model_validator(mode="after")
+    def _enforce_prod_security(self) -> "Settings":
+        """В production CSRF-защита обязана быть включена.
+
+        Это защита от fail-open: если разработчик забыл выставить
+        CSRF_ENABLED=true в .env прода — приложение упадёт при старте,
+        а не запустится с дырой в безопасности.
+        """
+        if self.IS_PRODUCTION and not self.CSRF_ENABLED:
+            raise ValueError(
+                "CSRF_ENABLED must be true when IS_PRODUCTION is true"
+            )
+        return self
 
     # ──────────────────────────────────────────
     # Computed: БД

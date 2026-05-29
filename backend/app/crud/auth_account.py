@@ -5,6 +5,13 @@
     - VK / Yandex            (provider_auth='vk' / 'yandex', password_hash=NULL)
 
 Тонкий слой: только запросы, без бизнес-логики.
+
+Про AuthProvider:
+    Это StrEnum, поэтому AuthProvider.EMAIL == "email" → True.
+    В where можно писать его напрямую, .value не нужен. Сигнатуры
+    функций принимают `str | AuthProvider` — это удобно для вызывающего
+    кода, который может прокинуть как enum-член, так и сырую строку
+    (например, провайдер из OAuth-конфига).
 """
 
 from sqlalchemy import select
@@ -31,7 +38,7 @@ async def get_auth_account(
     stmt = (
         select(AuthAccount)
         .where(
-            AuthAccount.provider_auth == str(provider),
+            AuthAccount.provider_auth == provider,
             AuthAccount.provider_user_id == provider_user_id,
         )
         .options(selectinload(AuthAccount.user))
@@ -46,7 +53,10 @@ async def get_email_account(
     """Достаёт email-аккаунт пользователя (provider_auth='email').
 
     Используется при логине: достаём password_hash для проверки пароля.
-    Email сравнивается КАК ЕСТЬ — нормализацию делает сервис.
+    Email сравнивается КАК ЕСТЬ — нормализацию (lower/strip) делает сервис
+    перед вызовом, потому что правила нормализации (а-ля RFC) — это
+    бизнес-логика, не CRUD.
+
     Сразу подгружаем связанного юзера через selectinload — это избавляет
     сервис от лишнего запроса get_user_by_id(auth.user_id) после успешной
     проверки пароля.
@@ -54,7 +64,7 @@ async def get_email_account(
     stmt = (
         select(AuthAccount)
         .where(
-            AuthAccount.provider_auth == AuthProvider.EMAIL.value,
+            AuthAccount.provider_auth == AuthProvider.EMAIL,
             AuthAccount.provider_user_id == email,
         )
         .options(selectinload(AuthAccount.user))
@@ -95,11 +105,11 @@ async def create_auth_account(
     password_hash=None.
 
     Уникальность пары (provider, provider_user_id) гарантирует БД —
-    тут на это не полагаемся, проверка должна быть в сервисе.
+    тут на это не полагаемся, обработка дубля должна быть в сервисе.
     """
     account = AuthAccount(
         user_id=user_id,
-        provider_auth=str(provider),
+        provider_auth=str(provider),  # StrEnum → строка для надёжности
         provider_user_id=provider_user_id,
         password_hash=password_hash,
     )
@@ -136,7 +146,7 @@ async def delete_auth_account(
 ) -> None:
     """Удаляет одну привязку (например, юзер отвязал VK от аккаунта).
 
-    Удаление SAMOG юзера → каскадом снесёт все его auth_accounts автоматически.
+    Удаление самого юзера → каскадом снесёт все его auth_accounts автоматически.
     Эта функция нужна только для частичной отвязки.
     """
     await db.delete(account)

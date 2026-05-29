@@ -1,22 +1,28 @@
-"""CRUD для материалов."""
+"""CRUD для материалов (заметок и файлов).
 
-from sqlalchemy import select, or_
+Тонкий слой над БД: только SELECT/INSERT/UPDATE/DELETE.
+Никаких проверок владельца, raise HTTPException — это работа сервиса.
+Commit не делаем (агрегирует вызывающий код).
+"""
+
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.db_utils import escape_like
+from app.core.db_utils import LIKE_ESCAPE_CHAR, escape_like
 from app.models.collection import Collection
-from app.models.material import Material
+from app.models.material import Material, SourceType
 from app.models.material_tag import material_tags
 
 
 # ─────────────────────────────────────
 # READ
-# ────────────────────────────────────
+# ─────────────────────────────────────
 async def get_material_by_id(
     db: AsyncSession,
     material_id: int,
 ) -> Material | None:
+    """Один материал по id, с подгруженными тегами."""
     stmt = (
         select(Material)
         .options(selectinload(Material.tags))
@@ -30,6 +36,7 @@ async def list_materials_by_collection(
     db: AsyncSession,
     collection_id: int,
 ) -> list[Material]:
+    """Все материалы коллекции, новые сверху."""
     stmt = (
         select(Material)
         .options(selectinload(Material.tags))
@@ -44,6 +51,7 @@ async def list_all_user_materials(
     db: AsyncSession,
     user_id: int,
 ) -> list[Material]:
+    """Все материалы юзера (через JOIN с collections)."""
     stmt = (
         select(Material)
         .join(Collection, Material.collection_id == Collection.id)
@@ -65,13 +73,7 @@ async def search_materials(
 ) -> list[Material]:
     """Поиск материалов с опциональными фильтрами.
 
-    query_str ищется по:
-      - material_name (название карточки)
-      - text_content (для текстов)
-      - extracted_text (для файлов — извлечённый текст)
-
-    Спецсимволы LIKE (%, _) экранируются, чтобы юзер не мог
-    управлять шаблоном через ввод.
+    Семантика тегов — OR (материал имеет хотя бы один из tag_ids).
     """
     stmt = (
         select(Material)
@@ -87,18 +89,20 @@ async def search_materials(
         pattern = f"%{escape_like(query_str)}%"
         stmt = stmt.where(
             or_(
-                Material.material_name.ilike(pattern, escape="\\"),
-                Material.text_content.ilike(pattern, escape="\\"),
-                Material.extracted_text.ilike(pattern, escape="\\"),
+                Material.material_name.ilike(pattern, escape=LIKE_ESCAPE_CHAR),
+                Material.text_content.ilike(pattern, escape=LIKE_ESCAPE_CHAR),
+                Material.extracted_text.ilike(pattern, escape=LIKE_ESCAPE_CHAR),
             )
         )
 
     if tag_ids:
-        for tag_id in tag_ids:
-            sub = select(material_tags.c.material_id).where(
-                material_tags.c.tag_id == tag_id
-            )
-            stmt = stmt.where(Material.id.in_(sub))
+        stmt = stmt.where(
+            Material.id.in_(
+                select(material_tags.c.material_id).where(
+                    material_tags.c.tag_id.in_(tag_ids),
+                ),
+            ),
+        )
 
     stmt = stmt.order_by(Material.created_at.desc())
     result = await db.execute(stmt)
@@ -113,13 +117,13 @@ async def create_material(
     *,
     collection_id: int,
     material_name: str,
-    source_type: str,
+    source_type: SourceType,
     text_content: str | None = None,
     file_path: str | None = None,
     file_size: int | None = None,
     extracted_text: str | None = None,
 ) -> Material:
-    """Создаёт материал. Все file_* поля передавать только для source_type='file'."""
+    """Создаёт материал."""
     material = Material(
         collection_id=collection_id,
         material_name=material_name,
@@ -132,6 +136,7 @@ async def create_material(
     db.add(material)
     await db.flush()
     return material
+
 
 _UPDATABLE_MATERIAL_FIELDS = {
     "material_name",
@@ -146,6 +151,7 @@ async def update_material(
     material: Material,
     **fields,
 ) -> Material:
+    """Обновляет разрешённые поля материала."""
     for key, value in fields.items():
         if key in _UPDATABLE_MATERIAL_FIELDS:
             setattr(material, key, value)
@@ -157,5 +163,6 @@ async def delete_material(
     db: AsyncSession,
     material: Material,
 ) -> None:
+    """Удаляет материал. Связи material_tags чистятся каскадом FK."""
     await db.delete(material)
     await db.flush()

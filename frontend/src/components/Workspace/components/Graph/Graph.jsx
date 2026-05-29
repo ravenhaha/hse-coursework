@@ -6,11 +6,10 @@ import GraphNode from './GraphNode';
 import NodePreviewModal from '../NodePreviewModal/NodePreviewModal';
 import styles from './Graph.module.css';
 
-// ===== Настройки drag’а — правь, чтобы кастомить ощущение перетаскивания =====
-const DRAG_MOVE_THRESHOLD = 3; // пиксели в screen-координатах, после которых движение считается дрэгом
-// ============================================================================
+// ===== Настройки drag’а =====
+const DRAG_MOVE_THRESHOLD = 3;
+// ============================
 
-// Находим узел в дереве по цепочке id (breadcrumb).
 function findByPath(root, path) {
     let current = root;
     for (let i = 1; i < path.length; i++) {
@@ -21,7 +20,6 @@ function findByPath(root, path) {
     return current;
 }
 
-// Собираем хлебные крошки по текущему пути.
 function buildBreadcrumbs(root, path) {
     const crumbs = [];
     let current = root;
@@ -34,18 +32,16 @@ function buildBreadcrumbs(root, path) {
     return crumbs;
 }
 
-export default function Graph({ data }) {
-    // path — цепочка id от настоящего корня к текущему «корню» отображения.
+// 🆕 onOpenMaterial — колбэк, который открывает материал в основном вьюере.
+//    Прокидывается с уровня WorkspacePage через Workspace.
+export default function Graph({ data, onOpenMaterial }) {
     const [path, setPath] = useState([data.id]);
     const [hoveredId, setHoveredId] = useState(null);
     const [previewNode, setPreviewNode] = useState(null);
 
-    // Позиции узлов, которые пользователь перетащил. key = id узла.
-    // При drill-down сбрасываем, чтобы новый уровень начинался с авто-раскладки.
     const [dragOverrides, setDragOverrides] = useState({});
     const dragStateRef = useRef(null);
 
-    // Если пришло новое дерево (mock кликнули повторно) — сбрасываем путь.
     useEffect(() => {
         setPath([data.id]);
     }, [data]);
@@ -53,16 +49,12 @@ export default function Graph({ data }) {
     const currentRoot = useMemo(() => findByPath(data, path), [data, path]);
     const crumbs = useMemo(() => buildBreadcrumbs(data, path), [data, path]);
 
-    // На верхнем уровне (path.length === 1) не строим дерево — показываем только
-    // прямых детей корня как разбросанных светлячков, без связей и без маркеров
-    // вложенности. При drill-down рисуем полное поддерево текущего корня.
     const isTopLevel = path.length === 1;
     const { nodes: treeNodes, edges: treeEdges } = useTreeLayout(
         isTopLevel ? null : currentRoot
     );
     const { containerRef, transform, handlers, setTransform } = usePanZoom();
 
-    // Верхний уровень: прямые дети корня, раскиданные по подсолнуховой спирали.
     const scatteredNodes = useMemo(() => {
         if (!isTopLevel) return [];
         const kids = currentRoot?.children ?? [];
@@ -76,24 +68,20 @@ export default function Graph({ data }) {
                 depth: 1,
                 x: pos.x,
                 y: pos.y,
-                hasChildren: false, // на верхнем уровне маркер не показываем
+                hasChildren: false,
             };
         });
     }, [isTopLevel, currentRoot]);
 
-    // При смене уровня: центрируем сцену и сбрасываем перетаскивания.
     useEffect(() => {
         setDragOverrides({});
         const el = containerRef.current;
         if (!el) return;
         const { width, height } = el.getBoundingClientRect();
-        // Верхний уровень: скаттер центрирован в (0,0) — ставим в центр вьюпорта.
-        // Drill-down: корень поддерева в (0,0), рост вправо — сдвигаем влево.
         const x = isTopLevel ? width / 2 : width * 0.15;
         setTransform({ x, y: height / 2, scale: 1 });
     }, [path, isTopLevel, setTransform, containerRef]);
 
-    // Применяем перетаскивания поверх авто-раскладки / скаттера.
     const displayNodes = useMemo(() => {
         const base = isTopLevel ? scatteredNodes : treeNodes;
         return base.map((n) => {
@@ -107,18 +95,24 @@ export default function Graph({ data }) {
         [isTopLevel, treeEdges]
     );
 
-    // Карта id → позиция, чтобы рёбра следили за перетаскиваемыми узлами.
     const nodeById = useMemo(() => {
         const m = new Map();
         displayNodes.forEach((n) => m.set(n.id, n));
         return m;
     }, [displayNodes]);
 
-    // --- Drag узлов: стартуем на pointerdown, слушаем move/up на window ---
+    const handleNodeActivate = useCallback((node) => {
+        if (node.depth === 0) return;
+        if (node.type === 'folder') {
+            setPath((prev) => [...prev, node.id]);
+        } else {
+            setPreviewNode(node.raw);
+        }
+    }, []);
+
     const handleNodePointerDown = useCallback(
         (e, node) => {
             e.stopPropagation();
-            // Пропускаем правый клик и прочее.
             if (e.button !== 0 && e.pointerType === 'mouse') return;
 
             const override = dragOverrides[node.id];
@@ -128,7 +122,7 @@ export default function Graph({ data }) {
                 startY: e.clientY,
                 originX: override?.x ?? node.x,
                 originY: override?.y ?? node.y,
-                scale: transform.scale, // фиксируем зум на момент старта
+                scale: transform.scale,
                 moved: false,
                 pointerId: e.pointerId,
             };
@@ -141,7 +135,6 @@ export default function Graph({ data }) {
                 if (!drag.moved && Math.hypot(dxScreen, dyScreen) > DRAG_MOVE_THRESHOLD) {
                     drag.moved = true;
                 }
-                // Переводим delta экрана в delta SVG-сцены (учитываем зум).
                 const dx = dxScreen / drag.scale;
                 const dy = dyScreen / drag.scale;
                 setDragOverrides((prev) => ({
@@ -159,7 +152,6 @@ export default function Graph({ data }) {
                 dragStateRef.current = null;
                 if (!drag) return;
 
-                // Если пользователь не двигал — трактуем как клик.
                 if (!drag.moved) {
                     handleNodeActivate(node);
                 }
@@ -169,26 +161,28 @@ export default function Graph({ data }) {
             window.addEventListener('pointerup', handleUp);
             window.addEventListener('pointercancel', handleUp);
         },
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [dragOverrides, transform.scale]
+        [dragOverrides, transform.scale, handleNodeActivate]
     );
-
-    const handleNodeActivate = useCallback((node) => {
-        // Защита: если каким-то образом кликнули по текущему корню —
-        // не пытаемся провалиться «в себя», чтобы не сломать путь.
-        if (node.depth === 0) return;
-        if (node.type === 'folder') {
-            // Drill-down: кликнутая папка становится новым корнем.
-            setPath((prev) => [...prev, node.id]);
-        } else {
-            // Файл — открываем превью.
-            setPreviewNode(node.raw);
-        }
-    }, []);
 
     const handleCrumbClick = useCallback((index) => {
         setPath((prev) => prev.slice(0, index + 1));
     }, []);
+
+    // 🆕 ИСПРАВЛЕНИЕ БАГА №3
+    // Кнопка «Открыть полностью» в превью графа.
+    // Закрываем модалку превью и передаём id наверх — там откроется
+    // полноценный MaterialViewerModal.
+    const handleOpenFull = useCallback(
+        (node) => {
+            setPreviewNode(null);
+            if (onOpenMaterial) {
+                onOpenMaterial(node.id);
+            } else {
+                console.warn('Graph: onOpenMaterial не прокинут — материал не открыть.');
+            }
+        },
+        [onOpenMaterial],
+    );
 
     return (
         <div className={styles.wrapper}>
@@ -226,7 +220,6 @@ export default function Graph({ data }) {
                 )}
                 <svg className={styles.svg} width="100%" height="100%">
                     <defs>
-                        {/* Палитра светлячка: от белого ядра к бирюзовому ореолу (#3ad7d3) */}
                         <radialGradient id="fireflyCore" cx="50%" cy="50%" r="50%">
                             <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
                             <stop offset="55%" stopColor="#d8fffe" stopOpacity="0.95" />
@@ -245,7 +238,6 @@ export default function Graph({ data }) {
                     </defs>
 
                     <g transform={`translate(${transform.x}, ${transform.y}) scale(${transform.scale})`}>
-                        {/* Связи рендерим по текущим позициям узлов — так они «ходят» за dragom */}
                         <g>
                             {displayEdges.map((edge) => {
                                 const s = nodeById.get(edge.sourceId);
@@ -286,31 +278,23 @@ export default function Graph({ data }) {
             <NodePreviewModal
                 node={previewNode}
                 onClose={() => setPreviewNode(null)}
-                onOpenFull={(n) => {
-                    // TODO: интеграция с редактором материалов
-                    console.log('Открыть материал полностью:', n);
-                }}
+                onOpenFull={handleOpenFull}
             />
         </div>
     );
 }
 
-// Кубическая кривая Безье между parent-child (горизонтальная ориентация:
-// родитель слева, ребёнок справа — изгиб через серединную вертикаль).
 function buildCurve(sx, sy, tx, ty) {
     const midX = (sx + tx) / 2;
     return `M ${sx} ${sy} C ${midX} ${sy}, ${midX} ${ty}, ${tx} ${ty}`;
 }
 
-// Стабильный хэш id → число, чтобы seed-ить рандом per-узел.
 function hashCode(str) {
     let h = 0;
     for (let i = 0; i < str.length; i++) h = ((h << 5) - h + str.charCodeAt(i)) | 0;
     return Math.abs(h);
 }
 
-// Детерминированный PRNG (mulberry32) — одинаковый seed даёт одинаковую
-// последовательность, поэтому позиции не прыгают между рендерами.
 function mulberry32(seed) {
     let t = seed >>> 0;
     return function () {
@@ -321,12 +305,9 @@ function mulberry32(seed) {
     };
 }
 
-// Подсолнуховая (фибоначчи) спираль — точки распределяются по диску
-// равномерно и без перекрытий. Плюс небольшой per-id джиттер, чтобы
-// отойти от идеальной регулярности и получить «созвездие».
 function sunflowerScatter(id, i, total) {
-    const phi = Math.PI * (3 - Math.sqrt(5)); // золотой угол
-    const rMax = 120 + Math.sqrt(total) * 80;  // радиус области растёт с количеством узлов
+    const phi = Math.PI * (3 - Math.sqrt(5));
+    const rMax = 120 + Math.sqrt(total) * 80;
     const r = rMax * Math.sqrt((i + 0.5) / Math.max(total, 1));
     const theta = i * phi;
     const rng = mulberry32(hashCode(String(id)));

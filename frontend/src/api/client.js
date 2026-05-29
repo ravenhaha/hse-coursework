@@ -141,18 +141,16 @@ export async function apiFetch(path, options = {}) {
 
   // --- HTTP-ошибка ---
   if (!res.ok) {
-    const message =
-      (data && (data.message || data.error)) ||
-      `Ошибка ${res.status}`;
-    const code =
-      (data && data.code) ||
-      (res.status === 401 ? 'UNAUTHORIZED' : `HTTP_${res.status}`);
-    throw new ApiError(message, {
-      status: res.status,
-      code,
-      details: data,
-    });
-  }
+  const message = extractErrorMessage(data, res.status);
+  const code =
+    (data && data.code) ||
+    (res.status === 401 ? 'UNAUTHORIZED' : `HTTP_${res.status}`);
+  throw new ApiError(message, {
+    status: res.status,
+    code,
+    details: data,
+  });
+}
 
   return data;
 }
@@ -160,6 +158,21 @@ export async function apiFetch(path, options = {}) {
 // ============================================================================
 // Хелпер
 // ============================================================================
+
+function extractErrorMessage(data, status) {
+  if (!data) return `Что-то пошло не так (${status})`;
+
+  // FastAPI при валидации 422 кладёт detail в виде массива:
+  // [{ loc: [...], msg: "field required", type: "..." }, ...]
+  if (Array.isArray(data.detail)) {
+    const msgs = data.detail.map((e) => e?.msg).filter(Boolean);
+    return msgs.length ? msgs.join(', ') : `Ошибка валидации (${status})`;
+  }
+
+  // FastAPI обычные ошибки — detail: "текст"
+  // На всякий случай поддерживаем message / error от других бэков
+  return data.detail || data.message || data.error || `Что-то пошло не так (${status})`;
+}
 
 function safeJsonParse(text) {
   try {

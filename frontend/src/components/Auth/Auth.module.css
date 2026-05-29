@@ -192,9 +192,30 @@
     border-color: #43d9dc;
 }
 
+/* === Блок ошибки в форме === */
 .error {
-    color: #ff9a9a;
-    font-size: 14px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.4;
+  
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  
+  animation: errorAppear 0.2s ease-out;
+}
+
+@keyframes errorAppear {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .dividerWrap {
@@ -398,4 +419,26 @@
 
 .hintItemOk {
   color: #3AD7D3;
+}
+
+.emailSuggestion {
+  margin: -4px 0 4px;
+  font-size: 13px;
+  color: var(--text-secondary, #888);
+  text-align: left;
+}
+
+.emailSuggestionBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: var(--accent, #7c5cff);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.emailSuggestionBtn:hover {
+  opacity: 0.85;
 }

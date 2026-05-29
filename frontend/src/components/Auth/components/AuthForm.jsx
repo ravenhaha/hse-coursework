@@ -6,11 +6,23 @@ import PasswordHints from './PasswordHints';
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 export default function AuthForm({
-  mode, email, password, confirmPassword, errorText, loading, isFormReady,
-  onEmailChange, onPasswordChange, onConfirmChange, onSubmit,
+  mode,
+  email,
+  password,
+  confirmPassword,
+  errorText,
+  loading,
+  isFormReady,
+  emailSuggestion,
+  onEmailChange,
+  onPasswordChange,
+  onConfirmChange,
+  onApplyEmailSuggestion,
+  onSubmit,
 }) {
-  const submitText = mode === 'register' ? 'Создать аккаунт' : 'Войти';
   const isRegister = mode === 'register';
+  const submitText = isRegister ? 'Создать аккаунт' : 'Войти';
+  const loadingText = isRegister ? 'Создаём аккаунт…' : 'Входим…';
   const showHints = isRegister && password.length > 0;
   const passwordsMatch =
     isRegister && confirmPassword.length > 0
@@ -18,7 +30,7 @@ export default function AuthForm({
       : undefined;
 
   return (
-    <form className={styles.form} onSubmit={onSubmit}>
+    <form className={styles.form} onSubmit={onSubmit} noValidate>
       <input
         className={styles.input}
         onChange={(e) => onEmailChange(e.target.value)}
@@ -26,12 +38,27 @@ export default function AuthForm({
         type="email"
         value={email}
         autoComplete="email"
+        autoFocus
       />
+
+      {emailSuggestion && (
+        <p className={styles.emailSuggestion}>
+          Возможно, вы имели в виду{' '}
+          <button
+            type="button"
+            className={styles.emailSuggestionBtn}
+            onClick={onApplyEmailSuggestion}
+          >
+            {emailSuggestion}
+          </button>
+          ?
+        </p>
+      )}
 
       <PasswordInput
         value={password}
         onChange={onPasswordChange}
-        placeholder={isRegister ? 'Пароль' : 'Пароль'}
+        placeholder="Пароль"
         autoComplete={isRegister ? 'new-password' : 'current-password'}
       />
 
@@ -80,8 +107,12 @@ export default function AuthForm({
         </button>
       </div>
 
-      <button className={styles.submitButton} disabled={loading || !isFormReady} type="submit">
-        {loading ? 'Загрузка...' : submitText}
+      <button
+        className={styles.submitButton}
+        disabled={loading || !isFormReady}
+        type="submit"
+      >
+        {loading ? loadingText : submitText}
       </button>
     </form>
   );

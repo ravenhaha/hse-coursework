@@ -9,8 +9,9 @@
         - всё в ОДНОЙ транзакции.
 
     2. Локальный логин email+password:
-        - находим AuthAccount по email;
+        - находим AuthAccount по email (с подгруженным User через selectinload);
         - сверяем пароль;
+        - обновляем last_login_at;
         - если хеш устарел — ре-хешируем;
         - выдаём пару токенов.
 
@@ -18,6 +19,7 @@
         - обмениваем code на access_token провайдера;
         - получаем профиль юзера;
         - get_or_create_oauth_user → User + AuthAccount;
+        - обновляем last_login_at;
         - выдаём НАШУ пару токенов.
 
     4. Refresh: проверяем refresh-токен → выдаём новую пару.
@@ -29,7 +31,9 @@
     - OAuth-токены провайдера НЕ храним — берём профиль и забываем.
 """
 
+from datetime import datetime, timezone
 from typing import NoReturn
+from urllib.parse import urlencode
 
 import httpx
 from fastapi import HTTPException, status
@@ -57,15 +61,16 @@ from app.crud.auth_account import (
     update_password_hash,
 )
 from app.crud.user import create_user, get_user_by_email, get_user_by_id
-from app.models.auth_account import AuthProvider
+from app.models.auth_account import AuthAccount, AuthProvider
 from app.models.user import User
 from app.schemas.user import UserLogin, UserRegister
 from app.services.defaults import create_default_tags_for_user
 
 
-# ══════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
 # Утилиты
-# ══════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
+
 def _normalize_email(email: str) -> str:
     """Email → lowercase + strip.
 
@@ -96,6 +101,16 @@ def _issue_token_pair(user: User) -> tuple[str, str]:
     return access, refresh
 
 
+def _touch_last_login(auth: AuthAccount) -> None:
+    """Обновляет метку времени последнего успешного входа через провайдер.
+
+    Сам flush/commit оставляем вызывающему — он лучше знает границы
+    транзакции. Метку обновляем явно (а не через onupdate колонки),
+    иначе она бы менялась при любом UPDATE строки (например, смена пароля).
+    """
+    auth.last_login_at = datetime.now(timezone.utc)
+
+
 def _oauth_error(detail: str) -> NoReturn:
     """Единый формат ошибки для OAuth-сбоев."""
     raise HTTPException(
@@ -104,9 +119,41 @@ def _oauth_error(detail: str) -> NoReturn:
     )
 
 
-# ══════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
+# URL-builder для OAuth-провайдеров
+# ─────────────────────────────────────────────────────────────────────────────
+
+def build_vk_authorize_url(state: str) -> str:
+    """Собирает URL страницы авторизации VK с обязательным state.
+
+    state — короткоживущая случайная строка, защита от OAuth Login CSRF
+    (см. OAuth 2.0 Security BCP, раздел 4.7). Проверяется в callback.
+    """
+    params = {
+        "client_id": settings.VK_CLIENT_ID,
+        "redirect_uri": settings.VK_REDIRECT_URI,
+        "display": "popup",
+        "response_type": "code",
+        "state": state,
+    }
+    return f"https://oauth.vk.com/authorize?{urlencode(params)}"
+
+
+def build_yandex_authorize_url(state: str) -> str:
+    """Собирает URL страницы авторизации Yandex с обязательным state."""
+    params = {
+        "client_id": settings.YANDEX_CLIENT_ID,
+        "redirect_uri": settings.YANDEX_REDIRECT_URI,
+        "response_type": "code",
+        "state": state,
+    }
+    return f"https://oauth.yandex.ru/authorize?{urlencode(params)}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 1. Регистрация (email + password) с автологином
-# ══════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
+
 async def register_user(
     db: AsyncSession, payload: UserRegister,
 ) -> tuple[User, str, str]:
@@ -149,9 +196,10 @@ async def register_user(
     return user, access, refresh
 
 
-# ══════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
 # 2. Логин (email + password)
-# ══════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
+
 async def login_user(
     db: AsyncSession, payload: UserLogin,
 ) -> tuple[User, str, str]:
@@ -159,9 +207,12 @@ async def login_user(
 
     Безопасность:
         - Один и тот же ответ при «нет такого email» и «неверный пароль» —
-          чтобы нельзя было перебором узнавать зарегистрированные email
-          (invalid_credentials → 401).
+          защита от user enumeration (invalid_credentials → 401).
         - Re-hash пароля, если параметры argon2 в коде стали строже.
+        - Обновляем last_login_at при успехе — для аудита.
+
+    Оптимизация: get_email_account уже подгружает связанного User через
+    selectinload, отдельный get_user_by_id не нужен — экономим один SQL.
     """
     email = _normalize_email(payload.email)
 
@@ -172,24 +223,32 @@ async def login_user(
     if not verify_password(payload.password, auth.password_hash):
         invalid_credentials()
 
-    if needs_rehash(auth.password_hash):
-        new_hash = hash_password(payload.password)
-        await update_password_hash(db, auth, new_hash)
-        await db.commit()
-
-    user = await get_user_by_id(db, auth.user_id)
+    user = auth.user  # уже подгружен через selectinload
     if not user:
+        # Теоретически невозможно (FK с CASCADE), но защищаемся.
         invalid_credentials()
     if not user.is_active:
         user_inactive()
+
+    # Обновления (last_login_at + опциональный rehash) объединены в одну
+    # транзакцию — один commit вместо двух.
+    _touch_last_login(auth)
+
+    if needs_rehash(auth.password_hash):
+        new_hash = hash_password(payload.password)
+        await update_password_hash(db, auth, new_hash)
+
+    await db.commit()
+    await db.refresh(user)
 
     access, refresh = _issue_token_pair(user)
     return user, access, refresh
 
 
-# ══════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
 # 3. Refresh
-# ══════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
+
 async def refresh_tokens(
     db: AsyncSession, refresh_token: str,
 ) -> tuple[User, str, str]:
@@ -206,14 +265,15 @@ async def refresh_tokens(
     if not payload:
         token_invalid()
 
-    sub = payload.get("sub")
-    if not sub:
+    sub = payload.get("sub") if payload else None
+    if sub is None:  # 0 — валидный id, поэтому именно is None
         token_invalid()
 
     try:
         user_id = int(sub)
     except (TypeError, ValueError):
         token_invalid()
+        raise  # unreachable, но защищает от регрессии если token_invalid поменяется
 
     user = await get_user_by_id(db, user_id)
     if not user:
@@ -225,9 +285,10 @@ async def refresh_tokens(
     return user, access, refresh
 
 
-# ══════════════════════════════════════════════════════════
-# 4. OAuth — общий "найти или создать"
-# ══════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
+# 4. OAuth — общий «найти или создать»
+# ─────────────────────────────────────────────────────────────────────────────
+
 async def get_or_create_oauth_user(
     db: AsyncSession,
     *,
@@ -240,23 +301,34 @@ async def get_or_create_oauth_user(
 
     Логика поиска (по приоритету):
         1. Привязка (provider, provider_user_id) уже есть → это он.
+           Обновляем last_login_at.
         2. Есть юзер с таким email → линкуем новую auth-привязку.
         3. Создаём нового юзера + auth-привязку + дефолтные теги.
 
     Если провайдер не вернул email (бывает у VK без скоупа email) —
-    создаём синтетический "vk_<id>@oauth.local".
-    """
+    создаём синтетический "vk_<id>@oauth.local". Юзер сможет потом
+    задать настоящий email в профиле.
 
+    Оптимизация: get_auth_account возвращает AuthAccount с уже
+    подгруженным User (selectinload) — отдельный get_user_by_id не нужен.
+    """
+    # Сценарий 1: уже существующая привязка.
     existing_auth = await get_auth_account(db, provider, provider_user_id)
     if existing_auth:
-        user = await get_user_by_id(db, existing_auth.user_id)
+        user = existing_auth.user
         if not user:
             token_invalid()
         if not user.is_active:
             user_inactive()
+
+        _touch_last_login(existing_auth)
+        await db.commit()
+        await db.refresh(user)
+
         access, refresh = _issue_token_pair(user)
         return user, access, refresh
 
+    # Сценарий 2: есть юзер с таким email — линкуем новую привязку.
     if email:
         email = _normalize_email(email)
         existing_user = await get_user_by_email(db, email)
@@ -264,37 +336,43 @@ async def get_or_create_oauth_user(
             if not existing_user.is_active:
                 user_inactive()
             try:
-                await create_auth_account(
+                new_auth = await create_auth_account(
                     db,
                     user_id=existing_user.id,
                     provider=provider,
                     provider_user_id=provider_user_id,
                     password_hash=None,
                 )
+                _touch_last_login(new_auth)
                 await db.commit()
                 await db.refresh(existing_user)
             except Exception:
                 await db.rollback()
                 raise
+
             access, refresh = _issue_token_pair(existing_user)
             return existing_user, access, refresh
     else:
-        email = f"{provider.value}_{provider_user_id}@oauth.local"
+        # OAuth-провайдер не дал email — генерим синтетический.
+        email = f"{provider.value}_{provider_user_id}@oauth.invalid"
 
+    # Сценарий 3: создаём нового юзера + привязку + дефолтные теги.
     try:
         new_user = await create_user(
             db,
             email=email,
             display_name=display_name or _default_display_name(email),
         )
-        await create_auth_account(
+        new_auth = await create_auth_account(
             db,
             user_id=new_user.id,
             provider=provider,
             provider_user_id=provider_user_id,
             password_hash=None,
         )
+        _touch_last_login(new_auth)
         await create_default_tags_for_user(db, new_user.id)
+
         await db.commit()
         await db.refresh(new_user)
     except Exception:
@@ -305,9 +383,10 @@ async def get_or_create_oauth_user(
     return new_user, access, refresh
 
 
-# ══════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
 # 5. OAuth: Yandex
-# ══════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
+
 _YANDEX_TOKEN_URL = "https://oauth.yandex.ru/token"
 _YANDEX_USERINFO_URL = "https://login.yandex.ru/info"
 
@@ -325,7 +404,6 @@ async def oauth_yandex_login(
     Все сетевые сбои → 400 "OAuth: ...", чтобы фронт мог показать ошибку.
     """
     async with httpx.AsyncClient(timeout=10.0) as client:
-
         try:
             token_resp = await client.post(
                 _YANDEX_TOKEN_URL,
@@ -367,7 +445,6 @@ async def oauth_yandex_login(
         _oauth_error("Яндекс не вернул id пользователя")
 
     email = info.get("default_email") or (info.get("emails") or [None])[0]
-
     display_name = info.get("real_name") or info.get("display_name") or info.get("login")
 
     return await get_or_create_oauth_user(
@@ -379,9 +456,10 @@ async def oauth_yandex_login(
     )
 
 
-# ══════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
 # 6. OAuth: VK
-# ══════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
+
 _VK_TOKEN_URL = "https://oauth.vk.com/access_token"
 _VK_USERS_GET_URL = "https://api.vk.com/method/users.get"
 _VK_API_VERSION = "5.199"
@@ -393,8 +471,8 @@ async def oauth_vk_login(
     """Полный цикл VK OAuth.
 
     Шаги:
-        1. Меняем code на access_token + email (VK возвращает email в ответе токена,
-           а НЕ в users.get — это особенность VK API).
+        1. Меняем code на access_token + email (VK возвращает email в ответе
+           токена, а НЕ в users.get — это особенность VK API).
         2. Берём профиль через users.get (получаем имя/фамилию).
         3. Передаём в get_or_create_oauth_user.
 

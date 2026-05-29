@@ -1,12 +1,37 @@
 """Модель способа аутентификации.
 
-Один пользователь может иметь несколько строк здесь:
-  - provider_auth="email",  provider_user_id=<email>,  password_hash=<argon2>
-  - provider_auth="vk",     provider_user_id=<vk_id>,  password_hash=NULL
-  - provider_auth="yandex", provider_user_id=<ya_id>,  password_hash=NULL
+Один пользователь (`User`) может иметь несколько `AuthAccount` — по одной
+строке на каждый способ входа: email+password, VK OAuth, Yandex OAuth и т.д.
 
-Уникальность пары (provider_auth, provider_user_id) гарантирует, что один и тот же
-внешний аккаунт не может быть привязан к двум разным юзерам у нас.
+Такая модель решает несколько задач:
+    - Юзер может привязать несколько способов входа к одному аккаунту.
+    - При отвязке провайдера сам юзер не удаляется.
+    - Добавление нового провайдера = одна новая строка, без изменения
+      схемы таблицы users.
+
+Про AuthProvider:
+    StrEnum, поэтому AuthProvider.EMAIL == "email" → True. В колонке БД
+    хранится как обычная строка (String(50)), это даёт совместимость:
+        - можно сравнивать с enum-членом: provider_auth == AuthProvider.VK;
+        - можно сравнивать со строкой: provider_auth == 'vk';
+        - схема БД остаётся неизменной даже при добавлении новых провайдеров
+          (в отличие от PG ENUM type, который требует ALTER TYPE).
+
+Инварианты:
+    1. (provider_auth, provider_user_id) — уникальная пара. Один и тот же
+       VK-аккаунт не может быть привязан к двум юзерам.
+       Гарантия: UNIQUE constraint в БД.
+
+    2. password_hash IS NOT NULL ⇔ provider_auth = 'email'.
+       Для OAuth-провайдеров (VK, Yandex) пароля нет — там доверие
+       внешнему провайдеру.
+       Гарантия: сервисный слой (AuthService) — не CHECK, потому что
+       правило может эволюционировать (magic-link, passwordless).
+
+    3. last_login_at обновляется только при успешном входе через данный
+       провайдер. Обновление выполняется в AuthService.login(), а не через
+       onupdate — иначе метка обновлялась бы при любом изменении строки
+       (например, при смене пароля).
 """
 
 from __future__ import annotations
@@ -25,11 +50,13 @@ if TYPE_CHECKING:
 
 
 class AuthProvider(StrEnum):
-    """Перечисление поддерживаемых провайдеров.
+    """Поддерживаемые способы аутентификации.
 
-    Используется в коде как enum, но в БД хранится как обычная строка —
-    чтобы добавлять новых провайдеров без миграций SQL ENUM.
+    Значения совпадают с тем, что хранится в колонке provider_auth.
+    Добавление нового провайдера — одна строка тут, без миграции БД
+    (колонка остаётся String(50)).
     """
+
     EMAIL = "email"
     VK = "vk"
     YANDEX = "yandex"
@@ -42,7 +69,6 @@ class AuthAccount(Base):
         UniqueConstraint(
             "provider_auth",
             "provider_user_id",
-            name="uq_auth_accounts_provider_auth_provider_user_id",
         ),
     )
 
@@ -64,6 +90,11 @@ class AuthAccount(Base):
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False,
+    )
+
+    last_login_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        default=None,
     )
 
     user: Mapped[User] = relationship(back_populates="auth_accounts")

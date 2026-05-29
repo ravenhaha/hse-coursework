@@ -1,7 +1,23 @@
-"""Схемы для тегов и привязки тегов к материалам."""
+"""Схемы для тегов и привязки тегов к материалам.
+
+Регистр имени:
+  Сохраняем оригинальный регистр как ввёл юзер ("Физика", "PYTHON").
+  Уникальность проверяется case-insensitive — на уровне БД через
+  функциональный UNIQUE INDEX (user_id, lower(tag_name)).
+  Поэтому здесь только trim, без lower().
+"""
 
 from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+def _strip_tag_name(v: str) -> str:
+    """Триммим пробелы; пустую строку отклоняем."""
+    v = v.strip()
+    if not v:
+        raise ValueError("Имя тега не может быть пустым")
+    return v
 
 
 class TagBase(BaseModel):
@@ -12,11 +28,7 @@ class TagBase(BaseModel):
     @field_validator("tag_name")
     @classmethod
     def _normalize(cls, v: str) -> str:
-        """Триммим пробелы; не позволяем пустую строку из одних пробелов."""
-        v = v.strip()
-        if not v:
-            raise ValueError("Имя тега не может быть пустым")
-        return v
+        return _strip_tag_name(v)
 
 
 class TagCreate(TagBase):
@@ -37,10 +49,7 @@ class TagUpdate(BaseModel):
     @field_validator("tag_name")
     @classmethod
     def _normalize(cls, v: str) -> str:
-        v = v.strip()
-        if not v:
-            raise ValueError("Имя тега не может быть пустым")
-        return v
+        return _strip_tag_name(v)
 
 
 class TagResponse(BaseModel):

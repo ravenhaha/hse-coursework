@@ -2,29 +2,46 @@
 
 Принципы:
     - Бизнес-логика и валидация бизнес-правил.
-    - Файловые операции (запись/удаление аватара/материалов) — атомарно с БД-операциями.
-    - Все изменения в одной транзакции: либо всё, либо ничего.
-    - Удаление файлов с диска — best-effort (после успешного коммита).
+    - Файловые операции вынесены в core/file_storage.py — единая точка
+      входа для всех загрузок (материалы + аватары). Это даёт:
+        * единый формат путей в БД (относительный от UPLOADS_DIR);
+        * единую защиту от path traversal;
+        * единый механизм проверок и логирования.
+    - Изменения в БД — атомарны: либо всё, либо ничего.
+    - Удаление файлов с диска — best-effort после успешного коммита:
+      «осиротевший» файл лучше, чем битая ссылка в БД на удалённый файл.
+
+Безопасность аватаров:
+    - MIME проверяется по РЕАЛЬНОМУ содержимому (magic bytes), а не по
+      Content-Type из заголовка — клиент мог его подделать.
+    - Имя файла генерируется сервером в core/file_storage.py (uuid + ext
+      по белому списку) — никаких пользовательских имён.
 """
 
-import secrets
-from pathlib import Path
+from typing import Final
 
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.constants import ALLOWED_AVATAR_TYPES, EXT_BY_MIME
+from app.core.constants import ALLOWED_AVATAR_TYPES
 from app.core.exceptions import bad_request, payload_too_large
+from app.core.file_storage import delete_file, save_avatar
 from app.crud.material import list_all_user_materials
 from app.crud.user import update_user
+from app.models.material import SourceType
 from app.models.user import User
 from app.schemas.user import UserUpdate
 
+# Для всех поддерживаемых форматов (JPEG/PNG/GIF/WEBP) достаточно 12 байт,
+# берём с запасом — на всякий случай для будущих форматов.
+_IMAGE_MAGIC_PREFIX_BYTES: Final[int] = 16
 
-# ══════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Профиль
-# ══════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
+
 async def update_user_profile(
     db: AsyncSession,
     user: User,
@@ -34,122 +51,128 @@ async def update_user_profile(
 
     Сейчас это только display_name. Email и пароль меняются через
     отдельные endpoint'ы с подтверждением (на будущее).
-    """
-    update_data = payload.model_dump(exclude_unset=True)
 
-    if not update_data:
+    Если в payload нет ни одного значимого поля — no-op без коммита.
+    """
+    fields_to_update = payload.model_dump(exclude_unset=True)
+    if not fields_to_update:
         return user
 
-    await update_user(db, user, **update_data)
+    await update_user(db, user, **fields_to_update)
     await db.commit()
     await db.refresh(user)
     return user
 
 
-# ══════════════════════════════════════════════════════════
-# Аватары — вспомогательные функции
-# ══════════════════════════════════════════════════════════
-def _build_avatar_filename(user_id: int, mime: str) -> str:
-    """Генерирует уникальное имя файла для аватара.
+# ─────────────────────────────────────────────────────────────────────────────
+# Аватары — валидация
+# ─────────────────────────────────────────────────────────────────────────────
 
-    Формат: <user_id>_<random>.<ext>
-        - user_id для быстрой связки на диске;
-        - secrets.token_hex(8) — 16 hex-символов случайности
-          (защита от коллизий и от прямого угадывания URL);
-        - расширение по MIME (а не по имени из браузера — оно ненадёжно).
+def _detect_image_mime_by_magic_bytes(content: bytes) -> str | None:
+    """Определяет MIME изображения по magic bytes (file signature).
+
+    Зачем: Content-Type из заголовка приходит от клиента и может быть
+    подделан. Без этой проверки атакующий мог бы загрузить SVG/HTML/JS
+    с заголовком 'image/png' → файл сохранился бы как .png, но при
+    отдаче через статику браузер мог бы (через MIME-sniffing) выполнить
+    его → stored XSS.
+
+    Распознаём: JPEG, PNG, GIF (87a/89a), WEBP.
     """
-    ext = EXT_BY_MIME[mime]
-    random_part = secrets.token_hex(8)
-    return f"{user_id}_{random_part}.{ext}"
+    if content.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if content.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if content.startswith((b"GIF87a", b"GIF89a")):
+        return "image/gif"
+    if len(content) >= 12 and content.startswith(b"RIFF") and content[8:12] == b"WEBP":
+        return "image/webp"
+    return None
 
 
-def _safe_unlink(path: Path) -> None:
-    """Удаляет файл, игнорируя ошибки "файл не найден" и проблемы доступа.
+async def _read_and_validate_avatar_file(uploaded_file: UploadFile) -> tuple[bytes, str]:
+    """Читает аватар в память, валидирует размер и реальный формат.
 
-    Используется для best-effort очистки диска: если файл не удалится,
-    БД всё равно остаётся консистентной (это допустимый "мусор").
+    Returns:
+        (file_content, real_mime), где real_mime определён по magic bytes,
+        а НЕ по заголовку Content-Type.
+
+    Почему читаем в память целиком:
+        - аватары небольшие (≤ MAX_AVATAR_SIZE = 8 MB);
+        - позволяет проверить РЕАЛЬНЫЙ размер (заголовку Content-Length
+          доверять нельзя — клиент может врать);
+        - magic bytes нужны до записи на диск.
     """
-    try:
-        path.unlink(missing_ok=True)
-    except OSError:
-        pass
+    file_content = await uploaded_file.read()
 
+    if len(file_content) == 0:
+        bad_request("Пустой файл")
 
-def _public_path_to_disk_path(public_path: str, base_dir: Path) -> Path:
-    """Превращает публичный путь вида '/uploads/avatars/x.png' в путь на диске.
+    if len(file_content) > settings.MAX_AVATAR_SIZE:
+        max_size_mb = settings.MAX_AVATAR_SIZE // (1024 * 1024)
+        payload_too_large(f"Файл слишком большой. Максимум: {max_size_mb} MB")
 
-    Берём только basename, чтобы исключить любые попытки выхода
-    за пределы base_dir (защита от path traversal, если в БД что-то странное).
-    """
-    return base_dir / Path(public_path).name
-
-
-async def _read_and_validate_avatar(file: UploadFile) -> tuple[bytes, str]:
-    """Читает файл в память, проверяет MIME и размер.
-
-    Возвращает (содержимое, mime).
-
-    Почему читаем в память:
-        - аватар <= 8MB, не страшно;
-        - позволяет проверить РЕАЛЬНЫЙ размер (не верим заголовку Content-Length);
-        - запись на диск делается одной операцией → меньше шанс «битого файла»
-          из-за обрыва соединения.
-    """
-    if file.content_type not in ALLOWED_AVATAR_TYPES:
+    real_mime = _detect_image_mime_by_magic_bytes(file_content[:_IMAGE_MAGIC_PREFIX_BYTES])
+    if real_mime is None or real_mime not in ALLOWED_AVATAR_TYPES:
         bad_request(
-            f"Недопустимый формат изображения. "
+            "Файл не является поддерживаемым изображением. "
             f"Разрешены: {', '.join(sorted(ALLOWED_AVATAR_TYPES))}"
         )
 
-    content = await file.read()
-
-    if len(content) == 0:
-        bad_request("Пустой файл")
-
-    if len(content) > settings.MAX_AVATAR_SIZE:
-        max_mb = settings.MAX_AVATAR_SIZE // (1024 * 1024)
-        payload_too_large(f"Файл слишком большой. Максимум: {max_mb} MB")
-
-    return content, file.content_type
+    return file_content, real_mime
 
 
-# ══════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
 # Аватары — публичные операции
-# ══════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
+
 async def update_user_avatar(
     db: AsyncSession,
     user: User,
-    file: UploadFile,
+    uploaded_file: UploadFile,
 ) -> User:
     """Загружает аватар: запись на диск + обновление user.avatar_path.
 
-    Порядок операций важен:
-        1. Валидируем + читаем в память (если упадёт — БД не тронута).
-        2. Пишем новый файл на диск.
+    Хранение в БД:
+        Путь относительный, формата 'avatars/{user_id}/{uuid}.png'.
+        Публичный URL собирается в UserResponse через computed_field
+        как '/uploads/' + avatar_path.
+
+    Порядок операций:
+        1. Валидируем + читаем в память. Если упадёт — БД и диск целы.
+        2. Сохраняем новый файл через save_avatar() (генерирует имя сам).
         3. Обновляем БД и коммитим.
         4. Только ПОСЛЕ успешного коммита удаляем старый файл.
 
-    Если шаг 3 упадёт — у нас будет один «осиротевший» файл на диске,
-    но БД целая. Это лучше, чем сломанная ссылка в БД на удалённый файл.
+    Что если шаг N упадёт:
+        - 2 (диск): БД целая, ничего восстанавливать не надо;
+        - 3 (БД): откатываем — удаляем новый файл, старый avatar_path
+          в БД остаётся актуальным;
+        - 4 (удаление старого): «осиротевший» файл на диске,
+          БД консистентна — допустимая ситуация.
     """
-    content, mime = await _read_and_validate_avatar(file)
+    file_content, _mime = await _read_and_validate_avatar_file(uploaded_file)
 
-    filename = _build_avatar_filename(user.id, mime)
-    new_path_on_disk = settings.AVATARS_DIR / filename
-    new_path_public = f"/uploads/avatars/{filename}"
-    old_path_public = user.avatar_path
-    new_path_on_disk.write_bytes(content)
+    # save_avatar сам сгенерирует безопасное имя (uuid + ext по whitelist)
+    # и вернёт относительный путь вида 'avatars/42/abc123.png'.
+    new_avatar_path = await save_avatar(
+        user_id=user.id,
+        original_filename=uploaded_file.filename or "avatar",
+        file_content=file_content,
+    )
+    old_avatar_path = user.avatar_path
 
     try:
-        await update_user(db, user, avatar_path=new_path_public)
+        await update_user(db, user, avatar_path=new_avatar_path)
         await db.commit()
         await db.refresh(user)
     except Exception:
-        _safe_unlink(new_path_on_disk)
+        await db.rollback()
+        await delete_file(new_avatar_path)
         raise
 
-    if old_path_public:
-        _safe_unlink(_public_path_to_disk_path(old_path_public, settings.AVATARS_DIR))
+    if old_avatar_path:
+        await delete_file(old_avatar_path)
 
     return user
 
@@ -157,55 +180,65 @@ async def update_user_avatar(
 async def remove_user_avatar(db: AsyncSession, user: User) -> User:
     """Удаляет аватар: сбрасывает avatar_path и чистит файл с диска.
 
-    Если у юзера не было аватара — ничего не делаем, не ошибка.
+    Если у юзера не было аватара — no-op (идемпотентность).
+    Порядок: сначала БД, потом диск.
     """
     if not user.avatar_path:
         return user
 
-    old_path_public = user.avatar_path
+    old_avatar_path = user.avatar_path
 
     await update_user(db, user, avatar_path=None)
     await db.commit()
     await db.refresh(user)
 
-    _safe_unlink(_public_path_to_disk_path(old_path_public, settings.AVATARS_DIR))
-
+    await delete_file(old_avatar_path)
     return user
 
 
-# ══════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
 # Удаление аккаунта
-# ══════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
+
 async def delete_user_account(db: AsyncSession, user: User) -> None:
     """Полное удаление аккаунта со всеми данными.
 
     Что удаляется:
-        - User (каскадом: AuthAccount, Collection, Material, Tag, material_tags);
+        - User (каскадом БД: AuthAccount, Collection, Material, Tag,
+          material_tags);
         - все файлы материалов с диска;
         - файл аватара.
 
     Порядок:
-        1. Собираем пути файлов (БД ещё цела).
-        2. Удаляем User из БД и коммитим (каскады делают своё дело).
-        3. Best-effort удаление файлов с диска.
+        1. Собираем относительные пути файлов из БД (пока юзер ещё жив).
+        2. Удаляем User и коммитим — каскады в БД делают своё дело.
+        3. Best-effort удаление файлов с диска через delete_file()
+           (он сам защищает от path traversal и игнорирует отсутствующие
+           файлы).
 
-    Если шаг 3 частично упадёт — на диске останется "мусор",
-    но БД консистентна. Это допустимо.
+    Почему собираем пути ДО удаления юзера:
+        После db.delete(user) каскад снесёт записи материалов из БД, и мы
+        потеряем ссылки на их file_path. Поэтому сначала собираем список
+        путей в память, потом удаляем, потом чистим диск.
+
+    Best-effort на диске:
+        Если файл уже отсутствует или удаление не удалось — это НЕ
+        проваливает операцию. Главное, что в БД юзера больше нет.
+        «Осиротевший» файл на диске лучше, чем юзер, которого нельзя
+        удалить из-за сбоя файловой системы.
     """
-    files_to_delete: list[Path] = []
-    materials = await list_all_user_materials(db, user.id)
-    for material in materials:
-        if material.source_type == "file" and material.file_path:
-            files_to_delete.append(
-                _public_path_to_disk_path(material.file_path, settings.MATERIALS_DIR)
-            )
+    files_to_delete: list[str] = []
+
+    user_materials = await list_all_user_materials(db, user.id)
+    for material in user_materials:
+        if material.source_type == SourceType.FILE and material.file_path:
+            files_to_delete.append(material.file_path)
 
     if user.avatar_path:
-        files_to_delete.append(
-            _public_path_to_disk_path(user.avatar_path, settings.AVATARS_DIR)
-        )
+        files_to_delete.append(user.avatar_path)
 
     await db.delete(user)
     await db.commit()
-    for path in files_to_delete:
-        _safe_unlink(path)
+
+    for relative_path in files_to_delete:
+        await delete_file(relative_path)

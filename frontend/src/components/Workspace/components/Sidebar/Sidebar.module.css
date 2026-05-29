@@ -15,7 +15,6 @@
     padding: 0 14px;
     z-index: var(--z-sticky);
 }
-
 /* 🆕 Resizer — drag-handle справа от сайдбара
    ⚠️ ФИКС: z-index приведён к глобальной системе слоёв.
    Использовалось z-index: 1000 — перекрывало модалки (--z-modal = 40).
@@ -792,4 +791,89 @@
 .inlineCreateRow .inlineCreateInput {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+/* ═══════════════════════════════════════════
+   Inline-создание коллекции
+   ═══════════════════════════════════════════ */
+
+.createInputWrap {
+  position: relative;
+}
+
+/* Бирюзовый glow вокруг инпута — как у CTA */
+.createInputWrap .inlineCreateInput {
+  border-color: #2dd4bf;
+  box-shadow:
+    0 0 0 3px rgba(45, 212, 191, 0.18),
+    0 0 14px rgba(45, 212, 191, 0.22);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.createInputWrap .inlineCreateInput:focus {
+  outline: none;
+  border-color: #2dd4bf;
+  box-shadow:
+    0 0 0 4px rgba(45, 212, 191, 0.28),
+    0 0 22px rgba(45, 212, 191, 0.4);
+}
+
+/* Shake — всегда при открытии / пустом submit */
+.createInputShake .inlineCreateInput {
+  animation: createShake 0.55s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes createShake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
+}
+
+/* 🆕 Popover-подсказка ПОВЕРХ (только первый раз) */
+.createHintPopover {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+
+  padding: 8px 12px;
+  background: #2dd4bf;
+  color: #0b1220;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  border-radius: 8px;
+  box-shadow: 0 8px 22px rgba(45, 212, 191, 0.35);
+
+  pointer-events: none;
+  z-index: 50;
+
+  animation:
+    hintPopIn 0.35s ease both,
+    hintPulse 1.8s ease-in-out 0.4s infinite;
+}
+
+/* Стрелочка ↑ от попапа к инпуту */
+.createHintPopover::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 10px;
+  height: 10px;
+  background: #2dd4bf;
+  border-radius: 2px;
+}
+
+@keyframes hintPopIn {
+  from { opacity: 0; transform: translate(-50%, -6px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes hintPulse {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50%      { transform: translateX(-50%) translateY(3px); }
 }

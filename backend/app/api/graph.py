@@ -1,45 +1,26 @@
-from fastapi import APIRouter, Depends, Request
+"""Эндпоинт построения дерева «Мои материалы» для графовой визуализации."""
+
+from fastapi import APIRouter
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import token_invalid, token_missing, user_not_found
-from app.core.security import decode_token
-from app.db.session import get_db
+from app.core.dependencies import DB, CurrentUser
 from app.models.collection import Collection
 from app.models.material import Material
 from app.models.material_tag import MaterialTag
 from app.models.tag import Tag
-from app.models.user import User
 from app.schemas.graph import GraphNode, GraphTreeResponse
 
 router = APIRouter(prefix="/graph", tags=["Graph"])
 
 
-async def get_current_user(request: Request, db: AsyncSession) -> User:
-    token = request.cookies.get("access_token")
-    if not token:
-        token_missing()
-
-    payload = decode_token(token)
-    if not payload:
-        token_invalid()
-
-    user_id = int(payload["sub"])
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if not user:
-        user_not_found()
-
-    return user
-
-
 @router.get("/tree", response_model=GraphTreeResponse)
 async def get_graph_tree(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
+    user: CurrentUser,
+    db: DB,
 ) -> GraphTreeResponse:
-    user = await get_current_user(request, db)
-
+    """Собирает дерево коллекций и материалов текущего пользователя."""
+    # 1. Коллекции — стабильный порядок (created_at, id).
     collections_result = await db.execute(
         select(Collection)
         .where(Collection.user_id == user.id)
@@ -47,6 +28,7 @@ async def get_graph_tree(
     )
     collections = list(collections_result.scalars().all())
 
+    # 2. Материалы — фильтр по user через JOIN с Collection.
     materials_result = await db.execute(
         select(Material)
         .join(Collection, Material.collection_id == Collection.id)
@@ -55,8 +37,13 @@ async def get_graph_tree(
     )
     materials = list(materials_result.scalars().all())
 
-    material_tags = await get_material_tags(db, user.id)
-    collection_nodes = {
+    # 3. Теги по материалам — один запрос, группировка в Python.
+    # ⚠️ ВАЖНО: имя переменной НЕ должно совпадать с импортируемой
+    # таблицей material_tags (хоть тут её и нет — это защита в глубину).
+    tags_by_material_id = await _get_tags_by_material(db, user.id)
+
+    # ── Сборка дерева ──
+    collection_nodes: dict[int, GraphNode] = {
         collection.id: GraphNode(
             id=f"collection:{collection.id}",
             name=collection.name,
@@ -78,7 +65,7 @@ async def get_graph_tree(
 
     for material in materials:
         parent = collection_nodes.get(material.collection_id)
-        if not parent:
+        if parent is None:
             continue
 
         parent.children = parent.children or []
@@ -87,7 +74,7 @@ async def get_graph_tree(
                 id=f"material:{material.id}",
                 name=material.material_name,
                 type="document",
-                tags=material_tags.get(material.id) or None,
+                tags=tags_by_material_id.get(material.id) or None,
                 content=material.text_content,
             )
         )
@@ -100,11 +87,23 @@ async def get_graph_tree(
     )
 
 
-async def get_material_tags(db: AsyncSession, user_id: int) -> dict[int, list[str]]:
+async def _get_tags_by_material(
+    db: AsyncSession,
+    user_id: int,
+) -> dict[int, list[str]]:
+    """Возвращает {material_id: [tag_name, ...]} одним запросом.
+
+    Защита в глубину: тройной JOIN
+    Tag → MaterialTag → Material → Collection
+    с фильтром по Collection.user_id гарантирует, что не утечёт
+    тег чужого юзера даже при битых связях в material_tags.
+    """
     result = await db.execute(
         select(MaterialTag.material_id, Tag.tag_name)
         .join(Tag, MaterialTag.tag_id == Tag.id)
-        .where(Tag.user_id == user_id)
+        .join(Material, MaterialTag.material_id == Material.id)
+        .join(Collection, Material.collection_id == Collection.id)
+        .where(Collection.user_id == user_id)
         .order_by(Tag.tag_name)
     )
 

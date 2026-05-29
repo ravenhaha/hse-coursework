@@ -8,6 +8,13 @@
 
 Слой ничего не знает про HTTP — только про доменные ошибки
 из app.core.exceptions.
+
+Транзакции:
+  CRUD-слой делает только flush() (чтобы получить server-generated
+  поля типа id и created_at). COMMIT — обязанность сервисного слоя:
+  каждая мутирующая публичная функция (create/update/delete) сама
+  вызывает `await db.commit()` после успешного выполнения всех
+  бизнес-проверок. Так границы транзакций видны явно.
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,7 +33,7 @@ from app.schemas.collection import CollectionTreeNode
 
 # ─────────────────────────────────────
 # Внутренние хелперы (приватные)
-# ────────────────────────────────────
+# ─────────────────────────────────────
 async def _get_owned_collection(
     db: AsyncSession,
     collection_id: int,
@@ -120,7 +127,7 @@ async def _ensure_name_unique(
 
 
 # ─────────────────────────────────────
-# Публичные сервисные функции
+# Публичные сервисные функции — READ
 # ─────────────────────────────────────
 async def get_collection(
     db: AsyncSession,
@@ -218,6 +225,9 @@ async def build_tree(
     return roots
 
 
+# ─────────────────────────────────────
+# Публичные сервисные функции — WRITE
+# ─────────────────────────────────────
 async def create_collection(
     db: AsyncSession,
     *,
@@ -226,17 +236,27 @@ async def create_collection(
     parent_id: int | None,
     icon: str | None,
 ) -> Collection:
-    """Создание коллекции с проверкой родителя и дублей."""
+    """Создание коллекции с проверкой родителя и дублей.
+
+    После CRUD'шного flush делаем commit, чтобы транзакция
+    зафиксировалась в БД (иначе при закрытии сессии будет
+    rollback и коллекция «исчезнет»). Затем refresh —
+    подтянуть server-defaults (created_at и т.п.) уже после
+    коммита, в актуальном состоянии.
+    """
     await _ensure_parent_valid(db, user_id, parent_id)
     await _ensure_name_unique(db, user_id, parent_id, name)
 
-    return await crud_collection.create_collection(
+    collection = await crud_collection.create_collection(
         db,
         user_id=user_id,
         name=name,
         parent_id=parent_id,
         icon=icon,
     )
+    await db.commit()
+    await db.refresh(collection)
+    return collection
 
 
 async def update_collection(
@@ -261,6 +281,9 @@ async def update_collection(
       - parent_id_provided=False → не трогать parent
       - icon_provided=True + new_icon=None → сбросить иконку
       - icon_provided=False → не трогать иконку
+
+    Commit делаем только если реально что-то поменяли —
+    нет смысла начинать/коммитить пустую транзакцию.
     """
     collection = await _get_owned_collection(db, collection_id, user_id)
 
@@ -301,6 +324,8 @@ async def update_collection(
 
     if fields_to_update:
         await crud_collection.update_collection(db, collection, **fields_to_update)
+        await db.commit()
+        await db.refresh(collection)
 
     return collection
 
@@ -311,6 +336,11 @@ async def delete_collection(
     collection_id: int,
     user_id: int,
 ) -> None:
-    """Удаление коллекции (каскадно — со всеми детьми и материалами)."""
+    """Удаление коллекции (каскадно — со всеми детьми и материалами).
+
+    Commit фиксирует удаление; refresh не нужен — объект больше
+    не существует в БД.
+    """
     collection = await _get_owned_collection(db, collection_id, user_id)
     await crud_collection.delete_collection(db, collection)
+    await db.commit()

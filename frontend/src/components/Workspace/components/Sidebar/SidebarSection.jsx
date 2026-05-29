@@ -24,6 +24,8 @@ export default function SidebarSection({
   createPlaceholder = 'Название…',
   collapseAllTitle = 'Свернуть все коллекции',
   toggleTitle = 'Свернуть/развернуть раздел',
+  externalCreateTick = 0,    // 🆕 «тик» из родителя
+  hintFirstTime = false,     // 🆕 показать popover-подсказку (1 раз)
   children,
 }) {
   const [open, setOpen] = useState(true);
@@ -31,10 +33,15 @@ export default function SidebarSection({
   const [isCreating, setIsCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [stickyFolder, setStickyFolder] = useState(null);
+  const [shake, setShake] = useState(false);
+  const [showHint, setShowHint] = useState(false); // 🆕 локальный показ popover
 
   const inputRef = useRef(null);
   const submittedRef = useRef(false);
   const bodyRef = useRef(null);
+  const sectionRef = useRef(null);
+  const shakeTimerRef = useRef(null);
+  const hintTimerRef = useRef(null);
 
   const { setNodeRef: setRootDropRef, isOver: isRootOver } = useDroppable({
     id: 'drop-root-collections',
@@ -42,6 +49,7 @@ export default function SidebarSection({
     disabled: !droppableRoot,
   });
 
+  // === фокус инпута при появлении ===
   useEffect(() => {
     if (isCreating) {
       submittedRef.current = false;
@@ -49,6 +57,7 @@ export default function SidebarSection({
     }
   }, [isCreating]);
 
+  // === sticky breadcrumb ===
   useEffect(() => {
     if (!stickyBreadcrumb) return;
     const body = bodyRef.current;
@@ -67,19 +76,14 @@ export default function SidebarSection({
       let candidate = null;
       for (const el of folders) {
         const rect = el.getBoundingClientRect();
-        if (rect.top < containerTop + 4) {
-          candidate = el;
-        } else {
-          break;
-        }
+        if (rect.top < containerTop + 4) candidate = el;
+        else break;
       }
 
       if (candidate) {
         const id = candidate.getAttribute('data-folder-id');
         const name = candidate.getAttribute('data-folder-name');
-        setStickyFolder((prev) =>
-          prev?.id === id ? prev : { id, name }
-        );
+        setStickyFolder((prev) => (prev?.id === id ? prev : { id, name }));
       } else {
         setStickyFolder(null);
       }
@@ -98,27 +102,78 @@ export default function SidebarSection({
     };
   }, [stickyBreadcrumb, open, search]);
 
-  const startCreate = () => {
-    if (inlineCreate) {
-      if (!open) setOpen(true);
-      setNewName('');
-      setIsCreating(true);
-    } else {
+  // === shake ===
+  const triggerAttention = useCallback(() => {
+    if (shakeTimerRef.current) clearTimeout(shakeTimerRef.current);
+    setShake(true);
+    shakeTimerRef.current = setTimeout(() => {
+      setShake(false);
+      shakeTimerRef.current = null;
+    }, 700);
+  }, []);
+
+  // === запуск создания ===
+  const startCreate = useCallback(() => {
+    if (!inlineCreate) {
       onAdd?.();
+      return;
     }
-  };
+    if (!open) setOpen(true);
+    setNewName('');
+    setIsCreating(true);
+
+    // popover-подсказка только если просили (первый раз) и автоматически прячется
+    if (hintFirstTime) {
+      setShowHint(true);
+      if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
+      hintTimerRef.current = setTimeout(() => {
+        setShowHint(false);
+        hintTimerRef.current = null;
+      }, 5000);
+    }
+
+    requestAnimationFrame(() => {
+      sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      inputRef.current?.focus();
+      triggerAttention();
+    });
+  }, [inlineCreate, open, onAdd, hintFirstTime, triggerAttention]);
+
+  // === внешний триггер ===
+  useEffect(() => {
+    if (externalCreateTick > 0) startCreate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalCreateTick]);
+
+  // === clean-up ===
+  useEffect(
+    () => () => {
+      if (shakeTimerRef.current) clearTimeout(shakeTimerRef.current);
+      if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
+    },
+    [],
+  );
 
   const submitCreate = () => {
     if (submittedRef.current) return;
-    submittedRef.current = true;
     const name = newName.trim();
-    if (name) onAdd?.(name);
+
+    if (!name) {
+      triggerAttention();
+      inputRef.current?.focus();
+      return;
+    }
+
+    submittedRef.current = true;
+    setShowHint(false); // 🆕 убираем popover
+    onAdd?.(name);
     setIsCreating(false);
     setNewName('');
   };
 
   const cancelCreate = () => {
     submittedRef.current = true;
+    setShowHint(false);
     setIsCreating(false);
     setNewName('');
   };
@@ -133,10 +188,25 @@ export default function SidebarSection({
     }
   };
 
-  const handleCollapseAll = useCallback((e) => {
-    e.stopPropagation();
-    onCollapseAll?.();
-  }, [onCollapseAll]);
+  // при первом вводе текста — прячем подсказку (юзер всё понял)
+  const handleChange = (e) => {
+    setNewName(e.target.value);
+    if (showHint && e.target.value.length > 0) setShowHint(false);
+  };
+
+  const handleBlur = () => {
+    const name = newName.trim();
+    if (!name) return; // оставляем открытым
+    submitCreate();
+  };
+
+  const handleCollapseAll = useCallback(
+    (e) => {
+      e.stopPropagation();
+      onCollapseAll?.();
+    },
+    [onCollapseAll],
+  );
 
   const bodyClassName = [
     styles.sectionBody,
@@ -145,8 +215,16 @@ export default function SidebarSection({
     .filter(Boolean)
     .join(' ');
 
+  const inputWrapClassName = [
+    styles.searchWrap,
+    styles.createInputWrap,
+    shake ? styles.createInputShake : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <div className={styles.section}>
+    <div className={styles.section} ref={sectionRef}>
       <div className={styles.sectionHeaderRow}>
         <button
           className={styles.sectionHeader}
@@ -196,9 +274,7 @@ export default function SidebarSection({
           {stickyBreadcrumb && stickyFolder && (
             <div className={styles.stickyBreadcrumb} title={stickyFolder.name}>
               <IoFolderOutline />
-              <span className={styles.breadcrumbItem}>
-                {stickyFolder.name}
-              </span>
+              <span className={styles.breadcrumbItem}>{stickyFolder.name}</span>
             </div>
           )}
 
@@ -213,21 +289,27 @@ export default function SidebarSection({
           </div>
 
           {isCreating && (
-            <div className={styles.searchWrap}>
+            <div className={inputWrapClassName}>
               <input
                 ref={inputRef}
                 className={styles.inlineCreateInput}
                 placeholder={createPlaceholder}
                 value={newName}
-                onChange={(e) => setNewName(e.target.value)}
+                onChange={handleChange}
                 onKeyDown={handleKeyDown}
-                onBlur={submitCreate}
+                onBlur={handleBlur}
                 maxLength={64}
               />
+
+              {/* 🆕 Popover-подсказка ПОВЕРХ инпута, только первый раз */}
+              {showHint && (
+                <div className={styles.createHintPopover} role="tooltip">
+                  <span>Впиши название и нажми Enter</span>
+                </div>
+              )}
             </div>
           )}
 
-          {/* прокидываем startCreate, чтобы empty-state мог запускать inline-создание */}
           <div className={styles.tree}>{children(search, startCreate)}</div>
         </div>
       )}

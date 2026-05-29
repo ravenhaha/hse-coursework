@@ -1,11 +1,20 @@
+"""Модель Material — текстовая заметка или загруженный файл.
+
+(... твой исходный docstring без изменений ...)
+"""
+
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
+from enum import StrEnum
 from datetime import datetime
+
 from sqlalchemy import (
     String, DateTime, ForeignKey, Text, Boolean,
-    CheckConstraint, BigInteger, func,
+    CheckConstraint, BigInteger, func, Index,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.db.base import Base
 
 if TYPE_CHECKING:
@@ -13,19 +22,12 @@ if TYPE_CHECKING:
     from app.models.tag import Tag
 
 
+class SourceType(StrEnum):
+    TEXT = "text"
+    FILE = "file"
+
+
 class Material(Base):
-    """Материал — текстовая заметка ИЛИ загруженный файл.
-
-    Семантика полей в зависимости от source_type:
-      - "text": text_content = HTML от юзера; file_path/file_size/extracted_text = NULL
-      - "file": file_path + file_size заполнены;
-                extracted_text = HTML от парсера (опционально, для поиска/превью);
-                text_content = NULL.
-
-    material_name — название карточки в UI. Используется и при скачивании
-    как имя файла. original_name НЕ хранится — это упрощает модель.
-    """
-
     __tablename__ = "materials"
 
     __table_args__ = (
@@ -46,6 +48,11 @@ class Material(Base):
             " AND text_content IS NULL)",
             name="source_content_match",
         ),
+        Index(
+            None,
+            "collection_id",
+            "created_at",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -55,7 +62,7 @@ class Material(Base):
     )
 
     material_name: Mapped[str] = mapped_column(String(255))
-    source_type: Mapped[str] = mapped_column(String(20))
+    source_type: Mapped[SourceType] = mapped_column(String(20))
 
     text_content: Mapped[str | None] = mapped_column(Text, default=None)
 
@@ -63,11 +70,19 @@ class Material(Base):
     file_size: Mapped[int | None] = mapped_column(BigInteger, default=None)
     extracted_text: Mapped[str | None] = mapped_column(Text, default=None)
 
-    is_important: Mapped[bool] = mapped_column(Boolean, default=False)
+    # 🆕 server_default — чтобы прямые INSERT'ы и старые миграции не падали
+    # с NOT NULL violation. ORM-default остаётся для удобства Python-кода.
+    is_important: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default="false",
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
     )
+
     updated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         default=None,
@@ -75,6 +90,7 @@ class Material(Base):
     )
 
     collection: Mapped[Collection] = relationship(back_populates="materials")
+
     tags: Mapped[list[Tag]] = relationship(
         secondary="material_tags",
         back_populates="materials",

@@ -8,6 +8,7 @@ import {
 } from 'react-icons/io5';
 import { getMaterialIcon } from '../../../../utils/materialType';
 import { formatRelativeDate, formatFullDate } from '../../../../utils/formatDate';
+import TagDots from './TagDots';
 import styles from './Sidebar.module.css';
 
 // Рендер вертикальных гайд-линий по уровню вложенности

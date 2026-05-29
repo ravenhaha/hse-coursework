@@ -7,13 +7,20 @@ CRUD-слой для тегов и связки material_tags.
 
 Commit здесь не делается — это ответственность вызывающего сервиса
 (чтобы можно было собирать несколько CRUD-операций в одну транзакцию).
+
+Регистронезависимость:
+    Уникальность tag_name внутри юзера обеспечивается функциональным
+    UNIQUE-индексом uq_tags_user_lower_name (user_id, lower(tag_name)).
+    Поэтому поиск тега по имени тоже идёт через lower() — он попадает
+    в этот же индекс и работает за O(log n).
 """
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.tag import Tag
 from app.models.material_tag import material_tags
+from app.models.tag import Tag
 
 
 # ══════════════════════════════════════════════════════════
@@ -24,7 +31,11 @@ async def create_tag(
     user_id: int,
     tag_name: str,
 ) -> Tag:
-    """Создаёт тег. flush() — чтобы получить id без commit."""
+    """Создаёт тег. flush() — чтобы получить id без commit.
+
+    На дубль (case-insensitive) выбросит IntegrityError —
+    ловить его и переводить в доменное исключение должен сервис.
+    """
     tag = Tag(user_id=user_id, tag_name=tag_name)
     db.add(tag)
     await db.flush()
@@ -36,15 +47,30 @@ async def get_tag_by_id(db: AsyncSession, tag_id: int) -> Tag | None:
     return await db.get(Tag, tag_id)
 
 
-async def get_tag_by_name(
+async def get_tag_by_name_ci(
     db: AsyncSession,
     user_id: int,
     tag_name: str,
 ) -> Tag | None:
-    """Тег по (user_id, tag_name). Для проверки уникальности имени."""
+    """Регистронезависимый поиск тега по имени.
+
+    Использует функциональный индекс uq_tags_user_lower_name —
+    тот же, что обеспечивает UNIQUE-проверку. Это значит:
+        - O(log n) даже на больших объёмах;
+        - результат гарантированно совпадает с тем, что
+          увидит UNIQUE-констрейнт при INSERT, поэтому проверки
+          в сервисе и в БД не разъезжаются.
+
+    РАНЬШЕ функция называлась get_tag_by_name и сравнивала строки
+    "как есть" — это давало баг: сервис проверял дубль по точному
+    совпадению, не находил, делал INSERT, и БД ругалась
+    IntegrityError-ом из-за UNIQUE по lower(). Сервис при этом
+    делал rollback всей транзакции. Теперь проверка и индекс
+    согласованы.
+    """
     stmt = select(Tag).where(
         Tag.user_id == user_id,
-        Tag.tag_name == tag_name,
+        func.lower(Tag.tag_name) == tag_name.lower(),
     )
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
@@ -61,9 +87,10 @@ async def get_tags_by_ids(
     db: AsyncSession,
     tag_ids: list[int],
 ) -> list[Tag]:
-    """
-    Батч-выборка тегов по списку id. Используется для bulk-проверок
-    владельца (один SQL вместо N).
+    """Батч-выборка тегов по списку id.
+
+    Используется сервисом для bulk-проверки владельца
+    (один SQL вместо N запросов в цикле).
     """
     if not tag_ids:
         return []
@@ -77,16 +104,20 @@ async def update_tag(
     tag: Tag,
     tag_name: str,
 ) -> Tag:
-    """Переименовать тег. flush — чтобы изменения попали в БД до commit."""
+    """Переименовать тег. flush — чтобы изменения попали в БД до commit.
+
+    Как и create_tag: на коллизию по lower() выбросит IntegrityError.
+    """
     tag.tag_name = tag_name
     await db.flush()
     return tag
 
 
 async def delete_tag(db: AsyncSession, tag: Tag) -> None:
-    """
-    Удалить тег. Связи в material_tags чистятся каскадом
-    (ondelete='CASCADE' в модели MaterialTag).
+    """Удалить тег.
+
+    Связи в material_tags чистятся каскадом
+    (ondelete='CASCADE' на FK material_tags.tag_id).
     """
     await db.delete(tag)
     await db.flush()
@@ -126,26 +157,53 @@ async def link_material_tag(
     db: AsyncSession,
     material_id: int,
     tag_id: int,
-) -> None:
-    """Привязать тег к материалу (INSERT в material_tags)."""
-    stmt = material_tags.insert().values(
-        material_id=material_id,
-        tag_id=tag_id,
+) -> bool:
+    """Привязать тег к материалу.
+
+    Идемпотентна на уровне SQL: ON CONFLICT DO NOTHING на PK
+    (material_id, tag_id). Это:
+        - убирает race condition (раньше было: SELECT существующих →
+          INSERT; между ними другой запрос мог вставить эту же связь
+          и получить дубль на UNIQUE);
+        - избавляет сервис от лишнего предварительного SELECT;
+        - не требует try/except IntegrityError + rollback в сервисе.
+
+    Возвращает True, если связь была действительно вставлена,
+    False — если уже существовала. Сервис сам решит, что с этим делать
+    (тихо вернуть 200 или райзнуть 409).
+    """
+    stmt = (
+        pg_insert(material_tags)
+        .values(material_id=material_id, tag_id=tag_id)
+        .on_conflict_do_nothing(
+            index_elements=[
+                material_tags.c.material_id,
+                material_tags.c.tag_id,
+            ],
+        )
     )
-    await db.execute(stmt)
+    result = await db.execute(stmt)
+    return result.rowcount > 0
 
 
 async def unlink_material_tag(
     db: AsyncSession,
     material_id: int,
     tag_id: int,
-) -> None:
-    """Снять тег с материала (DELETE из material_tags)."""
+) -> bool:
+    """Снять тег с материала.
+
+    Возвращает True, если связь существовала и была удалена,
+    False — если такой связи и не было. Раньше сервис делал
+    предварительный SELECT для проверки существования —
+    теперь он не нужен.
+    """
     stmt = delete(material_tags).where(
         material_tags.c.material_id == material_id,
         material_tags.c.tag_id == tag_id,
     )
-    await db.execute(stmt)
+    result = await db.execute(stmt)
+    return result.rowcount > 0
 
 
 async def set_material_tags(
@@ -153,12 +211,21 @@ async def set_material_tags(
     material_id: int,
     tag_ids: list[int],
 ) -> list[int]:
-    """
-    Полная замена набора тегов у материала.
-    Стратегия: снести всё → вставить новое.
+    """Полная замена набора тегов у материала.
 
-    Возвращает фактически вставленные id (с дедупликацией),
-    чтобы роут мог отдать клиенту итоговое состояние.
+    Стратегия: снести всё → вставить новое. Это проще, чем считать
+    diff (to_delete, to_insert), и для типичных объёмов (5–20 тегов
+    на материал) не уступает в производительности.
+
+    Дедупликация id — на уровне CRUD: если в роуте не отсеяли повторы,
+    мы тут не упадём по UNIQUE.
+
+    ВАЖНО: проверка владельца тегов (что все tag_ids принадлежат
+    тому же юзеру, что и material) — обязанность сервиса.
+
+    Возвращает фактически вставленные id (после дедупликации),
+    в исходном порядке поступления — чтобы роут мог отдать клиенту
+    итоговое состояние без дополнительного SELECT.
     """
     await db.execute(
         delete(material_tags).where(

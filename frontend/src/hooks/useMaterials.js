@@ -92,12 +92,20 @@ export default function useMaterials() {
     return ids;
   }, []);
 
+  // 🆕 ИСПРАВЛЕНИЕ БАГА №1:
+  // Раньше делали Promise.all(tagIds.map(assignToMaterial)) — что:
+  //   1) при двойном вызове (StrictMode / повторный клик) падало с 409
+  //      "Тег уже привязан к материалу"
+  //   2) в случае ошибки одного из тегов остальные могли уже выполниться
+  //   3) на N тегов — N запросов
+  // Теперь используем setMaterialTags — атомарно заменяет весь набор
+  // одним PUT-запросом. Бэк сам разрулит дубли.
   const finalizeMaterial = useCallback(async (materialId, tagNames, isImportant) => {
     if (tagNames?.length) {
       const tagIds = await ensureTags(tagNames);
-      await Promise.all(
-        tagIds.map((id) => tagsApi.assignToMaterial(materialId, id))
-      );
+      if (tagIds.length) {
+        await tagsApi.setMaterialTags(materialId, tagIds);
+      }
     }
 
     if (isImportant) {
@@ -173,10 +181,7 @@ export default function useMaterials() {
     setItems((prev) => prev.filter((it) => it.id !== id));
   }, []);
 
-  // 🆕 Локально вычистить материалы по списку id коллекций.
-  // Вызывается из WorkspacePage после удаления коллекции,
-  // чтобы материалы пропали из «Все материалы» моментально, без F5.
-  const removeByCollectionIds = useCallback((collectionIds) => {
+    const removeByCollectionIds = useCallback((collectionIds) => {
     if (!collectionIds?.length) return;
     const idSet = new Set(collectionIds.map(Number));
     setItems((prev) => prev.filter((it) => !idSet.has(Number(it.collectionId))));
@@ -203,7 +208,7 @@ export default function useMaterials() {
     rename,
     update,
     remove,
-    removeByCollectionIds, // 🆕
+    removeByCollectionIds,
     move,
     toggleImportant,
   };

@@ -13,6 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crud.tag import create_tag, get_tags_by_user
 
+# Порядок намеренно сохранён: так теги отображаются в UI
+# в осмысленной последовательности (от формата до приоритета).
 DEFAULT_TAG_NAMES: tuple[str, ...] = (
     "лекция",
     "семинар",
@@ -29,21 +31,21 @@ async def create_default_tags_for_user(
     db: AsyncSession,
     user_id: int,
 ) -> None:
-    """
-    Создаёт дефолтные теги для пользователя.
+    """Создаёт дефолтные теги для пользователя.
 
     Идемпотентна: безопасно вызывать повторно — уже существующие
-    теги пропускаются без ошибок UNIQUE.
+    теги пропускаются без ошибок UNIQUE. Сравнение тегов
+    регистронезависимое, в соответствии с UNIQUE-индексом
+    uq_tags_user_lower_name.
 
     ВАЖНО: НЕ делает commit — это ответственность вызывающего кода.
     Регистрация юзера и создание тегов должны быть в ОДНОЙ транзакции,
     чтобы при сбое откатилось всё разом.
     """
-    
     existing_tags = await get_tags_by_user(db, user_id)
-    existing_names = {t.tag_name for t in existing_tags}
+    existing_names_ci = {t.tag_name.casefold() for t in existing_tags}
 
-    for tag_name in dict.fromkeys(DEFAULT_TAG_NAMES):
-        if tag_name in existing_names:
+    for tag_name in DEFAULT_TAG_NAMES:
+        if tag_name.casefold() in existing_names_ci:
             continue
         await create_tag(db, user_id, tag_name)

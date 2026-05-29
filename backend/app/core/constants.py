@@ -22,14 +22,12 @@ UNSET: Final = object()
 ALLOWED_AVATAR_TYPES: Final[set[str]] = {
     "image/jpeg",
     "image/png",
-    "image/webp",
 }
 """MIME-типы, разрешённые для аватара. Проверяются в роуте загрузки."""
 
 EXT_BY_MIME: Final[dict[str, str]] = {
     "image/jpeg": "jpg",
     "image/png": "png",
-    "image/webp": "webp",
 }
 """Соответствие MIME → расширение для сохранения файла на диск."""
 

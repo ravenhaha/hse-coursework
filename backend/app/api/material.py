@@ -17,6 +17,7 @@ from app.core.exceptions import (
     unsupported_media_type,
 )
 from app.core.file_storage import delete_file, get_full_path, save_material
+from app.models.material import SourceType
 from app.schemas.material import MaterialCreateText, MaterialRead, MaterialUpdate
 from app.services.material import (
     create_file_material,
@@ -43,13 +44,8 @@ def _safe_download_filename(
     file_path: str,
     material_id: int,
 ) -> str:
-    """Формирует безопасное имя файла для скачивания.
-
-    Берёт material_name (как юзер назвал материал) + расширение из file_path.
-    Запрещённые символы заменяет на '_'. Если после очистки имя пустое —
-    fallback к 'material_{id}'.
-    """
-    ext = Path(file_path).suffix  # .pdf, .docx, ...
+    """Формирует безопасное имя файла для скачивания."""
+    ext = Path(file_path).suffix
     clean = _FILENAME_BAD_CHARS.sub("_", material_name).strip(" .")
     if not clean:
         clean = f"material_{material_id}"
@@ -60,12 +56,7 @@ async def _read_upload_with_limit(
     file: UploadFile,
     max_size: int,
 ) -> bytes:
-    """Читает UploadFile чанками с inflight-проверкой размера.
-
-    Защита от DDoS: если юзер шлёт огромный файл, мы не качаем его
-    целиком в память, а проверяем размер на лету и бросаем 413,
-    как только превысили лимит.
-    """
+    """Читает UploadFile чанками с inflight-проверкой размера."""
     total = 0
     chunks: list[bytes] = []
     while True:
@@ -113,14 +104,7 @@ async def create_file(
     material_name: str = Form(..., min_length=1, max_length=255),
     file: UploadFile = File(...),
 ):
-    """Загрузить файл и создать материал.
-
-    Валидация:
-      - Расширение из белого списка (ALLOWED_MATERIAL_EXTENSIONS).
-      - Размер не больше settings.MAX_MATERIAL_FILE_SIZE (проверка inflight).
-
-    Если запись в БД не удалась — файл с диска удаляется (rollback).
-    """
+    """Загрузить файл и создать материал."""
     # --- 1. Валидация расширения ---
     ext = Path(file.filename or "").suffix.lower()
     if ext not in ALLOWED_MATERIAL_EXTENSIONS:
@@ -132,10 +116,12 @@ async def create_file(
     )
 
     # --- 3. Сохранение на диск ---
+    # ⚠️ ВАЖНО: имена аргументов должны совпадать с file_storage.save_material —
+    # original_filename / file_content, иначе TypeError на каждой загрузке.
     relative_path, file_size = await save_material(
         user_id=user.id,
-        filename=file.filename or f"upload{ext}",
-        content=content,
+        original_filename=file.filename or f"upload{ext}",
+        file_content=content,
     )
 
     # --- 4. Создание записи в БД с rollback файла при ошибке ---
@@ -163,11 +149,7 @@ async def list_(
     user: CurrentUser,
     collection_id: int | None = Query(None),
 ):
-    """Материалы юзера.
-
-    - collection_id=null  → все материалы юзера (для построения дерева)
-    - collection_id=<id>  → только из указанной коллекции
-    """
+    """Материалы юзера."""
     return await list_materials(db, user=user, collection_id=collection_id)
 
 
@@ -206,12 +188,7 @@ async def update(
     db: DB,
     user: CurrentUser,
 ):
-    """Частичное обновление материала.
-
-    Используем model_fields_set, чтобы различать:
-      - поле не передано в JSON → не трогаем
-      - поле передано как null → пробуем установить (если бизнес-логика разрешит)
-    """
+    """Частичное обновление материала."""
     changes = body.model_dump(include=body.model_fields_set)
 
     return await update_existing_material(
@@ -239,15 +216,10 @@ async def delete(material_id: int, db: DB, user: CurrentUser):
 
 @router.get("/{material_id}/file")
 async def download_file(material_id: int, db: DB, user: CurrentUser):
-    """Отдать файл материала с правильным именем.
-
-    Имя файла = material_name юзера + расширение из file_path.
-    Кириллица в имени работает корректно благодаря RFC 5987
-    (Starlette автоматически добавляет filename*=UTF-8'').
-    """
+    """Отдать файл материала с правильным именем."""
     mat = await get_material(db, material_id=material_id, user=user)
 
-    if mat.source_type != "file" or not mat.file_path:
+    if mat.source_type != SourceType.FILE or not mat.file_path:
         bad_request("У этого материала нет файла")
 
     full_path = get_full_path(mat.file_path)

@@ -3,7 +3,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.db_utils import escape_like
+from app.core.db_utils import LIKE_ESCAPE_CHAR, escape_like
 from app.models.collection import Collection
 
 
@@ -26,18 +26,14 @@ async def list_user_collections(
     user_id: int,
     parent_id: int | None = None,
 ) -> list[Collection]:
-    """Список коллекций пользователя на одном уровне (по parent_id).
+    """Список коллекций пользователя на одном уровне (по parent_id)."""
+    stmt = select(Collection).where(Collection.user_id == user_id)
+    if parent_id is None:
+        stmt = stmt.where(Collection.parent_id.is_(None))
+    else:
+        stmt = stmt.where(Collection.parent_id == parent_id)
+    stmt = stmt.order_by(Collection.name)
 
-    parent_id=None → корневые коллекции.
-    """
-    stmt = (
-        select(Collection)
-        .where(
-            Collection.user_id == user_id,
-            Collection.parent_id == parent_id,
-        )
-        .order_by(Collection.name)
-    )
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
@@ -46,7 +42,7 @@ async def list_all_user_collections(
     db: AsyncSession,
     user_id: int,
 ) -> list[Collection]:
-    """ВСЕ коллекции пользователя одним запросом — для построения дерева на фронте."""
+    """ВСЕ коллекции пользователя одним запросом — для дерева."""
     stmt = (
         select(Collection)
         .where(Collection.user_id == user_id)
@@ -61,17 +57,13 @@ async def search_collections_by_name(
     user_id: int,
     query_str: str,
 ) -> list[Collection]:
-    """Поиск коллекций по подстроке в названии (регистронезависимый).
-
-    Спецсимволы LIKE экранируются, чтобы юзер не мог управлять
-    шаблоном через ввод (например, передав "%" или "_").
-    """
+    """Поиск коллекций по подстроке в названии (регистронезависимый)."""
     pattern = f"%{escape_like(query_str)}%"
     stmt = (
         select(Collection)
         .where(
             Collection.user_id == user_id,
-            Collection.name.ilike(pattern, escape="\\"),
+            Collection.name.ilike(pattern, escape=LIKE_ESCAPE_CHAR),
         )
         .order_by(Collection.created_at.desc())
     )
@@ -85,12 +77,16 @@ async def get_duplicate(
     parent_id: int | None,
     name: str,
 ) -> Collection | None:
-    """Ищет коллекцию с тем же именем на том же уровне (для проверки дублей)."""
+    """Ищет коллекцию с тем же именем на том же уровне."""
     stmt = select(Collection).where(
         Collection.user_id == user_id,
-        Collection.parent_id == parent_id,
         Collection.name == name,
     )
+    if parent_id is None:
+        stmt = stmt.where(Collection.parent_id.is_(None))
+    else:
+        stmt = stmt.where(Collection.parent_id == parent_id)
+
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
@@ -98,24 +94,12 @@ async def get_duplicate(
 # ─────────────────────────────────────
 # Защита от циклов в дереве
 # ─────────────────────────────────────
-
 async def is_descendant(
     db: AsyncSession,
     collection_id: int,
     potential_ancestor_id: int,
 ) -> bool:
-    """Проверяет, лежит ли potential_ancestor_id ВНУТРИ поддерева collection_id.
-
-    Сценарий: юзер хочет переместить коллекцию `collection_id` под нового
-    родителя `potential_ancestor_id`. Если новый родитель сам является
-    потомком перемещаемой — получим цикл. Так делать нельзя.
-
-    Алгоритм: идём ВВЕРХ по parent_id от potential_ancestor_id.
-    Если по дороге встретим collection_id — значит он предок potential_ancestor,
-    то есть potential_ancestor лежит внутри его поддерева → цикл.
-
-    `visited` защищает от уже существующих циклов в БД (на всякий).
-    """
+    """Проверяет, лежит ли potential_ancestor_id ВНУТРИ поддерева collection_id."""
     current_id: int | None = potential_ancestor_id
     visited: set[int] = set()
 
@@ -156,6 +140,7 @@ async def create_collection(
     db.add(collection)
     await db.flush()
     return collection
+
 
 _UPDATABLE_COLLECTION_FIELDS = {"name", "parent_id", "icon"}
 

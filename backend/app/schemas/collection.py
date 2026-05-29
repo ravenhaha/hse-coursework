@@ -1,9 +1,45 @@
 """Схемы для коллекций (папок материалов) с поддержкой иерархии."""
 
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, Field
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
+# ══════════════════════════════════════════════════════════
+# Валидаторы (переиспользуемые)
+# ══════════════════════════════════════════════════════════
+def _strip_required_name(v: str) -> str:
+    """Триммим пробелы; пустая строка после strip недопустима.
+
+    Зачем: юзер вводит "  Физика  " → сохраняем "Физика".
+    А "   " (одни пробелы) — это явная ошибка, отклоняем сразу,
+    а не сохраняем в БД мусор и не падаем потом на UNIQUE.
+    """
+    v = v.strip()
+    if not v:
+        raise ValueError("Имя коллекции не может быть пустым")
+    return v
+
+
+def _strip_optional_name(v: str | None) -> str | None:
+    """Версия для PATCH: None пропускаем (поле не передано — не трогаем),
+    непустую строку триммим, пустую после strip отклоняем."""
+    if v is None:
+        return None
+    return _strip_required_name(v)
+
+
+def _strip_icon(v: str | None) -> str | None:
+    """Иконка: триммим, пустую строку трактуем как None (сброс иконки)."""
+    if v is None:
+        return None
+    v = v.strip()
+    return v or None
+
+
+# ══════════════════════════════════════════════════════════
+# Схемы
+# ══════════════════════════════════════════════════════════
 class CollectionBase(BaseModel):
     """Общие поля для создания и обновления коллекции."""
 
@@ -17,6 +53,16 @@ class CollectionBase(BaseModel):
         None,
         description="ID родительской коллекции; null = корень",
     )
+
+    @field_validator("name")
+    @classmethod
+    def _v_name(cls, v: str) -> str:
+        return _strip_required_name(v)
+
+    @field_validator("icon")
+    @classmethod
+    def _v_icon(cls, v: str | None) -> str | None:
+        return _strip_icon(v)
 
 
 class CollectionCreate(CollectionBase):
@@ -43,6 +89,16 @@ class CollectionUpdate(BaseModel):
         None,
         description="ID нового родителя. Передать null, чтобы переместить в корень.",
     )
+
+    @field_validator("name")
+    @classmethod
+    def _v_name(cls, v: str | None) -> str | None:
+        return _strip_optional_name(v)
+
+    @field_validator("icon")
+    @classmethod
+    def _v_icon(cls, v: str | None) -> str | None:
+        return _strip_icon(v)
 
 
 class CollectionResponse(BaseModel):

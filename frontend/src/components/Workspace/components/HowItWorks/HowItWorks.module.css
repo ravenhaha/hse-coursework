@@ -35,21 +35,55 @@
     }
 }
 
+/* 🆕 Каждая карточка получает свой --accent через inline-style. */
 .card {
     position: relative;
     padding: 24px 22px 22px;
     border-radius: 16px;
     background: #0e2236;
     border: 1px solid #152a3f;
-    transition: border-color 0.2s ease, transform 0.15s ease;
+    transition:
+        border-color 0.25s ease,
+        transform 0.15s ease,
+        box-shadow 0.25s ease;
+    overflow: hidden;
+}
+
+/* 🆕 Тонкая цветная полоса сверху — даёт карточке "личность"
+   без шумной заливки фона. Приём из Linear, Notion. */
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        var(--accent, #3AD7D3),
+        transparent
+    );
+    opacity: 0.45;
+    transition: opacity 0.25s ease;
 }
 
 .card:hover {
-    border-color: rgba(58, 215, 211, 0.3);
+    /* color-mix — для рамки берём 40% акцента и смешиваем с прозрачным.
+       Так каждая карточка подсвечивается СВОИМ цветом, а не общим бирюзовым. */
+    border-color: color-mix(in srgb, var(--accent, #3AD7D3) 40%, transparent);
     transform: translateY(-2px);
+    box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.28),
+        0 0 0 1px color-mix(in srgb, var(--accent, #3AD7D3) 14%, transparent);
+}
+
+.card:hover::before {
+    opacity: 0.95;
 }
 
 .iconWrap {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -57,7 +91,22 @@
     height: 44px;
     margin-bottom: 16px;
     border-radius: 12px;
-    border: 1px solid;
+
+    /* 🆕 цвет иконки + фон + рамка теперь из --accent */
+    color: var(--accent, #3AD7D3);
+    background: color-mix(in srgb, var(--accent, #3AD7D3) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent, #3AD7D3) 20%, transparent);
+}
+
+.iconWrap::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 16px;
+    background: var(--accent, #3AD7D3);
+    opacity: 0.08;
+    filter: blur(14px);
+    z-index: -1;
 }
 
 .iconWrap svg {
@@ -65,14 +114,23 @@
     height: 22px;
 }
 
+/* 🆕 Номер шага окрашен в цвет своей карточки, а не везде бирюзовый.
+   Так глаз "цепляется" за последовательность 1→2→3 разноцветно. */
 .number {
     position: absolute;
     top: 20px;
     right: 22px;
     font-size: 28px;
     font-weight: 700;
-    color: rgba(58, 215, 211, 0.18);
+    color: var(--accent, #3AD7D3);
+    opacity: 0.22;
     line-height: 1;
+    font-variant-numeric: tabular-nums;
+    transition: opacity 0.25s ease;
+}
+
+.card:hover .number {
+    opacity: 0.5;
 }
 
 .cardTitle {
