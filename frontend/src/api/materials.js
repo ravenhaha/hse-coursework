@@ -1,24 +1,93 @@
-import { apiFetch } from './client';
+import { apiFetch, ApiError } from './client';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+
+function buildMaterialsQuery({ q = '', collectionId = null, tagIds = [] } = {}) {
+  const params = new URLSearchParams();
+
+  if (q) params.set('q', q);
+  if (collectionId != null) {
+    params.set('collection_id', String(collectionId));
+  }
+
+  (tagIds || []).forEach((id) => params.append('tag_ids', String(id)));
+
+  return params.toString();
+}
+
+function getFilenameFromDisposition(disposition, fallback = 'download.bin') {
+  if (!disposition) return fallback;
+
+  const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]);
+    } catch {
+      return utf8Match[1];
+    }
+  }
+
+  const plainMatch = disposition.match(/filename="([^"]+)"/i);
+  if (plainMatch?.[1]) {
+    return plainMatch[1];
+  }
+
+  return fallback;
+}
+
+async function fetchBinary(url, fallbackMessage, fallbackFilename) {
+  const res = await fetch(url, {
+    method: 'GET',
+    credentials: 'include',
+  });
+
+  if (!res.ok) {
+    let message = fallbackMessage;
+    const contentType = res.headers.get('content-type') || '';
+
+    try {
+      if (contentType.includes('application/json')) {
+        const data = await res.json();
+        message = data?.detail || data?.message || message;
+      } else {
+        const text = await res.text();
+        if (text) message = text;
+      }
+    } catch {
+      // ignore
+    }
+
+    throw new ApiError(message, {
+      status: res.status,
+      code: `HTTP_${res.status}`,
+    });
+  }
+
+  const blob = await res.blob();
+  const filename = getFilenameFromDisposition(
+    res.headers.get('content-disposition'),
+    fallbackFilename,
+  );
+
+  return { blob, filename };
+}
 
 export const materialsApi = {
-  // collectionId === null/undefined → ВСЕ материалы пользователя
-  // collectionId === <id>           → материалы конкретной коллекции
   list: (collectionId = null) => {
-    const qs = collectionId != null ? `?collection_id=${collectionId}` : '';
-    return apiFetch(`/materials/${qs}`);
+    const qs = collectionId != null ? `collection_id=${collectionId}` : '';
+    return apiFetch(`/materials${qs ? `?${qs}` : ''}`);
   },
 
   get: (id) => apiFetch(`/materials/${id}`),
 
   search: ({ q = '', collectionId = null, tagIds = [] } = {}) => {
-    const params = new URLSearchParams();
-    if (q) params.set('q', q);
-    if (collectionId != null) params.set('collection_id', String(collectionId));
-    tagIds.forEach((id) => params.append('tag_ids', String(id)));
-    const qs = params.toString();
+    const qs = buildMaterialsQuery({ q, collectionId, tagIds });
     return apiFetch(`/materials/search${qs ? `?${qs}` : ''}`);
+  },
+
+  summary: ({ q = '', collectionId = null, tagIds = [] } = {}) => {
+    const qs = buildMaterialsQuery({ q, collectionId, tagIds });
+    return apiFetch(`/materials/summary${qs ? `?${qs}` : ''}`);
   },
 
   createText: ({ collection_id, material_name, text_content }) =>
@@ -32,30 +101,72 @@ export const materialsApi = {
     fd.append('collection_id', String(collection_id));
     fd.append('material_name', material_name);
     fd.append('file', file);
-    return apiFetch('/materials/file', { method: 'POST', body: fd });
+
+    return apiFetch('/materials/file', {
+      method: 'POST',
+      body: fd,
+    });
   },
 
   update: (id, data) =>
-    apiFetch(`/materials/${id}`, { method: 'PATCH', body: data }),
+    apiFetch(`/materials/${id}`, {
+      method: 'PATCH',
+      body: data,
+    }),
 
   delete: (id) =>
-    apiFetch(`/materials/${id}`, { method: 'DELETE' }),
+    apiFetch(`/materials/${id}`, {
+      method: 'DELETE',
+    }),
 
-  // 🆕 Прямой URL — оставляем на всякий случай (для navigation-скачивания)
   fileUrl: (id) => `${API_BASE}/materials/${id}/file`,
 
-  // 🆕 Скачать файл как Blob (через credentials: 'include' — куки шлются)
-  // Используется для показа картинок и для скачивания оригинала.
   async getFileBlob(id) {
     const res = await fetch(`${API_BASE}/materials/${id}/file`, {
       method: 'GET',
       credentials: 'include',
     });
+
     if (!res.ok) {
-      const err = new Error(`Ошибка загрузки файла: ${res.status}`);
-      err.status = res.status;
-      throw err;
+      throw new ApiError(`Ошибка загрузки файла (${res.status})`, {
+        status: res.status,
+        code: `HTTP_${res.status}`,
+      });
     }
+
     return res.blob();
+  },
+
+  async exportCsv({ q = '', collectionId = null, tagIds = [] } = {}) {
+    const qs = buildMaterialsQuery({ q, collectionId, tagIds });
+    const url = `${API_BASE}/materials/export.csv${qs ? `?${qs}` : ''}`;
+
+    return fetchBinary(
+      url,
+      'Не удалось экспортировать CSV',
+      'materials_export.csv',
+    );
+  },
+
+  async exportFilesZip(collectionId) {
+    const url =
+      `${API_BASE}/materials/export-files.zip` +
+      `?collection_id=${encodeURIComponent(collectionId)}`;
+
+    return fetchBinary(
+      url,
+      'Не удалось скачать архив',
+      `collection_${collectionId}_files.zip`,
+    );
+  },
+
+  importCsv({ collectionId, file }) {
+    const fd = new FormData();
+    fd.append('file', file);
+
+    return apiFetch(`/materials/import.csv?collection_id=${collectionId}`, {
+      method: 'POST',
+      body: fd,
+    });
   },
 };

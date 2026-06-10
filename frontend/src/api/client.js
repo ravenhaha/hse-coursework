@@ -1,20 +1,15 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 // ============================================================================
-// Хук для уведомления о смерти сессии
+// Хуки уведомлений
 // ============================================================================
 
 let onSessionExpired = null;
+let onNetworkError = null;
 
 export function setSessionExpiredHandler(fn) {
   onSessionExpired = fn;
 }
-
-// ============================================================================
-// Хук для уведомления о сетевых ошибках
-// ============================================================================
-
-let onNetworkError = null;
 
 export function setNetworkErrorHandler(fn) {
   onNetworkError = fn;
@@ -27,6 +22,11 @@ export function setNetworkErrorHandler(fn) {
 function getCsrfToken() {
   const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
   return match ? decodeURIComponent(match[1]) : null;
+}
+
+function buildUrl(path) {
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${API_BASE}${path}`;
 }
 
 export class ApiError extends Error {
@@ -50,11 +50,22 @@ async function refreshAccessToken() {
 
   refreshPromise = (async () => {
     const csrf = getCsrfToken();
-    const res = await fetch(`${API_BASE}/auth/refresh`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: csrf ? { 'X-CSRF-Token': csrf } : {},
-    });
+
+    let res;
+    try {
+      res = await fetch(buildUrl('/auth/refresh'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: csrf ? { 'X-CSRF-Token': csrf } : {},
+      });
+    } catch {
+      onNetworkError?.();
+      throw new ApiError('Нет связи с сервером', {
+        status: 0,
+        code: 'NETWORK',
+      });
+    }
+
     if (!res.ok) {
       onSessionExpired?.();
       throw new ApiError('Сессия истекла, войдите снова', {
@@ -62,12 +73,22 @@ async function refreshAccessToken() {
         code: 'SESSION_EXPIRED',
       });
     }
+
     return true;
   })().finally(() => {
     refreshPromise = null;
   });
 
   return refreshPromise;
+}
+
+function shouldTryRefresh(path, { skipRefresh = false, isRetry = false } = {}) {
+  if (skipRefresh || isRetry) return false;
+
+  const authPaths = ['/auth/login', '/auth/register', '/auth/refresh'];
+  if (authPaths.some((p) => path.startsWith(p))) return false;
+
+  return true;
 }
 
 // ============================================================================
@@ -84,37 +105,55 @@ export async function apiFetch(path, options = {}) {
     ...rest
   } = options;
 
-  const finalHeaders = { ...headers };
+  const finalHeaders = new Headers(headers);
   let finalBody;
 
-  // ─── Обработка body ─────────────────────────────────────────────────────
-  // FormData / Blob / ArrayBuffer / URLSearchParams отправляем как есть.
-  // Браузер сам выставит правильный Content-Type (с boundary для multipart).
+  // --------------------------------------------------------------------------
+  // Обработка body
+  // --------------------------------------------------------------------------
   if (body !== undefined && body !== null) {
     if (
       body instanceof FormData ||
       body instanceof Blob ||
       body instanceof ArrayBuffer ||
-      body instanceof URLSearchParams
+      body instanceof URLSearchParams ||
+      ArrayBuffer.isView(body)
     ) {
       finalBody = body;
+
+      if (body instanceof URLSearchParams && !finalHeaders.has('Content-Type')) {
+        finalHeaders.set(
+          'Content-Type',
+          'application/x-www-form-urlencoded;charset=UTF-8'
+        );
+      }
+    } else if (typeof body === 'string') {
+      finalBody = body;
+      // Content-Type не трогаем: вызывающий код сам может его передать
     } else {
-      finalHeaders['Content-Type'] = 'application/json';
+      if (!finalHeaders.has('Content-Type')) {
+        finalHeaders.set('Content-Type', 'application/json');
+      }
       finalBody = JSON.stringify(body);
     }
   }
-  // ────────────────────────────────────────────────────────────────────────
 
-  // CSRF добавляем на все небезопасные методы
-  if (method !== 'GET' && method !== 'HEAD') {
+  // --------------------------------------------------------------------------
+  // CSRF
+  // --------------------------------------------------------------------------
+  if (method !== 'GET' && method !== 'HEAD' && !finalHeaders.has('X-CSRF-Token')) {
     const csrf = getCsrfToken();
-    if (csrf) finalHeaders['X-CSRF-Token'] = csrf;
+    if (csrf) {
+      finalHeaders.set('X-CSRF-Token', csrf);
+    }
   }
 
-  // --- Выполняем запрос ---
+  // --------------------------------------------------------------------------
+  // Запрос
+  // --------------------------------------------------------------------------
   let res;
   try {
-    res = await fetch(`${API_BASE}${path}`, {
+    res = await fetch(buildUrl(path), {
       method,
       credentials: 'include',
       headers: finalHeaders,
@@ -129,49 +168,79 @@ export async function apiFetch(path, options = {}) {
     });
   }
 
-  // --- Авто-рефреш при 401 ---
-  if (res.status === 401 && !_skipRefresh && !_isRetry) {
+  // --------------------------------------------------------------------------
+  // Авто-рефреш при 401
+  // --------------------------------------------------------------------------
+  if (
+    res.status === 401 &&
+    shouldTryRefresh(path, {
+      skipRefresh: _skipRefresh,
+      isRetry: _isRetry,
+    })
+  ) {
     await refreshAccessToken();
     return apiFetch(path, { ...options, _isRetry: true });
   }
 
-  // --- Парсим тело ---
+  // --------------------------------------------------------------------------
+  // Парсим тело
+  // --------------------------------------------------------------------------
   const text = await res.text();
   const data = text ? safeJsonParse(text) : null;
 
-  // --- HTTP-ошибка ---
+  // --------------------------------------------------------------------------
+  // HTTP-ошибка
+  // --------------------------------------------------------------------------
   if (!res.ok) {
-  const message = extractErrorMessage(data, res.status);
-  const code =
-    (data && data.code) ||
-    (res.status === 401 ? 'UNAUTHORIZED' : `HTTP_${res.status}`);
-  throw new ApiError(message, {
-    status: res.status,
-    code,
-    details: data,
-  });
-}
+    const message = extractErrorMessage(data, res.status);
+    const code =
+      (data && typeof data === 'object' && data.code) ||
+      (res.status === 401 ? 'UNAUTHORIZED' : `HTTP_${res.status}`);
+
+    throw new ApiError(message, {
+      status: res.status,
+      code,
+      details: data,
+    });
+  }
 
   return data;
 }
 
 // ============================================================================
-// Хелпер
+// Хелперы
 // ============================================================================
 
 function extractErrorMessage(data, status) {
   if (!data) return `Что-то пошло не так (${status})`;
 
-  // FastAPI при валидации 422 кладёт detail в виде массива:
-  // [{ loc: [...], msg: "field required", type: "..." }, ...]
+  if (typeof data === 'string') {
+    return data || `Что-то пошло не так (${status})`;
+  }
+
+  if (Array.isArray(data.errors) && data.errors.length > 0) {
+    return data.errors
+      .map((e) => {
+        if (e?.field && e?.message) return `${e.field}: ${e.message}`;
+        return e?.message || e?.field || null;
+      })
+      .filter(Boolean)
+      .join(', ');
+  }
+
   if (Array.isArray(data.detail)) {
-    const msgs = data.detail.map((e) => e?.msg).filter(Boolean);
+    const msgs = data.detail
+      .map((e) => e?.msg || e?.message)
+      .filter(Boolean);
+
     return msgs.length ? msgs.join(', ') : `Ошибка валидации (${status})`;
   }
 
-  // FastAPI обычные ошибки — detail: "текст"
-  // На всякий случай поддерживаем message / error от других бэков
-  return data.detail || data.message || data.error || `Что-то пошло не так (${status})`;
+  if (typeof data.detail === 'string') return data.detail;
+  if (typeof data.message === 'string') return data.message;
+  if (typeof data.error === 'string') return data.error;
+
+  return `Что-то пошло не так (${status})`;
 }
 
 function safeJsonParse(text) {

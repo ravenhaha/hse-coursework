@@ -16,8 +16,6 @@ export function Modal({ isOpen, onClose, title, children }) {
     const modalRef = useRef(null);
     const previousFocusRef = useRef(null);
     const wasOpenRef = useRef(false);
-
-    // Focus trap on Tab (no Escape close, no overlay close — by design)
     const handleKeyDown = useCallback((e) => {
         if (e.key !== 'Tab' || !modalRef.current) return;
 

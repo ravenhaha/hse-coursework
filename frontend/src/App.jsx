@@ -15,7 +15,7 @@ import BlurFade from './components/Effects/BlurFade/BlurFade.jsx';
 import GrainOverlay from './components/Effects/GrainOverlay/GrainOverlay.jsx';
 import AmbientParticles from './components/Effects/AmbientParticles/AmbientParticles.jsx';
 // import LumosCursor from './components/Effects/LumosCursor/LumosCursor.jsx';
-import DevNav from './components/DevNav/DevNav.jsx';
+//import DevNav from './components/DevNav/DevNav.jsx';
 import NetworkStatusBanner from './components/NetworkStatusBanner/NetworkStatusBanner.jsx';
 
 import styles from './App.module.css';
@@ -37,7 +37,6 @@ function AppContent() {
             {!isAuth && <AmbientParticles />}
             <GrainOverlay />
             <BlurFade active={blurActive} />
-            <DevNav />
 
             <Suspense fallback={null}>
                 <Routes>
