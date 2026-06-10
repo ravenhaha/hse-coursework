@@ -24,15 +24,14 @@ function mergeTree(collections, materials) {
     if (!byCollection[cid]) byCollection[cid] = [];
     byCollection[cid].push(m);
   }
+
   function walk(nodes) {
     return nodes.map((node) => ({
       ...node,
-      children: [
-        ...walk(node.children || []),
-        ...(byCollection[node.id] || []),
-      ],
+      children: [...walk(node.children || []), ...(byCollection[node.id] || [])],
     }));
   }
+
   return walk(collections);
 }
 
@@ -57,9 +56,6 @@ function buildMaterialsSignature(materials) {
     .join('|');
 }
 
-// 🆕 ИСПРАВЛЕНИЕ БАГА №3
-// Граф присылает id в формате "material:9" / "collection:3".
-// Достаём из строки число.
 function parseGraphMaterialId(rawId) {
   if (rawId == null) return null;
   if (typeof rawId === 'number') return rawId;
@@ -107,14 +103,17 @@ export default function WorkspacePage() {
     let cancelled = false;
     graphApi
       .tree()
-      .then((data) => { if (!cancelled) loadTree(data); })
+      .then((data) => {
+        if (!cancelled) loadTree(data);
+      })
       .catch((err) => console.error('Не удалось загрузить граф:', err.message));
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [loadTree, collectionsSig, materialsSig]);
 
   useEffect(() => clearTree, [clearTree]);
 
-  // ── UI state ──
   const [activeItemId, setActiveItemId] = useState(null);
   const [previewMaterial, setPreviewMaterial] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -137,7 +136,6 @@ export default function WorkspacePage() {
     }
   }, [hintShown]);
 
-  // ── SOFT-DELETE ──
   const [pendingDeletes, setPendingDeletes] = useState(() => new Map());
 
   const collectCollectionBranch = useCallback(
@@ -216,22 +214,22 @@ export default function WorkspacePage() {
     return () => window.removeEventListener('keydown', onKey);
   }, [homeOpen, collections.length]);
 
-  // ── Навигация ──
   const handleSelectItem = useCallback(
     (id, type = 'document') => {
       setActiveItemId(id);
       setHomeOpen(false);
-      if (type === 'folder') { setPreviewMaterial(null); return; }
+
+      if (type === 'folder') {
+        setPreviewMaterial(null);
+        return;
+      }
+
       const mat = materials.find((m) => m.id === id);
       if (mat) setPreviewMaterial(mat);
     },
     [materials],
   );
 
-  // 🆕 ИСПРАВЛЕНИЕ БАГА №3
-  // Открытие материала из графа.
-  // Graph даёт id в виде "material:9" — чистим до integer
-  // и ищем материал в локальном состоянии.
   const handleOpenMaterialFromGraph = useCallback(
     (rawId) => {
       const numId = parseGraphMaterialId(rawId);
@@ -239,11 +237,13 @@ export default function WorkspacePage() {
         console.warn('Не удалось распарсить id материала из графа:', rawId);
         return;
       }
+
       const mat = materials.find((m) => Number(m.id) === numId);
       if (!mat) {
         console.warn('Материал из графа не найден в локальном состоянии:', numId);
         return;
       }
+
       setActiveItemId(mat.id);
       setHomeOpen(false);
       setPreviewMaterial(mat);
@@ -259,7 +259,6 @@ export default function WorkspacePage() {
 
   const handleCloseHome = useCallback(() => setHomeOpen(false), []);
 
-  // ── КОЛЛЕКЦИИ ──
   const handleCreateCollection = useCallback(
     async (name) => {
       try {
@@ -290,7 +289,6 @@ export default function WorkspacePage() {
     [createCollection, reloadCollections],
   );
 
-  // ── МАТЕРИАЛЫ ──
   const handleAddMaterial = useCallback(
     async (data) => {
       try {
@@ -345,10 +343,10 @@ export default function WorkspacePage() {
     [renameCollection, renameMaterial],
   );
 
-  // ── SOFT-DELETE ──
   const handleDeleteItem = useCallback(
     (id, type) => {
       const numId = Number(id);
+
       if (type === 'folder') {
         const branch = collectCollectionBranch(numId);
         const branchSet = new Set(branch.map(Number));
@@ -357,6 +355,7 @@ export default function WorkspacePage() {
             branchSet.has(Number(m.collectionId ?? m.raw?.collection_id)),
           )
           .map((m) => m.id);
+
         setPendingDeletes((prev) => {
           const next = new Map(prev);
           next.set(numId, {
@@ -377,6 +376,7 @@ export default function WorkspacePage() {
           return next;
         });
       }
+
       if (activeItemId === id) setActiveItemId(null);
       if (previewMaterial?.id === id) setPreviewMaterial(null);
     },
@@ -394,11 +394,13 @@ export default function WorkspacePage() {
   const handleCommitDelete = useCallback(
     async (id, type) => {
       const numId = Number(id);
+
       setPendingDeletes((prev) => {
         const next = new Map(prev);
         next.delete(numId);
         return next;
       });
+
       try {
         if (type === 'folder') {
           const affectedIds = await removeCollection(numId);
@@ -451,11 +453,13 @@ export default function WorkspacePage() {
     await usersApi.deleteAccount();
     setDeleteAccountOpen(false);
     setSettingsOpen(false);
+
     try {
       await logout();
     } catch {
-      /* игнор */
+      // ignore
     }
+
     navigate('/login', { replace: true });
   }, [logout, navigate]);
 
@@ -503,6 +507,7 @@ export default function WorkspacePage() {
         onMoveItem={handleMoveItem}
         onSettings={() => setSettingsOpen(true)}
         onLogout={handleLogout}
+        onImportCompleted={reloadMaterials}
       />
 
       <main className={styles.content}>

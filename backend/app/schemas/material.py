@@ -4,7 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.material import SourceType  # ← единый источник истины
+from app.models.material import SourceType
 from app.schemas.tag import TagResponse
 
 
@@ -17,17 +17,7 @@ class MaterialCreateText(BaseModel):
 
 
 class MaterialUpdate(BaseModel):
-    """Тело PATCH /materials/{id}. Все поля опциональны.
-
-    Семантика "поле не передано" vs "поле = null":
-      - Pydantic не различает их на уровне типов.
-      - Для различения роут использует body.model_fields_set
-        и передаёт в сервис флаги *_provided (как в update_collection).
-
-    Ограничения (валидируются в сервисном слое):
-      - text_content разрешён только для source_type='text'
-      - collection_id должен принадлежать текущему юзеру
-    """
+    """Тело PATCH /materials/{id}. Все поля опциональны."""
 
     material_name: str | None = Field(None, min_length=1, max_length=255)
     text_content: str | None = Field(None, min_length=1)
@@ -40,15 +30,7 @@ class MaterialUpdate(BaseModel):
 
 
 class MaterialRead(BaseModel):
-    """Материал в ответах API (с тегами).
-
-    extracted_text НЕ выдаётся в списках — он тяжёлый. Только в отдельном
-    эндпоинте превью (если понадобится).
-
-    Инвариант (поддерживается БД, не схемой):
-      - source_type='text' → text_content NOT NULL, file_path IS NULL
-      - source_type='file' → file_path NOT NULL, text_content IS NULL
-    """
+    """Материал в ответах API (с тегами)."""
 
     id: int
     collection_id: int
@@ -63,3 +45,21 @@ class MaterialRead(BaseModel):
     tags: list[TagResponse] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class MaterialsSummaryTypeCounts(BaseModel):
+    text: int = 0
+    file: int = 0
+
+
+class MaterialsSummaryItem(BaseModel):
+    id: int
+    name: str
+    count: int
+
+
+class MaterialsSummary(BaseModel):
+    total: int
+    byType: MaterialsSummaryTypeCounts = Field(default_factory=MaterialsSummaryTypeCounts)
+    byCollection: list[MaterialsSummaryItem] = Field(default_factory=list)
+    byTag: list[MaterialsSummaryItem] = Field(default_factory=list)

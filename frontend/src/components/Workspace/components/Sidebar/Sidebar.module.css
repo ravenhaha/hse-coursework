@@ -877,3 +877,455 @@
   0%, 100% { transform: translateX(-50%) translateY(0); }
   50%      { transform: translateX(-50%) translateY(3px); }
 }
+
+.materialsSummaryPanel {
+  margin: 12px 0;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(77, 176, 255, 0.16);
+  background:
+    linear-gradient(180deg, rgba(14, 28, 52, 0.72), rgba(8, 18, 36, 0.82));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 10px 30px rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(10px);
+  color: #dff5ff;
+}
+
+.materialsSummaryHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.materialsSummaryTitle {
+  font-size: 15px;
+  line-height: 1.3;
+  font-weight: 700;
+  color: #ecf8ff;
+}
+
+.materialsSummaryActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.materialsSummaryBtn,
+.materialsSummaryBtnGhost {
+  appearance: none;
+  border: 1px solid rgba(82, 196, 255, 0.22);
+  border-radius: 12px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.materialsSummaryBtn {
+  color: #04111f;
+  background: linear-gradient(180deg, #67e8f9 0%, #38bdf8 100%);
+  box-shadow: 0 6px 20px rgba(56, 189, 248, 0.22);
+}
+
+.materialsSummaryBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(56, 189, 248, 0.28);
+}
+
+.materialsSummaryBtnGhost {
+  color: #d8f7ff;
+  background: rgba(12, 30, 52, 0.72);
+}
+
+.materialsSummaryBtnGhost:hover {
+  transform: translateY(-1px);
+  background: rgba(18, 39, 66, 0.88);
+  border-color: rgba(103, 232, 249, 0.4);
+}
+
+.materialsSummaryBtn:disabled,
+.materialsSummaryBtnGhost:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.materialsStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.materialsStatCard {
+  min-width: 0;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(85, 162, 255, 0.12);
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.materialsStatLabel {
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: rgba(210, 236, 255, 0.72);
+}
+
+.materialsStatValue {
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #f2fbff;
+}
+
+.materialsSummaryLists {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.materialsSummaryList {
+  min-width: 0;
+}
+
+.materialsSummaryListTitle {
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(210, 236, 255, 0.72);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.materialsSummaryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.materialsSummaryRow:last-child {
+  border-bottom: none;
+}
+
+.materialsSummaryRowName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #dff5ff;
+}
+
+.materialsSummaryRowCount {
+  flex: 0 0 auto;
+  font-weight: 700;
+  color: #8be9ff;
+}
+
+.materialsSummaryEmpty {
+  font-size: 13px;
+  color: rgba(210, 236, 255, 0.58);
+}
+
+.materialsSummaryNote {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(210, 236, 255, 0.62);
+}
+
+/* import modal */
+
+.importCsvForm {
+  display: grid;
+  gap: 14px;
+  margin-top: 12px;
+  color: #dff5ff;
+}
+
+.importCsvField {
+  display: grid;
+  gap: 8px;
+}
+
+.importCsvLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ebf9ff;
+}
+
+.importCsvSelect,
+.importCsvInput {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid rgba(82, 196, 255, 0.22);
+  border-radius: 12px;
+  background: rgba(10, 22, 40, 0.9);
+  color: #effbff;
+  padding: 11px 12px;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+  color-scheme: dark;
+}
+
+.importCsvSelect:focus,
+.importCsvInput:focus {
+  border-color: rgba(103, 232, 249, 0.55);
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.12);
+  background: rgba(10, 24, 44, 0.96);
+}
+
+.importCsvInput::file-selector-button {
+  margin-right: 12px;
+  border: 1px solid rgba(82, 196, 255, 0.22);
+  border-radius: 10px;
+  padding: 9px 12px;
+  background: rgba(19, 41, 67, 0.95);
+  color: #dff5ff;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.importCsvInput::file-selector-button:hover {
+  background: rgba(25, 51, 82, 1);
+  border-color: rgba(103, 232, 249, 0.38);
+}
+
+.importCsvError {
+  font-size: 13px;
+  color: #ff8c9b;
+}
+
+.importCsvActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.importCsvBtn,
+.importCsvBtnSecondary {
+  appearance: none;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.importCsvBtn {
+  border: 1px solid rgba(82, 196, 255, 0.22);
+  background: linear-gradient(180deg, #67e8f9 0%, #38bdf8 100%);
+  color: #03111d;
+}
+
+.importCsvBtn:hover {
+  transform: translateY(-1px);
+}
+
+.importCsvBtnSecondary {
+  border: 1px solid rgba(82, 196, 255, 0.18);
+  background: rgba(14, 30, 52, 0.75);
+  color: #dff5ff;
+}
+
+.importCsvBtnSecondary:hover {
+  transform: translateY(-1px);
+  background: rgba(19, 39, 66, 0.95);
+}
+
+.importCsvBtn:disabled,
+.importCsvBtnSecondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@media (max-width: 640px) {
+  .materialsStatsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .materialsSummaryLists {
+    grid-template-columns: 1fr;
+  }
+
+  .materialsSummaryHeader {
+    align-items: stretch;
+  }
+
+  .materialsSummaryActions {
+    width: 100%;
+  }
+
+  .materialsSummaryBtn,
+  .materialsSummaryBtnGhost {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .importCsvActions {
+    flex-direction: column-reverse;
+  }
+
+  .importCsvBtn,
+  .importCsvBtnSecondary {
+    width: 100%;
+  }
+}
+
+.transferModalBody {
+  display: grid;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.transferField {
+  display: grid;
+  gap: 6px;
+}
+
+.transferLabel {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.transferSelect,
+.transferInput {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  padding: 10px 12px;
+  outline: none;
+}
+
+.transferSelect:focus,
+.transferInput:focus {
+  border-color: rgba(71, 217, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(71, 217, 255, 0.12);
+}
+
+.transferFormatGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.transferFormatCard {
+  text-align: left;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 12px;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.transferFormatCard:hover {
+  transform: translateY(-1px);
+  border-color: rgba(71, 217, 255, 0.35);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.transferFormatCardActive {
+  border-color: rgba(71, 217, 255, 0.55);
+  box-shadow: 0 0 0 3px rgba(71, 217, 255, 0.12);
+  background: rgba(71, 217, 255, 0.08);
+}
+
+.transferFormatCardDisabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.transferFormatHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.transferFormatTitle {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.transferFormatDescription {
+  font-size: 13px;
+  opacity: 0.75;
+  line-height: 1.35;
+}
+
+.transferFormatBadge {
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+  opacity: 0.85;
+}
+
+.transferHint {
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.transferHintWarning {
+  color: #ffd58a;
+  border: 1px solid rgba(255, 191, 73, 0.22);
+  background: rgba(255, 191, 73, 0.08);
+}
+
+.transferHintInfo {
+  color: #bfefff;
+  border: 1px solid rgba(71, 217, 255, 0.2);
+  background: rgba(71, 217, 255, 0.08);
+}
+
+.transferError {
+  color: #ff8f8f;
+  font-size: 13px;
+}
+
+.transferActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

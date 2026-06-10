@@ -1,11 +1,12 @@
 """Роуты материалов: создание (текст/файл), чтение, поиск,
-обновление, удаление, скачивание файла."""
+сводка, import/export CSV, обновление, удаление, скачивание файла."""
 
 import re
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, Query, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
+from starlette.background import BackgroundTask
 
 from app.core.config import settings
 from app.core.constants import ALLOWED_MATERIAL_EXTENSIONS
@@ -18,7 +19,12 @@ from app.core.exceptions import (
 )
 from app.core.file_storage import delete_file, get_full_path, save_material
 from app.models.material import SourceType
-from app.schemas.material import MaterialCreateText, MaterialRead, MaterialUpdate
+from app.schemas.material import (
+    MaterialCreateText,
+    MaterialRead,
+    MaterialsSummary,
+    MaterialUpdate,
+)
 from app.services.material import (
     create_file_material,
     create_text_material,
@@ -27,6 +33,12 @@ from app.services.material import (
     list_materials,
     search_materials,
     update_existing_material,
+)
+from app.services.reports import (
+    build_collection_files_zip,
+    get_materials_summary,
+    import_texts_from_csv,
+    iter_export_csv,
 )
 
 router = APIRouter(prefix="/materials", tags=["Materials"])
@@ -52,6 +64,14 @@ def _safe_download_filename(
     return f"{clean}{ext}"
 
 
+def _remove_temp_file(path_str: str) -> None:
+    """Удалить временный ZIP после отправки."""
+    try:
+        Path(path_str).unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
 async def _read_upload_with_limit(
     file: UploadFile,
     max_size: int,
@@ -59,16 +79,18 @@ async def _read_upload_with_limit(
     """Читает UploadFile чанками с inflight-проверкой размера."""
     total = 0
     chunks: list[bytes] = []
+
     while True:
         chunk = await file.read(_UPLOAD_CHUNK_SIZE)
         if not chunk:
             break
+
         total += len(chunk)
         if total > max_size:
-            file_too_large(
-                f"Файл больше {max_size // (1024 * 1024)} MB"
-            )
+            file_too_large(max_size // (1024 * 1024))
+
         chunks.append(chunk)
+
     return b"".join(chunks)
 
 
@@ -105,26 +127,18 @@ async def create_file(
     file: UploadFile = File(...),
 ):
     """Загрузить файл и создать материал."""
-    # --- 1. Валидация расширения ---
     ext = Path(file.filename or "").suffix.lower()
     if ext not in ALLOWED_MATERIAL_EXTENSIONS:
         unsupported_media_type(f"Расширение {ext!r} не поддерживается")
 
-    # --- 2. Стриминговое чтение с inflight-проверкой размера ---
-    content = await _read_upload_with_limit(
-        file, settings.MAX_MATERIAL_FILE_SIZE
-    )
+    content = await _read_upload_with_limit(file, settings.MAX_MATERIAL_FILE_SIZE)
 
-    # --- 3. Сохранение на диск ---
-    # ⚠️ ВАЖНО: имена аргументов должны совпадать с file_storage.save_material —
-    # original_filename / file_content, иначе TypeError на каждой загрузке.
     relative_path, file_size = await save_material(
         user_id=user.id,
         original_filename=file.filename or f"upload{ext}",
         file_content=content,
     )
 
-    # --- 4. Создание записи в БД с rollback файла при ошибке ---
     try:
         return await create_file_material(
             db,
@@ -168,6 +182,94 @@ async def search(
         query_str=q,
         collection_id=collection_id,
         tag_ids=tag_ids,
+    )
+
+
+@router.get("/summary", response_model=MaterialsSummary)
+async def summary(
+    db: DB,
+    user: CurrentUser,
+    q: str = Query("", description="Подстрока для поиска"),
+    collection_id: int | None = Query(None),
+    tag_ids: list[int] = Query(default_factory=list),
+):
+    """Сводка по текущей выборке: total, byType, byCollection, byTag."""
+    return await get_materials_summary(
+        db,
+        user,
+        q=q,
+        collection_id=collection_id,
+        tag_ids=tag_ids or None,
+    )
+
+
+@router.get("/export.csv")
+async def export_csv(
+    db: DB,
+    user: CurrentUser,
+    q: str = Query("", description="Подстрока для поиска"),
+    collection_id: int | None = Query(None),
+    tag_ids: list[int] = Query(default_factory=list),
+):
+    """Экспорт CSV текущей выборки."""
+    filename = "materials_export.csv"
+    generator = iter_export_csv(
+        db,
+        user,
+        q=q,
+        collection_id=collection_id,
+        tag_ids=tag_ids or None,
+    )
+
+    return StreamingResponse(
+        generator,
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
+    )
+
+
+@router.get("/export-files.zip")
+async def export_files_zip(
+    db: DB,
+    user: CurrentUser,
+    collection_id: int = Query(..., gt=0, description="Коллекция для ZIP-экспорта"),
+):
+    """Скачать ZIP со всеми файловыми материалами выбранной коллекции."""
+    archive_path, filename = await build_collection_files_zip(
+        db,
+        user,
+        collection_id=collection_id,
+    )
+
+    return FileResponse(
+        path=archive_path,
+        media_type="application/zip",
+        filename=filename,
+        background=BackgroundTask(_remove_temp_file, str(archive_path)),
+    )
+
+
+@router.post("/import.csv")
+async def import_csv(
+    db: DB,
+    user: CurrentUser,
+    collection_id: int = Query(..., description="Коллекция, куда импортируем"),
+    file: UploadFile = File(...),
+):
+    """Импорт текстовых материалов из CSV."""
+    filename = (file.filename or "").lower()
+    if not filename.endswith(".csv"):
+        bad_request("Нужен CSV-файл с расширением .csv")
+
+    content = await _read_upload_with_limit(file, settings.MAX_MATERIAL_FILE_SIZE)
+
+    return await import_texts_from_csv(
+        db,
+        user,
+        collection_id=collection_id,
+        file_bytes=content,
     )
 
 
