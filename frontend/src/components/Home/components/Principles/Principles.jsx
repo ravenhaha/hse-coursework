@@ -4,7 +4,7 @@ import styles from "./Principles.module.css";
 
 function Principles() {
     return (
-        <section className={styles.section}>
+        <section id="principles" className={styles.section}>
             <div className="container">
                 <div className={styles.header}>
                     <h2 className={styles.title}>{titleData.title}</h2>
