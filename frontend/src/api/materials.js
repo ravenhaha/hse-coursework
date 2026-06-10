@@ -1,3 +1,4 @@
+import JSZip from 'jszip';
 import { apiFetch, ApiError } from './client';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -70,6 +71,106 @@ async function fetchBinary(url, fallbackMessage, fallbackFilename) {
   );
 
   return { blob, filename };
+}
+
+function stripExtension(filename) {
+  const base = String(filename || '').split('/').pop() || 'Файл';
+  return base.replace(/\.[^.]+$/, '') || base;
+}
+
+function shouldSkipArchiveEntry(entryName) {
+  const normalized = String(entryName || '').replace(/\\/g, '/');
+  if (!normalized) return true;
+  if (normalized.endsWith('/')) return true;
+  if (normalized.startsWith('__MACOSX/')) return true;
+
+  const basename = normalized.split('/').pop() || '';
+  if (basename === '.DS_Store') return true;
+
+  return false;
+}
+
+async function importArchiveToCollection({ collectionId, file, onProgress }) {
+  if (!Number.isFinite(Number(collectionId))) {
+    throw new ApiError('Выберите коллекцию');
+  }
+
+  if (!(file instanceof File)) {
+    throw new ApiError('Выберите ZIP-архив');
+  }
+
+  if (!String(file.name || '').toLowerCase().endsWith('.zip')) {
+    throw new ApiError('Нужен файл архива .zip');
+  }
+
+  let zip;
+  try {
+    zip = await JSZip.loadAsync(file);
+  } catch {
+    throw new ApiError('Не удалось прочитать ZIP-архив');
+  }
+
+  const entries = Object.values(zip.files).filter(
+    (entry) => !shouldSkipArchiveEntry(entry.name),
+  );
+
+  if (entries.length === 0) {
+    throw new ApiError('В архиве нет файлов для импорта');
+  }
+
+  let createdCount = 0;
+  let skippedCount = 0;
+  const errors = [];
+
+  for (let index = 0; index < entries.length; index += 1) {
+    const entry = entries[index];
+    const filename = entry.name.split('/').pop() || `file_${index + 1}`;
+
+    try {
+      const blob = await entry.async('blob');
+      const uploadFile = new File([blob], filename, {
+        type: blob.type || 'application/octet-stream',
+        lastModified: Date.now(),
+      });
+
+      const fd = new FormData();
+      fd.append('collection_id', String(collectionId));
+      fd.append('material_name', stripExtension(filename));
+      fd.append('file', uploadFile);
+
+      await apiFetch('/materials/file', {
+        method: 'POST',
+        body: fd,
+      });
+
+      createdCount += 1;
+    } catch (err) {
+      skippedCount += 1;
+      errors.push({
+        name: filename,
+        message: err?.message || 'Не удалось загрузить файл',
+      });
+    } finally {
+      onProgress?.({
+        current: index + 1,
+        total: entries.length,
+        filename,
+        createdCount,
+        skippedCount,
+      });
+    }
+  }
+
+  return {
+    createdCount,
+    skippedCount,
+    totalCount: entries.length,
+    errors,
+    message:
+      skippedCount > 0
+        ? `Импорт завершён: создано ${createdCount}, пропущено ${skippedCount}`
+        : `Импорт завершён: создано ${createdCount}`,
+  };
 }
 
 export const materialsApi = {
@@ -169,4 +270,6 @@ export const materialsApi = {
       body: fd,
     });
   },
+
+  importArchive: importArchiveToCollection,
 };
