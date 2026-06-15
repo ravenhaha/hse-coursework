@@ -1,0 +1,237 @@
+/* ══════════════════════════════════════════════
+   TOOLBAR
+   ══════════════════════════════════════════════ */
+
+.toolbar {
+    display: flex;
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #1a3a52;
+    border-radius: 12px;
+    background: rgba(7, 27, 49, 0.5);
+    overflow: visible;
+}
+
+.toolbarInner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px;
+    width: 100%;
+}
+
+/* ══════════════════════════════════════════════
+   КНОПКА
+   ══════════════════════════════════════════════ */
+
+.btnWrap {
+    position: relative;
+    display: inline-flex;
+}
+
+.btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    color: #8fb3c2;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.btn:hover {
+    background: rgba(67, 217, 220, 0.1);
+    color: #b7fcff;
+}
+
+.btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(67, 217, 220, 0.3);
+}
+
+.btnActive {
+    background: rgba(58, 215, 211, 0.18);
+    color: #3AD7D3;
+}
+
+.btnActive:hover {
+    background: rgba(58, 215, 211, 0.26);
+    color: #3AD7D3;
+}
+
+/* ── Полоска цвета под иконкой ── */
+
+.colorIndicator {
+    position: absolute;
+    bottom: 4px;
+    left: 7px;
+    right: 7px;
+    height: 3px;
+    border-radius: 2px;
+    pointer-events: none;
+}
+
+/* ══════════════════════════════════════════════
+   РАЗДЕЛИТЕЛЬ
+   ══════════════════════════════════════════════ */
+
+.separator {
+    width: 1px;
+    height: 20px;
+    background: #1a3a52;
+    margin: 0 6px;
+    flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════
+   DROPDOWN (общий контейнер)
+   ══════════════════════════════════════════════ */
+
+.dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 100;
+    min-width: 180px;
+    padding: 8px;
+    border-radius: 10px;
+    border: 1px solid #215676;
+    background: #0c2238;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    animation: dropdownIn 0.15s ease;
+}
+
+@keyframes dropdownIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ══════════════════════════════════════════════
+   ЦВЕТОВОЙ ПИКЕР
+   ══════════════════════════════════════════════ */
+
+.colorGrid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+}
+
+.colorSwatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid #1a3a52;
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.12s, box-shadow 0.12s;
+}
+
+.colorSwatch:hover {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 2px rgba(67, 217, 220, 0.35);
+}
+
+.colorSwatchActive {
+    box-shadow: 0 0 0 2px #3AD7D3;
+}
+
+/* ══════════════════════════════════════════════
+   ПИКЕР ШРИФТОВ
+   ══════════════════════════════════════════════ */
+
+.fontList {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 160px;
+}
+
+.fontItem {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    color: #c6e8f2;
+    text-align: left;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.12s, color 0.12s;
+}
+
+.fontItem:hover {
+    background: rgba(67, 217, 220, 0.1);
+    color: #b7fcff;
+}
+
+.fontItemActive {
+    background: rgba(58, 215, 211, 0.18);
+    color: #3AD7D3;
+}
+
+/* ══════════════════════════════════════════════
+   ПИКЕР ШАБЛОНОВ
+   ══════════════════════════════════════════════ */
+
+.templateList {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 200px;
+}
+
+.templateItem {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    background: transparent;
+    color: #c6e8f2;
+    text-align: left;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background-color 0.12s, color 0.12s;
+}
+
+.templateItem:hover {
+    background: rgba(67, 217, 220, 0.1);
+    color: #b7fcff;
+}
+
+/* ══════════════════════════════════════════════
+   МОБИЛЬНЫЕ
+   ══════════════════════════════════════════════ */
+
+@media (max-width: 680px) {
+    .toolbar {
+        padding: 6px;
+    }
+
+    .btn {
+        width: 30px;
+        height: 30px;
+    }
+
+    .separator {
+        margin: 0 4px;
+    }
+
+    .dropdown {
+        min-width: 160px;
+    }
+}

@@ -1,0 +1,13 @@
+.layout {
+    display: flex;
+    min-height: 100vh;
+    background: #091422;  /* 🆕 на случай если body не закрашен */
+}
+
+.content {
+    flex: 1;
+    min-width: 0;
+    margin-left: var(--sidebar-width, 280px);
+    background: #091422;  /* 🆕 явный тёмный фон */
+    min-height: 100vh;
+}

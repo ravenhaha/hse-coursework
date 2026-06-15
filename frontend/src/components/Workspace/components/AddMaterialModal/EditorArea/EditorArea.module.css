@@ -1,0 +1,383 @@
+/* ══════════════════════════════════════════════
+   КОНТЕЙНЕР
+   ══════════════════════════════════════════════ */
+
+.container {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border-radius: 10px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+/* ══════════════════════════════════════════════
+   PROSEMIRROR — базовое
+   ══════════════════════════════════════════════ */
+
+.proseMirror {
+    outline: none !important;
+    min-height: 180px;
+    font-size: 15px;
+    line-height: 1.65;
+    color: #e9f7ff;
+    caret-color: #3AD7D3;
+    padding: 4px 2px;
+    word-wrap: break-word;
+}
+
+.proseMirror:focus,
+.proseMirror:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.proseMirror ::selection {
+    background: rgba(58, 215, 211, 0.3);
+    color: #ffffff;
+}
+
+/* ── Placeholder ── */
+
+.proseMirror p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    color: #3d6a7e;
+    pointer-events: none;
+    height: 0;
+    font-style: italic;
+}
+
+/* ══════════════════════════════════════════════
+   ЗАГОЛОВКИ
+   ══════════════════════════════════════════════ */
+
+.proseMirror h1,
+.proseMirror h2,
+.proseMirror h3,
+.proseMirror h4 {
+    color: #c6e8f2;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.proseMirror h1 { font-size: 1.6em; margin: 0.7em 0 0.3em; }
+.proseMirror h2 { font-size: 1.35em; margin: 0.6em 0 0.25em; }
+.proseMirror h3 { font-size: 1.15em; margin: 0.5em 0 0.2em; }
+.proseMirror h4 {
+    font-size: 1em;
+    margin: 0.4em 0 0.15em;
+    font-weight: 600;
+}
+
+/* ══════════════════════════════════════════════
+   ПАРАГРАФЫ
+   ══════════════════════════════════════════════ */
+
+.proseMirror p {
+    margin: 0.35em 0;
+}
+
+/* ══════════════════════════════════════════════
+   СПИСКИ — принудительно возвращаем маркеры
+   ══════════════════════════════════════════════ */
+
+.proseMirror ul {
+    list-style: disc outside;
+    padding-left: 1.6em;
+    margin: 0.4em 0;
+}
+
+.proseMirror ol {
+    list-style: decimal outside;
+    padding-left: 1.6em;
+    margin: 0.4em 0;
+}
+
+.proseMirror ul ul { list-style: circle outside; }
+.proseMirror ul ul ul { list-style: square outside; }
+
+.proseMirror ol ol { list-style: lower-alpha outside; }
+.proseMirror ol ol ol { list-style: lower-roman outside; }
+
+.proseMirror li {
+    margin: 0.15em 0;
+}
+
+.proseMirror li > p {
+    margin: 0;
+}
+
+.proseMirror li::marker {
+    color: #3AD7D3;
+    font-weight: 600;
+}
+
+/* ══════════════════════════════════════════════
+   TASK LIST — без маркеров, с чекбоксами
+   ══════════════════════════════════════════════ */
+
+.proseMirror ul[data-type="taskList"] {
+    list-style: none !important;
+    padding-left: 0.2em;
+}
+
+.proseMirror ul[data-type="taskList"] li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.proseMirror ul[data-type="taskList"] li > label {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin-top: 4px;
+    user-select: none;
+}
+
+.proseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #1f4e67;
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
+    position: relative;
+}
+
+.proseMirror ul[data-type="taskList"] li > label input[type="checkbox"]:hover {
+    border-color: #3AD7D3;
+}
+
+.proseMirror ul[data-type="taskList"] li > label input[type="checkbox"]:checked {
+    background: #3AD7D3;
+    border-color: #3AD7D3;
+}
+
+.proseMirror ul[data-type="taskList"] li > label input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 4px;
+    width: 4px;
+    height: 8px;
+    border: solid #0A1A2A;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.proseMirror ul[data-type="taskList"] li[data-checked="true"] > div > p {
+    text-decoration: line-through;
+    color: #3d6a7e;
+}
+
+/* ══════════════════════════════════════════════
+   ВЫРАВНИВАНИЕ (TextAlign)
+   ══════════════════════════════════════════════ */
+
+.proseMirror [style*="text-align: center"]  { text-align: center; }
+.proseMirror [style*="text-align: right"]   { text-align: right; }
+.proseMirror [style*="text-align: justify"] { text-align: justify; }
+.proseMirror [style*="text-align: left"]    { text-align: left; }
+
+/* ══════════════════════════════════════════════
+   ЦИТАТЫ
+   ══════════════════════════════════════════════ */
+
+.proseMirror blockquote {
+    border-left: 3px solid #3AD7D3;
+    margin: 0.6em 0;
+    padding: 0.2em 0 0.2em 1em;
+    color: #89aab7;
+    font-style: italic;
+    background: rgba(58, 215, 211, 0.04);
+    border-radius: 0 6px 6px 0;
+}
+
+.proseMirror blockquote p {
+    margin: 0.2em 0;
+}
+
+/* ══════════════════════════════════════════════
+   КОД
+   ══════════════════════════════════════════════ */
+
+.proseMirror code {
+    background: rgba(58, 215, 211, 0.08);
+    color: #5be8e5;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-family: 'Fira Code', Consolas, Monaco, monospace;
+    border: 1px solid rgba(58, 215, 211, 0.12);
+}
+
+.proseMirror pre {
+    background: #071b31;
+    border: 1px solid #164567;
+    color: #c6e8f2;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 0.7em 0;
+    font-family: 'Fira Code', Consolas, Monaco, monospace;
+    font-size: 0.9em;
+    line-height: 1.5;
+}
+
+.proseMirror pre code {
+    background: none;
+    color: inherit;
+    padding: 0;
+    font-size: inherit;
+    border: none;
+}
+
+/* ── Скроллбар внутри pre ── */
+
+.proseMirror pre::-webkit-scrollbar {
+    height: 6px;
+}
+
+.proseMirror pre::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.proseMirror pre::-webkit-scrollbar-thumb {
+    background: #1f4e67;
+    border-radius: 3px;
+}
+
+.proseMirror pre::-webkit-scrollbar-thumb:hover {
+    background: #2a6b8a;
+}
+
+/* ══════════════════════════════════════════════
+   ССЫЛКИ
+   ══════════════════════════════════════════════ */
+
+.proseMirror a {
+    color: #5be8e5;
+    text-decoration: underline;
+    text-decoration-color: rgba(91, 232, 229, 0.4);
+    text-underline-offset: 2px;
+    cursor: pointer;
+    transition: color 0.15s, text-decoration-color 0.15s;
+}
+
+.proseMirror a:hover {
+    color: #8af1f4;
+    text-decoration-color: #8af1f4;
+}
+
+.proseMirror a:focus-visible {
+    outline: 2px solid #3AD7D3;
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+/* ══════════════════════════════════════════════
+   ГОРИЗОНТАЛЬНАЯ ЛИНИЯ
+   ══════════════════════════════════════════════ */
+
+.proseMirror hr {
+    border: none;
+    border-top: 1px solid #1f4e67;
+    margin: 1.2em 0;
+    position: relative;
+}
+
+.proseMirror hr::after {
+    content: '◆';
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0A1A2A;
+    color: #3AD7D3;
+    padding: 0 8px;
+    font-size: 10px;
+    opacity: 0.5;
+}
+
+/* ══════════════════════════════════════════════
+   ПОДСВЕТКА (highlight / mark) — под тему
+   ══════════════════════════════════════════════ */
+
+.proseMirror mark {
+    background: rgba(58, 215, 211, 0.18);
+    color: #e9f7ff;
+    padding: 0 3px;
+    border-radius: 3px;
+    box-shadow: 0 0 0 1px rgba(58, 215, 211, 0.25);
+}
+
+/* ══════════════════════════════════════════════
+   ИЗОБРАЖЕНИЯ
+   ══════════════════════════════════════════════ */
+
+.proseMirror img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 0.6em 0;
+    border: 1px solid #164567;
+}
+
+/* ══════════════════════════════════════════════
+   ТАБЛИЦЫ
+   ══════════════════════════════════════════════ */
+
+.proseMirror table {
+    border-collapse: collapse;
+    margin: 0.7em 0;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 6px;
+}
+
+.proseMirror th,
+.proseMirror td {
+    border: 1px solid #164567;
+    padding: 6px 10px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.proseMirror th {
+    background: rgba(58, 215, 211, 0.08);
+    color: #c6e8f2;
+    font-weight: 600;
+}
+
+.proseMirror .tableWrapper {
+    overflow-x: auto;
+    margin: 0.7em 0;
+}
+
+.proseMirror table .column-resize-handle {
+    position: absolute;
+    right: -2px;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: #3AD7D3;
+    cursor: col-resize;
+    pointer-events: auto;
+    border-radius: 2px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.proseMirror table:hover .column-resize-handle,
+.proseMirror table .column-resize-handle:hover {
+    opacity: 1;
+}
+
+.proseMirror .selectedCell {
+    background: rgba(58, 215, 211, 0.15);
+}

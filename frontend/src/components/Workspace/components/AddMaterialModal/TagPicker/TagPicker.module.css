@@ -1,0 +1,136 @@
+/* ── Контейнер ── */
+
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 0;
+}
+
+/* ── Ввод нового тега ── */
+
+.inputRow {
+    display: flex;
+    gap: 6px;
+}
+
+.input {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 10px;
+    border: 1px solid #1f4e67;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    background: rgba(13, 33, 55, 0.6);
+    color: #c6e8f2;
+    transition: border-color 0.15s;
+}
+
+.input::placeholder {
+    color: #3d6a7e;
+}
+
+.input:focus {
+    outline: none;
+    border-color: #3AD7D3;
+    box-shadow: 0 0 0 2px rgba(67, 217, 220, 0.15);
+}
+
+/* ── Кнопка «+» ── */
+
+.addBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border: 1px solid rgba(67, 217, 220, 0.3);
+    background: rgba(67, 217, 220, 0.08);
+    color: #3AD7D3;
+    border-radius: 8px;
+    cursor: pointer;
+    transition:
+        background-color 0.15s,
+        border-color 0.15s;
+}
+
+.addBtn:hover {
+    background: rgba(67, 217, 220, 0.15);
+    border-color: #3AD7D3;
+}
+
+.addBtn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(67, 217, 220, 0.3);
+}
+
+/* ── Группы тегов ── */
+
+.presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.custom {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-top: 6px;
+    border-top: 1px solid #1a3a52;
+}
+
+/* ── Кнопка тега ── */
+
+.tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border: 1px solid #1f4e67;
+    background: rgba(13, 33, 55, 0.4);
+    border-radius: 20px;
+    font-size: 12px;
+    font-family: inherit;
+    color: #5a8899;
+    cursor: pointer;
+    transition:
+        color 0.15s,
+        border-color 0.15s,
+        background-color 0.15s;
+}
+
+.tag:hover {
+    border-color: rgba(67, 217, 220, 0.4);
+    color: #89aab7;
+}
+
+.tag:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(67, 217, 220, 0.3);
+}
+
+.tagActive {
+    background: rgba(67, 217, 220, 0.08);
+    border-color: rgba(67, 217, 220, 0.3);
+    color: #3AD7D3;
+    font-weight: 500;
+}
+
+.tagActive:hover {
+    background: rgba(67, 217, 220, 0.12);
+    border-color: #3AD7D3;
+}
+
+/* Кастомные теги — с иконкой удаления */
+
+.tagCustom svg {
+    opacity: 0.6;
+    transition: opacity 0.15s;
+}
+
+.tagCustom:hover svg {
+    opacity: 1;
+}

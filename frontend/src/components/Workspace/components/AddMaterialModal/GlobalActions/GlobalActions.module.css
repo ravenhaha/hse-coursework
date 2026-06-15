@@ -1,0 +1,144 @@
+/* ── Контейнер ── */
+
+.container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(67, 217, 220, 0.04);
+    border: 1px solid #1a3a52;
+    border-radius: 10px;
+    flex-wrap: wrap;
+}
+
+/* ── Лейбл ── */
+
+.label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #5a8899;
+    white-space: nowrap;
+}
+
+/* ── Кнопки ── */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border: 1px solid #1f4e67;
+    background: rgba(13, 33, 55, 0.6);
+    border-radius: 8px;
+    font-size: 12px;
+    font-family: inherit;
+    color: #89aab7;
+    cursor: pointer;
+    transition:
+        color 0.15s,
+        border-color 0.15s,
+        background-color 0.15s;
+}
+
+.btn:hover {
+    color: #c6e8f2;
+    border-color: #3AD7D3;
+    background: rgba(67, 217, 220, 0.06);
+}
+
+.btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(67, 217, 220, 0.3);
+}
+
+.btnActive {
+    color: #3AD7D3;
+    border-color: #3AD7D3;
+}
+
+.importantActive {
+    color: #ffd43b;
+    border-color: rgba(255, 212, 59, 0.4);
+    background: rgba(255, 212, 59, 0.06);
+}
+
+.importantActive:hover {
+    border-color: #ffd43b;
+}
+
+/* ── Бейдж количества тегов ── */
+
+.badge {
+    font-size: 9px;
+    font-weight: 700;
+    min-width: 14px;
+    height: 14px;
+    padding: 0 4px;
+    border-radius: 7px;
+    background: #3AD7D3;
+    color: #0A1A2A;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+/* ── Панель тегов ── */
+
+.tagPickerWrap {
+    width: 100%;
+    margin-top: 4px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #1f4e67;
+    background: rgba(13, 33, 55, 0.8);
+    animation: slideDown 0.15s ease;
+}
+
+.tagPickerHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #1a3a52;
+}
+
+.tagPickerTitle {
+    color: #89aab7;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.tagPickerClear {
+    background: none;
+    border: none;
+    color: #ff6b6b;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background-color 0.15s;
+}
+
+.tagPickerClear:hover {
+    background: rgba(255, 107, 107, 0.1);
+}
+
+.tagPickerClear:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.3);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

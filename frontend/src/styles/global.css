@@ -1,0 +1,51 @@
+@import './reset.css';
+@import './fonts.css';
+@import './z-index.css';
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-main);
+    overscroll-behavior: none;
+}
+
+body.no-scroll {
+    overflow: hidden;
+}
+
+/* @media (pointer: fine) {
+    body.landing * {
+        cursor: none !important;
+    }
+} */
+
+.container {
+    max-width: 1280px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 3px;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0a0e14;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #3ad7d3;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #4de3df;
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #3ad7d3 #0a0e14;
+}

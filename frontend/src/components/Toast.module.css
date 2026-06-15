@@ -1,0 +1,128 @@
+/* === Базовый блок тоста === */
+.toast {
+  position: relative;
+  overflow: hidden;
+  min-width: 280px;
+  max-width: 400px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  
+  /* 🔑 Стеклянный эффект */
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  
+  opacity: 0;
+  transform: translateX(120%);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.28s ease;
+}
+
+.toastVisible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* === Варианты по типу === */
+.toastInfo {
+  background: rgba(148, 163, 184, 0.14);
+  border-color: rgba(148, 163, 184, 0.32);
+  color: #e2e8f0;
+}
+
+.toastSuccess {
+  background: rgba(94, 234, 212, 0.14);
+  border-color: rgba(94, 234, 212, 0.4);
+  color: #99f6e4;
+}
+
+.toastError {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.42);
+  color: #fca5a5;
+}
+
+.toastWarning {
+  background: rgba(251, 191, 36, 0.14);
+  border-color: rgba(251, 191, 36, 0.4);
+  color: #fde68a;
+}
+
+/* === Прогресс-бар (полоска уходящего времени) === */
+.progress {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.18;
+  transition: width 60ms linear;
+}
+
+.progressInfo    { background: #94a3b8; }
+.progressSuccess { background: #5eead4; }
+.progressError   { background: #ef4444; }
+.progressWarning { background: #fbbf24; }
+
+/* === Контент === */
+.body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.icon {
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.message {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* === Кнопка "Отменить" === */
+.actionButton {
+  background: transparent;
+  border: 1px solid currentColor;
+  color: inherit;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.actionButton:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* === Кнопка закрытия === */
+.closeButton {
+  background: transparent;
+  border: none;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  padding: 0 2px;
+  transition: opacity 0.15s ease;
+}
+
+.closeButton:hover {
+  opacity: 1;
+}

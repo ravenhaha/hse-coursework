@@ -1,0 +1,656 @@
+/* ════════════════════════════════════════════
+   ПЕРЕМЕННЫЕ ТЕМЫ
+   ════════════════════════════════════════════ */
+.overlay {
+    --bg-modal:     #0f2a3a;
+    --bg-panel:     #0a1f2c;
+    --bg-elevated:  #143447;
+    --bg-hover:     #1a4259;
+    --border:       #1e3a4d;
+    --border-soft:  #163143;
+
+    --text:         #e5edf2;
+    --text-muted:   #7a96a8;
+    --text-dim:     #5a7a8c;
+
+    --accent:       #3d6a7e;
+    --accent-hover: #4a7d93;
+    --accent-text:  #ffffff;
+
+    --warning:      #f5a623;
+    --link:         #6bb6d6;
+
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 15, 22, 0.75);
+    backdrop-filter: blur(6px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.modal {
+    width: min(1100px, 100%);
+    height: min(85vh, 900px);
+    background: var(--bg-modal);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: var(--text);
+}
+
+/* ── Header ── */
+.header {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-panel);
+}
+
+.title {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dirtyDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--warning);
+    display: inline-block;
+    flex-shrink: 0;
+    box-shadow: 0 0 6px rgba(245, 166, 35, 0.6);
+}
+
+.headerActions {
+    display: flex;
+    gap: 4px;
+}
+
+.iconBtn {
+    width: 36px;
+    height: 36px;
+    border: 0;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: var(--text-muted);
+    transition: background 0.15s, color 0.15s;
+}
+.iconBtn:hover:not(:disabled) {
+    background: var(--bg-hover);
+    color: var(--text);
+}
+.iconBtn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+/* ── Body ── */
+.body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    background: var(--bg-modal);
+    overflow: hidden;
+}
+
+.center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    color: var(--text-muted);
+    padding: 40px;
+    text-align: center;
+}
+
+.muted {
+    color: var(--text-dim);
+}
+
+/* ════════════════════════════════════════════
+   IFRAME — белый фон (PDF/TXT/MD)
+   ════════════════════════════════════════════ */
+.frame {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #fff;
+}
+
+/* ── Editor block ── */
+.editorBlock {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--bg-modal);
+}
+
+.toolbarWrap {
+    flex: 0 0 auto;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-panel);
+}
+
+/* ────────────────────────────────────────────
+   ОБЁРТКА РЕДАКТОРА
+   ──────────────────────────────────────────── */
+.editorWrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 16px 22px;
+    background: var(--bg-modal);
+}
+
+.editorReadonly { background: var(--bg-modal); }
+.editorEditable { background: var(--bg-modal); }
+
+/* Скроллбар */
+.editorWrap::-webkit-scrollbar { width: 6px; }
+.editorWrap::-webkit-scrollbar-track { background: transparent; }
+.editorWrap::-webkit-scrollbar-thumb {
+    background: rgba(67, 217, 220, 0.2);
+    border-radius: 3px;
+}
+.editorWrap::-webkit-scrollbar-thumb:hover {
+    background: rgba(67, 217, 220, 0.35);
+}
+
+/* ── Footer ── */
+.footer {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 18px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-panel);
+}
+
+.footerRight {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.meta {
+    font-size: 13px;
+    color: var(--text-dim);
+    user-select: none;
+}
+
+/* ── Кнопки ── */
+.ghostBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    background: var(--bg-elevated);
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    color: var(--text);
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.ghostBtn:hover:not(:disabled) {
+    background: var(--bg-hover);
+    border-color: var(--accent);
+    color: #fff;
+}
+.ghostBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.primaryBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: var(--accent-text);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.05s;
+}
+.primaryBtn:hover:not(:disabled) {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+}
+.primaryBtn:active:not(:disabled) {
+    transform: translateY(1px);
+}
+.primaryBtn:disabled {
+    background: var(--border);
+    border-color: var(--border);
+    color: var(--text-dim);
+    cursor: not-allowed;
+}
+
+/* ════════════════════════════════════════════
+   PROSE VIEW — просмотр заметки (HTML без редактора)
+   ⚠️ БЕЗ !important чтобы inline-стили (цвет/шрифт/highlight) работали
+   ════════════════════════════════════════════ */
+.proseView {
+    margin: 0;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+}
+
+.proseView p {
+    margin: 0 0 12px;
+    text-align: left;
+}
+
+.proseView h1 {
+    font-size: 28px; font-weight: 700;
+    margin: 24px 0 14px;
+    color: #fff;
+    letter-spacing: -0.01em;
+}
+.proseView h2 {
+    font-size: 22px; font-weight: 700;
+    margin: 22px 0 12px;
+    color: #fff;
+}
+.proseView h3 {
+    font-size: 18px; font-weight: 600;
+    margin: 18px 0 10px;
+    color: #f0f6fa;
+}
+.proseView h4 {
+    font-size: 16px; font-weight: 600;
+    margin: 14px 0 8px;
+    color: #f0f6fa;
+}
+
+.proseView ul,
+.proseView ol {
+    margin: 0 0 14px;
+    padding-left: 26px;
+}
+.proseView li { margin: 4px 0; text-align: left; }
+.proseView ul li::marker { color: var(--accent); }
+.proseView ol li::marker { color: var(--text-muted); }
+
+/* Чек-листы */
+.proseView ul[data-type="taskList"] {
+    list-style: none;
+    padding-left: 0;
+}
+.proseView ul[data-type="taskList"] li {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+.proseView ul[data-type="taskList"] li > label {
+    margin-top: 4px;
+}
+.proseView ul[data-type="taskList"] input[type="checkbox"] {
+    accent-color: var(--accent);
+    cursor: default;
+}
+
+.proseView blockquote {
+    border-left: 3px solid var(--accent);
+    padding: 4px 0 4px 14px;
+    color: var(--text-muted);
+    margin: 14px 0;
+    font-style: italic;
+}
+
+.proseView code {
+    background: var(--bg-elevated);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    color: #f0a674;
+    border: 1px solid var(--border-soft);
+}
+
+.proseView pre {
+    background: #061620;
+    color: #e6edf3;
+    padding: 14px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    overflow-x: auto;
+    margin: 14px 0;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-size: 13.5px;
+    line-height: 1.55;
+}
+.proseView pre code {
+    background: transparent; color: inherit;
+    padding: 0; border: 0; font-size: inherit;
+}
+
+.proseView table {
+    border-collapse: collapse;
+    margin: 14px 0;
+    width: 100%;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+.proseView th,
+.proseView td {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    text-align: left;
+    color: var(--text);
+}
+.proseView th {
+    background: var(--bg-elevated);
+    font-weight: 600;
+    color: #fff;
+}
+.proseView tr:nth-child(even) td {
+    background: rgba(20, 52, 71, 0.4);
+}
+
+.proseView img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+    margin: 10px 0;
+    border: 1px solid var(--border);
+}
+
+.proseView a {
+    color: var(--link);
+    text-decoration: underline;
+    text-decoration-color: rgba(107, 182, 214, 0.4);
+    text-underline-offset: 2px;
+    transition: color 0.15s;
+}
+.proseView a:hover {
+    color: #8fcde7;
+    text-decoration-color: #8fcde7;
+}
+
+.proseView hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+}
+
+.proseView mark {
+    background: rgba(245, 166, 35, 0.25);
+    color: inherit;
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+.proseView strong { font-weight: 700; }
+.proseView em { font-style: italic; }
+
+/* ════════════════════════════════════════════
+   КОНТЕНТ РЕДАКТОРА (ProseMirror) — тёмная тема
+   ⚠️ БЕЗ !important на color/font-family/background
+   чтобы inline-стили от TipTap (Color/FontFamily/Highlight) работали
+   ════════════════════════════════════════════ */
+
+.editorWrap :global(.ProseMirror) {
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    margin: 0;
+    outline: none;
+    min-height: 100%;
+}
+
+.editorWrap :global(.ProseMirror) p,
+.editorWrap :global(.ProseMirror) li {
+    text-align: left;
+}
+
+.editorWrap :global(.ProseMirror) p {
+    margin: 0 0 12px;
+}
+
+/* Заголовки */
+.editorWrap :global(.ProseMirror) h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 24px 0 14px;
+    color: #fff;
+    letter-spacing: -0.01em;
+}
+.editorWrap :global(.ProseMirror) h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 22px 0 12px;
+    color: #fff;
+}
+.editorWrap :global(.ProseMirror) h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 18px 0 10px;
+    color: #f0f6fa;
+}
+.editorWrap :global(.ProseMirror) h4 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 14px 0 8px;
+    color: #f0f6fa;
+}
+
+/* Списки */
+.editorWrap :global(.ProseMirror) ul,
+.editorWrap :global(.ProseMirror) ol {
+    margin: 0 0 14px;
+    padding-left: 26px;
+}
+.editorWrap :global(.ProseMirror) li {
+    margin: 4px 0;
+}
+.editorWrap :global(.ProseMirror) ul li::marker {
+    color: var(--accent);
+}
+.editorWrap :global(.ProseMirror) ol li::marker {
+    color: var(--text-muted);
+}
+
+/* Чек-листы */
+.editorWrap :global(.ProseMirror) ul[data-type="taskList"] {
+    list-style: none;
+    padding-left: 0;
+}
+.editorWrap :global(.ProseMirror) ul[data-type="taskList"] li {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+.editorWrap :global(.ProseMirror) ul[data-type="taskList"] li > label {
+    margin-top: 4px;
+}
+.editorWrap :global(.ProseMirror) ul[data-type="taskList"] input[type="checkbox"] {
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
+/* Цитаты */
+.editorWrap :global(.ProseMirror) blockquote {
+    border-left: 3px solid var(--accent);
+    padding: 4px 0 4px 14px;
+    color: var(--text-muted);
+    margin: 14px 0;
+    font-style: italic;
+}
+
+/* Инлайн-код */
+.editorWrap :global(.ProseMirror) code {
+    background: var(--bg-elevated);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    color: #f0a674;
+    border: 1px solid var(--border-soft);
+}
+
+/* Блок кода */
+.editorWrap :global(.ProseMirror) pre {
+    background: #061620;
+    color: #e6edf3;
+    padding: 14px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    overflow-x: auto;
+    margin: 14px 0;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-size: 13.5px;
+    line-height: 1.55;
+}
+.editorWrap :global(.ProseMirror) pre code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    border: 0;
+    font-size: inherit;
+}
+
+/* Таблицы */
+.editorWrap :global(.ProseMirror) table {
+    border-collapse: collapse;
+    margin: 14px 0;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+}
+.editorWrap :global(.ProseMirror) th,
+.editorWrap :global(.ProseMirror) td {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    text-align: left;
+    color: var(--text);
+}
+.editorWrap :global(.ProseMirror) th {
+    background: var(--bg-elevated);
+    font-weight: 600;
+    color: #fff;
+}
+.editorWrap :global(.ProseMirror) tr:nth-child(even) td {
+    background: rgba(20, 52, 71, 0.4);
+}
+
+/* Картинки */
+.editorWrap :global(.ProseMirror) img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+    margin: 10px 0;
+    border: 1px solid var(--border);
+}
+
+/* Ссылки */
+.editorWrap :global(.ProseMirror) a {
+    color: var(--link);
+    text-decoration: underline;
+    text-decoration-color: rgba(107, 182, 214, 0.4);
+    text-underline-offset: 2px;
+    transition: color 0.15s;
+}
+.editorWrap :global(.ProseMirror) a:hover {
+    color: #8fcde7;
+    text-decoration-color: #8fcde7;
+}
+
+/* Горизонтальный разделитель */
+.editorWrap :global(.ProseMirror) hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+}
+
+/* Выделение (highlight mark) */
+.editorWrap :global(.ProseMirror) mark {
+    color: inherit;
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+/* Selection */
+.editorWrap :global(.ProseMirror) ::selection {
+    background: rgba(61, 106, 126, 0.5);
+}
+
+/* Курсор для readonly */
+.editorReadonly :global(.ProseMirror) {
+    cursor: default;
+}
+
+/* Placeholder для пустого редактора */
+.editorWrap :global(.ProseMirror p.is-editor-empty:first-child::before) {
+    color: var(--text-dim);
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+}
+
+/* ── Адаптив ── */
+@media (max-width: 720px) {
+    .overlay {
+        padding: 0;
+    }
+    .modal {
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+        border: 0;
+    }
+    .editorWrap {
+        padding: 12px 16px;
+    }
+    .header,
+    .footer {
+        padding: 12px 14px;
+    }
+    .title {
+        font-size: 14px;
+    }
+}

@@ -1,0 +1,76 @@
+service: pencieve
+
+image: ravenhaha/pencieve-frontend
+
+servers:
+  web:
+    - 203.0.113.10
+
+proxy:
+  ssl: true
+  host: 203-0-113-10.sslip.io
+  app_port: 80
+  healthcheck:
+    path: /
+    interval: 5
+    timeout: 5
+
+registry:
+  server: ghcr.io
+  username: ravenhaha
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+builder:
+  arch: amd64
+  context: ./frontend
+  args:
+    VITE_API_BASE_URL: /api
+    VITE_API_URL: /api
+
+env:
+  clear:
+    BACKEND_UPSTREAM: pencieve-backend:8000
+
+accessories:
+  backend:
+    image: ghcr.io/ravenhaha/pencieve-backend:latest
+    host: 203.0.113.10
+    env:
+      clear:
+        POSTGRES_HOST: pencieve-db
+        POSTGRES_PORT: "5432"
+        POSTGRES_DB: pencieve
+        POSTGRES_USER: pencieve
+        IS_PRODUCTION: "true"
+        CSRF_ENABLED: "true"
+        WEB_CONCURRENCY: "2"
+        API_PREFIX: /api
+        FRONTEND_URL: https://203-0-113-10.sslip.io
+        BACKEND_URL: https://203-0-113-10.sslip.io
+        VK_CLIENT_ID: ""
+        VK_REDIRECT_URI: https://203-0-113-10.sslip.io/api/auth/vk/callback
+        YANDEX_CLIENT_ID: ""
+        YANDEX_REDIRECT_URI: https://203-0-113-10.sslip.io/api/auth/yandex/callback
+      secret:
+        - SECRET_KEY
+        - POSTGRES_PASSWORD
+        - VK_CLIENT_SECRET
+        - YANDEX_CLIENT_SECRET
+    volumes:
+      - pencieve_uploads:/app/uploads
+
+  db:
+    image: postgres:17
+    host: 203.0.113.10
+    env:
+      clear:
+        POSTGRES_DB: pencieve
+        POSTGRES_USER: pencieve
+      secret:
+        - POSTGRES_PASSWORD
+    volumes:
+      - pencieve_pg_data:/var/lib/postgresql/data
+
+ssh:
+  user: deploy

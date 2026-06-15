@@ -1,0 +1,144 @@
+.player {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+    padding: 6px 8px;
+    border-radius: 10px;
+    background: rgba(58, 215, 211, 0.06);
+    border: 1px solid rgba(58, 215, 211, 0.15);
+}
+
+.playBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: #3AD7D3;
+    color: #002733;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform 0.15s, box-shadow 0.2s, filter 0.2s;
+}
+
+.playBtn:hover {
+    transform: scale(1.08);
+    filter: brightness(1.1);
+    box-shadow: 0 4px 14px rgba(58, 215, 211, 0.35);
+}
+
+.playBtn:active {
+    transform: scale(0.95);
+}
+
+.playBtn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(67, 217, 220, 0.35);
+}
+
+.time {
+    color: #7cdde3;
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+    min-width: 32px;
+    text-align: center;
+}
+
+.progressBar {
+    flex: 1;
+    min-width: 0;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.progressTrack {
+    position: relative;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: #1a3a50;
+}
+
+.progressFill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #3AD7D3, #5be8e5);
+    transition: width 0.1s linear;
+}
+
+.progressThumb {
+    position: absolute;
+    top: 50%;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #3AD7D3;
+    border: 2px solid #0A1A2A;
+    transform: translate(-50%, -50%);
+    transition: left 0.1s linear;
+    box-shadow: 0 0 8px rgba(58, 215, 211, 0.4);
+}
+
+.progressBar:hover .progressThumb {
+    width: 14px;
+    height: 14px;
+    box-shadow: 0 0 12px rgba(58, 215, 211, 0.6);
+}
+
+.progressBar:hover .progressFill {
+    background: linear-gradient(90deg, #5be8e5, #8af1f4);
+}
+
+.removeBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #7a9aaa;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: color 0.2s, background-color 0.2s, border-color 0.2s;
+}
+
+.removeBtn:hover {
+    color: #ff9a9a;
+    background: rgba(255, 100, 100, 0.1);
+    border-color: rgba(255, 100, 100, 0.2);
+}
+
+.removeBtn:focus-visible {
+    outline: none;
+    border-color: #43d9dc;
+    box-shadow: 0 0 0 3px rgba(67, 217, 220, 0.25);
+}
+
+@media (max-width: 480px) {
+    .player {
+        gap: 6px;
+        padding: 4px 6px;
+    }
+
+    .playBtn {
+        width: 28px;
+        height: 28px;
+    }
+
+    .time {
+        font-size: 11px;
+    }
+}

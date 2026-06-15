@@ -1,0 +1,137 @@
+/* ── Overlay ── */
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal, 1000);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    background: rgba(1, 5, 15, 0.75);
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.2s ease;
+}
+
+/* ── Модальное окно ── */
+
+.modal {
+    position: relative;
+    width: 100%;
+    max-width: 640px;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    border-radius: 18px;
+    border: 1px solid #164567;
+    background: linear-gradient(180deg, #0A1A2A 0%, #071b31 100%);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+    padding: 28px 26px 22px;
+    animation: slideUp 0.25s cubic-bezier(0.22, 0.61, 0.36, 1);
+    outline: none;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(67, 217, 220, 0.15) transparent;
+}
+
+.modal::-webkit-scrollbar {
+    width: 4px;
+}
+
+.modal::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.modal::-webkit-scrollbar-thumb {
+    background: rgba(67, 217, 220, 0.15);
+    border-radius: 2px;
+}
+
+/* ── Header ── */
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.title {
+    margin: 0;
+    color: #f2feff;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+/* ── Кнопка закрытия ── */
+
+.close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    border: 1px solid #215676;
+    background: #0c3146;
+    color: #7cdde3;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition:
+        border-color 0.15s,
+        color 0.15s,
+        background-color 0.15s;
+}
+
+.close:hover {
+    border-color: #43d9dc;
+    color: #b7fcff;
+    background: #12445f;
+}
+
+.close:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(67, 217, 220, 0.3);
+}
+
+.close:active {
+    background: #0a3a50;
+}
+
+/* ── Анимации ── */
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .overlay,
+    .modal {
+        animation: none;
+    }
+}
+
+/* ── Мобильные ── */
+
+@media (max-width: 680px) {
+    .modal {
+        max-width: 100%;
+        padding: 22px 16px 18px;
+        border-radius: 14px;
+    }
+
+    .title {
+        font-size: 18px;
+    }
+}

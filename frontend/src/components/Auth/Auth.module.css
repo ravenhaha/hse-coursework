@@ -1,0 +1,444 @@
+.page {
+    position: relative;
+    overflow: hidden;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    background:
+        radial-gradient(80% 60% at 50% 30%, rgba(17, 50, 83, 0.6) 0%, rgba(3, 13, 28, 0.2) 46%, rgba(1, 6, 16, 0.95) 100%),
+        #01050f;
+}
+
+.card {
+    position: relative;
+    width: 100%;
+    z-index: var(--z-content);
+    max-width: 460px;
+    border-radius: 18px;
+    border: 1px solid #164567;
+    background: linear-gradient(180deg, #0A1A2A 0%, #071b31 100%);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+    padding: 28px 26px 22px;
+    transition: box-shadow 0.25s ease;
+}
+
+.closeButton {
+    position: absolute;
+    right: 16px;
+    top: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    border: 1px solid #215676;
+    background: #0c3146;
+    color: #7cdde3;
+    transition:
+        border-color 0.2s ease,
+        color 0.2s ease,
+        background-color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.closeButton:hover {
+    border-color: #43d9dc;
+    color: #b7fcff;
+    background: #12445f;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(67, 217, 220, 0.18);
+}
+
+.closeButton:active {
+    transform: translateY(0);
+}
+
+.closeButton:focus-visible {
+    outline: none;
+    border-color: #43d9dc;
+    box-shadow: 0 0 0 3px rgba(67, 217, 220, 0.25);
+}
+
+.closeButton svg {
+    width: 19px;
+    height: 19px;
+}
+
+.title {
+    color: #F2FEFF;
+    font-size: 44px;
+    line-height: 1.08;
+    font-weight: 700;
+    text-align: center;
+    margin-top: 8px;
+}
+
+.subtitle {
+    margin-top: 15px;
+    color: #8fb2c3;
+    text-align: center;
+    font-size: 16px;
+}
+
+.switcher {
+    margin-top: 24px;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: 13px;
+    background: #0e344b;
+    padding: 4px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}
+
+.switchHighlight {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    height: calc(100% - 8px);
+    width: calc(50% - 4px);
+    border-radius: 10px;
+    background: #3AD7D3;
+    transition: transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+    will-change: transform;
+    z-index: 0;
+}
+
+.switchHighlightRight {
+    transform: translateX(100%);
+}
+
+.switchButton {
+    position: relative;
+    z-index: 1;
+    min-height: 44px;
+    border-radius: 10px;
+    color: #89aab7;
+    font-size: 16px;
+    font-weight: 500;
+    transition:
+        color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.switchButton:hover {
+    color: #c6e8f2;
+}
+
+.switchButton:active {
+    transform: translateY(1px);
+}
+
+.switchButton:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(67, 217, 220, 0.25);
+}
+
+.switchButtonActive {
+    color: #00222f;
+}
+
+.switchButtonActive:hover {
+    color: #00222f;
+}
+
+.form {
+    margin-top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.confirmWrap {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition:
+        grid-template-rows 0.28s cubic-bezier(0.22, 0.61, 0.36, 1),
+        opacity 0.2s ease;
+}
+
+.confirmWrapOpen {
+    grid-template-rows: 1fr;
+    opacity: 1;
+}
+
+.confirmInner {
+    overflow: hidden;
+}
+
+.input {
+    width: 100%;
+    min-height: 52px;
+    border-radius: 14px;
+    border: 1px solid #1f4e67;
+    background: #0f3246;
+    padding: 0 16px;
+    color: #e9f7ff;
+    outline: none;
+}
+
+.input::placeholder {
+    color: #7a9aaa;
+}
+
+.input:focus {
+    border-color: #43d9dc;
+}
+
+/* === Блок ошибки в форме === */
+.error {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.4;
+  
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  
+  animation: errorAppear 0.2s ease-out;
+}
+
+@keyframes errorAppear {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dividerWrap {
+    position: relative;
+    text-align: center;
+    margin-top: 2px;
+}
+
+.dividerWrap::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-top: 1px solid #1d4c65;
+}
+
+.dividerText {
+    position: relative;
+    background: #081f37;
+    color: #8ab0c3;
+    font-size: 14px;
+    padding: 0 10px;
+}
+
+.oauthRow {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+}
+
+.oauthButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 13px;
+    border: 1px solid #23516c;
+    background: #0d2f44;
+    color: #c6e8f2;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.oauthButton svg {
+    width: 22px;
+    height: 22px;
+}
+
+.oauthButton:hover {
+    border-color: #43d9dc;
+    transform: translateY(-1px);
+}
+
+.submitButton {
+    margin-top: 10px;
+    min-height: 54px;
+    border-radius: 14px;
+    background: #3AD7D3;
+    color: #002733;
+    font-size: 20px;
+    font-weight: 700;
+    transition:
+        transform 0.2s ease,
+        filter 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.submitButton:hover:not(:disabled) {
+    filter: brightness(1.05);
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(67, 217, 220, 0.28);
+}
+
+.submitButton:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.submitButton:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(67, 217, 220, 0.25);
+}
+
+.submitButton:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.legalText {
+    margin-top: 18px;
+    color: #6f93a4;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.legalLink {
+    color: #51d8de;
+    text-decoration: none;
+    transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+.legalLink:hover {
+    color: #8af1f4;
+    text-decoration: underline;
+    text-decoration-color: currentColor;
+}
+
+.legalLink:focus-visible {
+    outline: none;
+    border-radius: 4px;
+    box-shadow: 0 0 0 2px rgba(67, 217, 220, 0.25);
+}
+
+@media (max-width: 560px) {
+    .title {
+        font-size: 36px;
+    }
+
+    .card {
+        padding: 22px 16px 18px;
+    }
+}
+
+/* ===== Password input with eye icon ===== */
+.passwordWrap {
+  position: relative;
+  width: 100%;
+}
+
+.inputWithIcon {
+  padding-right: 48px;
+}
+
+.eyeButton {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: transparent;
+  color: #7a9aaa;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.eyeButton:hover:not(:disabled) {
+  color: #c6e8f2;
+  background: rgba(67, 217, 220, 0.08);
+}
+
+.eyeButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.eyeButton svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ===== Password hints ===== */
+.hintList {
+  list-style: none;
+  margin: -4px 0 0;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-radius: 12px;
+  background: rgba(15, 50, 70, 0.45);
+  border: 1px solid #143a52;
+  animation: hintsFadeIn 0.2s ease;
+}
+
+@keyframes hintsFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hintItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #7a9aaa;
+  transition: color 0.2s ease;
+}
+
+.hintItem svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.hintItemOk {
+  color: #3AD7D3;
+}
+
+.emailSuggestion {
+  margin: -4px 0 4px;
+  font-size: 13px;
+  color: var(--text-secondary, #888);
+  text-align: left;
+}
+
+.emailSuggestionBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: var(--accent, #7c5cff);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.emailSuggestionBtn:hover {
+  opacity: 0.85;
+}

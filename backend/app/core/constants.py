@@ -1,0 +1,75 @@
+"""Глобальные константы и sentinel-значения приложения.
+
+Принципы:
+    - Здесь только то, что НЕ зависит от окружения (.env).
+    - Конфиг (пути, размеры файлов) — в core/config.py.
+    - Группировка по доменам: PATCH-sentinel / аватары / материалы.
+"""
+
+from typing import Final
+
+
+# ══════════════════════════════════════════
+# Sentinel для PATCH-операций
+# ══════════════════════════════════════════
+UNSET: Final = object()
+
+
+# ══════════════════════════════════════════
+# Аватары
+# ══════════════════════════════════════════
+
+ALLOWED_AVATAR_TYPES: Final[set[str]] = {
+    "image/jpeg",
+    "image/png",
+}
+"""MIME-типы, разрешённые для аватара. Проверяются в роуте загрузки."""
+
+EXT_BY_MIME: Final[dict[str, str]] = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+}
+"""Соответствие MIME → расширение для сохранения файла на диск."""
+
+
+# ══════════════════════════════════════════
+# Материалы — расширения файлов
+# ══════════════════════════════════════════
+
+MATERIAL_TEXT_EXT: Final[frozenset[str]] = frozenset({
+    ".txt", ".md",
+})
+"""Простой текст — редактируется в TipTap, превью = HTML."""
+
+MATERIAL_DOC_EXT: Final[frozenset[str]] = frozenset({
+    ".pdf", ".docx",
+})
+"""Документы — превью (PDF через PDF.js, DOCX через парсер python-docx)
++ скачивание. RTF не поддерживается: парсера нет, формат вынесен в backlog."""
+
+MATERIAL_IMAGE_EXT: Final[frozenset[str]] = frozenset({
+    ".jpg", ".jpeg", ".png",
+})
+"""Картинки — превью <img> + скачивание (зум на фронте).
+Текст из картинок не извлекается (OCR не реализован)."""
+
+ALLOWED_MATERIAL_EXTENSIONS: Final[frozenset[str]] = (
+    MATERIAL_TEXT_EXT
+    | MATERIAL_DOC_EXT
+    | MATERIAL_IMAGE_EXT
+)
+
+
+# ══════════════════════════════════════════
+# Excel-превью — лимиты на парсинг
+# ══════════════════════════════════════════
+EXCEL_PREVIEW_MAX_ROWS: Final[int] = 1000
+EXCEL_PREVIEW_MAX_COLS: Final[int] = 50
+
+
+# ══════════════════════════════════════════
+# Источники материала
+# ══════════════════════════════════════════
+SOURCE_TYPE_TEXT: Final[str] = "text"
+SOURCE_TYPE_FILE: Final[str] = "file"
+ALLOWED_SOURCE_TYPES: Final[set[str]] = {SOURCE_TYPE_TEXT, SOURCE_TYPE_FILE}

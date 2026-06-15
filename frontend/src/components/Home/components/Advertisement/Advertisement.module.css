@@ -1,0 +1,131 @@
+.advertisement {
+    background-color: #080f18;
+    padding: clamp(72px, 9vw, 120px) 0;
+    text-align: center;
+}
+
+.container {
+    max-width: 860px;
+}
+
+.heading {
+    margin-bottom: clamp(36px, 5vw, 56px);
+}
+
+.title {
+    font-size: clamp(56px, 9vw, 112px);
+    line-height: 0.95;
+    font-weight: 800;
+    color: #F2FEFF;
+    margin-bottom: 24px;
+}
+
+.text {
+    font-size: clamp(18px, 2vw, 24px);
+    line-height: 1.55;
+    color: #c4ced1;
+    max-width: 680px;
+    margin: 0 auto;
+}
+
+.form {
+    background: rgba(10, 26, 42, 0.86);
+    border: 1px solid #1E4658;
+    border-radius: 24px;
+    padding: clamp(22px, 4vw, 32px);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.22), 0 0 44px rgba(58, 215, 211, 0.06);
+}
+
+.formRow {
+    display: flex;
+    gap: 14px;
+}
+
+.input {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid rgba(242, 254, 255, 0.14);
+    border-radius: 18px;
+    background: rgba(242, 254, 255, 0.05);
+    color: #F2FEFF;
+    font: inherit;
+    font-size: 18px;
+    padding: 18px 20px;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.input::placeholder {
+    color: rgba(171, 181, 183, 0.74);
+}
+
+.input:focus {
+    outline: none;
+    border-color: #3AD7D3;
+    background: rgba(242, 254, 255, 0.08);
+}
+
+.button {
+    border: 0;
+    border-radius: 18px;
+    background: #F2FEFF;
+    color: #07121c;
+    cursor: pointer;
+    font: inherit;
+    font-size: 18px;
+    font-weight: 800;
+    padding: 18px 28px;
+    white-space: nowrap;
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.button:hover {
+    background: #ffffff;
+    transform: translateY(-2px);
+}
+
+.button:focus-visible {
+    outline: 2px solid #3AD7D3;
+    outline-offset: 4px;
+}
+
+.subtext {
+    font-size: 14px;
+    color: #8b999c;
+    margin-top: 16px;
+}
+
+.trustList {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 18px 34px;
+    color: #ABB5B7;
+    font-size: 15px;
+    margin-top: 32px;
+}
+
+.trustItem {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.trustItem svg {
+    color: #3AD7D3;
+    font-size: 14px;
+}
+
+@media (max-width: 768px) {
+    .advertisement {
+        padding: 64px 0;
+    }
+
+    .formRow {
+        flex-direction: column;
+    }
+
+    .button,
+    .input {
+        width: 100%;
+    }
+}

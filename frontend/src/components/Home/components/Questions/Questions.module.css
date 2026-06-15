@@ -1,0 +1,116 @@
+.questions {
+    background: #070a10;
+    padding: clamp(56px, 7vw, 96px) 0;
+}
+
+.container {
+    max-width: 980px;
+}
+
+.heading {
+    margin-bottom: clamp(32px, 5vw, 52px);
+}
+
+.mainTitle {
+    font-size: clamp(34px, 5vw, 56px);
+    line-height: 1.05;
+    color: #F2FEFF;
+    margin-bottom: 16px;
+}
+
+.mainText {
+    font-size: clamp(15px, 2vw, 18px);
+    color: #ABB5B7;
+    max-width: 560px;
+}
+
+.list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.title {
+    display: block;
+    font-size: clamp(17px, 2vw, 20px);
+    font-weight: 700;
+    line-height: 1.35;
+    color: #F2FEFF;
+    margin-bottom: 10px;
+}
+
+.iconBox {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: 14px;
+    background: rgba(58, 215, 211, 0.14);
+    color: #3AD7D3;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 0 24px rgba(58, 215, 211, 0.08);
+}
+
+.cardBody {
+    display: block;
+    min-width: 0;
+}
+
+.text {
+    display: block;
+    font-size: clamp(14px, 1.5vw, 16px);
+    color: #ABB5B7;
+    line-height: 1.6;
+}
+
+.questCard {
+    appearance: none;
+    border: 1px solid #1E4658;
+    background: #0A1A2A;
+    border-radius: 18px;
+    color: inherit;
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    padding: 24px;
+    text-align: left;
+    width: 100%;
+    min-height: 160px;
+    position: relative;
+    z-index: var(--z-content);
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.questCard:hover {
+    border-color: #2a6a80;
+    background: #0d2337;
+    transform: translateY(-2px);
+}
+
+.questCard.open {
+    border-color: #2a6a80;
+    background: #0d2337;
+}
+
+.questCard:focus-visible {
+    outline: 2px solid #3AD7D3;
+    outline-offset: 4px;
+}
+
+@media (max-width: 768px) {
+    .questions {
+        padding: 52px 0;
+    }
+
+    .list {
+        grid-template-columns: 1fr;
+    }
+
+    .questCard {
+        min-height: auto;
+        padding: 20px 16px;
+    }
+}

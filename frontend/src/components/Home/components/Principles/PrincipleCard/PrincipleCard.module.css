@@ -1,0 +1,39 @@
+.card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    flex: 1;
+    position: relative;
+    z-index: var(--z-content);
+}
+
+.iconWrapper {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background-color: #0A1A2A;
+    border: 1px solid #1E4658;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 38px;
+}
+
+.title {
+    font-weight: 600;
+    font-size: 20px;
+    line-height: 30px;
+    letter-spacing: -0.5px;
+    margin-bottom: 12px;
+    color: #F2FEFF;
+}
+
+.text {
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 23px;
+    letter-spacing: -0.5px;
+    color: #F2FEFF;
+    max-width: 280px;
+}

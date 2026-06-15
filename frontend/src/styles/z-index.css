@@ -1,0 +1,19 @@
+:root {
+    /* Слои страницы */
+    --z-background: 0;
+    --z-content: 2;
+    --z-sticky: 10;
+
+    /* Оверлеи / переходы */
+    --z-overlay: 30;
+    --z-modal: 40;
+
+    /* Внутри компонентов (локальный стекинг) */
+    --z-local-base: 0;
+    --z-local-above: 1;
+    --z-local-dropdown-overlay: 10;
+    --z-local-dropdown: 11;
+
+    /* Эффекты поверх всего */
+    --z-grain: 51;
+}

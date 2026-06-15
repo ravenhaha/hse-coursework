@@ -1,0 +1,60 @@
+.hero {
+    position: relative;
+    background: #070a10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.content {
+    position: relative;
+    z-index: var(--z-content);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.title {
+    color: white;
+    margin-bottom: 30px;
+    font-size: clamp(36px, 5vw, 64px);
+}
+
+.text {
+    color: #ABB5B7;
+    margin-bottom: 30px;
+    font-size: clamp(14px, 2vw, 20px);
+    text-align: center;
+    padding: 0 20px;
+}
+
+.linkLk {
+    margin-bottom: 50px;
+}
+
+.linkBottom {
+    transition: transform 0.2s ease;
+}
+
+.linkBottom:hover {
+    transform: translateY(4px);
+}
+
+.vortexWrap {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: var(--z-background);
+    transform: scale(1);
+    transition: transform 1.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    transform-origin: center center;
+}
+
+.vortexDiving {
+    transform: scale(1.6);
+}

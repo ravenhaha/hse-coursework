@@ -1,0 +1,220 @@
+/* ── Список ── */
+
+.list {
+    display: flex;
+    flex-direction: column;
+}
+
+.itemWrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Строка файла ── */
+
+.item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: background-color 0.15s;
+}
+
+.item:hover {
+    background: rgba(67, 217, 220, 0.04);
+}
+
+/* ── Иконка файла ── */
+
+.fileIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: rgba(67, 217, 220, 0.06);
+    color: #3d6a7e;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.ext {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    font-size: 7px;
+    font-weight: 700;
+    color: #5a8899;
+    background: #0d2137;
+    padding: 0 2px;
+    border-radius: 2px;
+    line-height: 1;
+}
+
+.preview {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+/* ── Имя и размер ── */
+
+.name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #89aab7;
+    font-size: 13px;
+}
+
+.size {
+    color: #3d6a7e;
+    font-size: 12px;
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Кнопки действий ── */
+
+.actionBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: #3d6a7e;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: color 0.15s, background-color 0.15s;
+}
+
+.actionBtn:hover {
+    color: #89aab7;
+    background: rgba(67, 217, 220, 0.06);
+}
+
+.actionBtn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(67, 217, 220, 0.3);
+}
+
+.actionBtnActive {
+    color: #3AD7D3;
+}
+
+.actionBtnImportant {
+    color: #ffd43b;
+}
+
+.tagBadge {
+    font-size: 8px;
+    font-weight: 700;
+    min-width: 12px;
+    height: 12px;
+    border-radius: 6px;
+    background: #3AD7D3;
+    color: #0A1A2A;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: #3d6a7e;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: color 0.15s, background-color 0.15s;
+}
+
+.remove:hover {
+    color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.08);
+}
+
+.remove:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.3);
+}
+
+/* ── Панель тегов ── */
+
+.fileTagsPanel {
+    margin: 4px 12px 8px 50px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #1f4e67;
+    background: rgba(13, 33, 55, 0.8);
+    animation: slideDown 0.15s ease;
+}
+
+.fileTagsHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #1a3a52;
+}
+
+.fileTagsTitle {
+    color: #89aab7;
+    font-size: 11px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 70%;
+}
+
+.fileTagsClear {
+    background: none;
+    border: none;
+    color: #ff6b6b;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background-color 0.15s;
+}
+
+.fileTagsClear:hover {
+    background: rgba(255, 107, 107, 0.1);
+}
+
+.fileTagsClear:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.3);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

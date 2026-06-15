@@ -1,0 +1,66 @@
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #6b8fa0;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+@media (max-width: 768px) {
+    .list {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Карточки совсем тихие — без фона, только лёгкая иконка слева. */
+.tip {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: rgba(14, 34, 54, 0.4);
+    border: 1px solid rgba(21, 42, 63, 0.6);
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.tip:hover {
+    background: rgba(18, 41, 67, 0.7);
+    border-color: rgba(58, 215, 211, 0.18);
+}
+
+.iconWrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    color: #6bb6d6;
+    background: rgba(107, 182, 214, 0.1);
+}
+
+.iconWrap svg {
+    width: 15px;
+    height: 15px;
+}
+
+.text {
+    font-size: 13px;
+    line-height: 1.4;
+    color: #8fb2c3;
+}
