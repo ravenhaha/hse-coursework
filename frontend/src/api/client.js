@@ -45,7 +45,7 @@ export class ApiError extends Error {
 
 let refreshPromise = null;
 
-async function refreshAccessToken() {
+async function refreshAccessToken({ suppressSessionExpired = false } = {}) {
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
@@ -67,7 +67,7 @@ async function refreshAccessToken() {
     }
 
     if (!res.ok) {
-      onSessionExpired?.();
+      if (!suppressSessionExpired) onSessionExpired?.();
       throw new ApiError('Сессия истекла, войдите снова', {
         status: res.status,
         code: 'SESSION_EXPIRED',
@@ -102,6 +102,7 @@ export async function apiFetch(path, options = {}) {
     headers = {},
     _skipRefresh = false,
     _isRetry = false,
+    _suppressSessionExpired = false,
     ...rest
   } = options;
 
@@ -178,7 +179,7 @@ export async function apiFetch(path, options = {}) {
       isRetry: _isRetry,
     })
   ) {
-    await refreshAccessToken();
+    await refreshAccessToken({ suppressSessionExpired: _suppressSessionExpired });
     return apiFetch(path, { ...options, _isRetry: true });
   }
 

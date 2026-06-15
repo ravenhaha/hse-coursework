@@ -3,15 +3,15 @@ import { apiFetch } from './client';
 export const tagsApi = {
   // ─── CRUD тегов ───
 
-  /** GET /tags/ — список всех тегов юзера */
-  list: () => apiFetch('/tags/'),
+  /** GET /tags — список всех тегов юзера */
+  list: () => apiFetch('/tags'),
 
   /** GET /tags/:id — один тег */
   get: (id) => apiFetch(`/tags/${id}`),
 
-  /** POST /tags/ — создать тег */
+  /** POST /tags — создать тег */
   create: (tagName) =>
-    apiFetch('/tags/', {
+    apiFetch('/tags', {
       method: 'POST',
       body: { tag_name: tagName },
     }),

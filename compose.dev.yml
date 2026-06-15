@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pencieve}
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devpass1234}
+    ports:
+      - "${POSTGRES_PORT:-5440}:5432"
+    volumes:
+      - pencieve_dev_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-pencieve}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pencieve}
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devpass1234}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      SECRET_KEY: ${SECRET_KEY:-change_me_generate_with_openssl_rand_hex_32}
+      IS_PRODUCTION: "false"
+      CSRF_ENABLED: "false"
+      FRONTEND_URL: http://localhost:3000
+      BACKEND_URL: http://localhost:8000
+      VK_CLIENT_ID: ${VK_CLIENT_ID:-}
+      VK_CLIENT_SECRET: ${VK_CLIENT_SECRET:-}
+      VK_REDIRECT_URI: http://localhost:8000/api/auth/vk/callback
+      YANDEX_CLIENT_ID: ${YANDEX_CLIENT_ID:-}
+      YANDEX_CLIENT_SECRET: ${YANDEX_CLIENT_SECRET:-}
+      YANDEX_REDIRECT_URI: http://localhost:8000/api/auth/yandex/callback
+    ports:
+      - "8000:8000"
+    volumes:
+      - pencieve_dev_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)\""]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: /api
+        VITE_API_URL: /api
+    restart: unless-stopped
+    environment:
+      BACKEND_UPSTREAM: backend:8000
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+volumes:
+  pencieve_dev_pg_data:
+  pencieve_dev_uploads:

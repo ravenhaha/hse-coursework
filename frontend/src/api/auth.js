@@ -26,5 +26,5 @@ export const authApi = {
       method: 'POST',
       _skipRefresh: true,
     }),
-  me: () => apiFetch('/users/me'),
+  me: (options = {}) => apiFetch('/users/me', options),
 };

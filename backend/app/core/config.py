@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     POSTGRES_HOST: str = "127.0.0.1"
     POSTGRES_PORT: int = 5432
 
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 5
+    DB_POOL_PRE_PING: bool = True
+
     # ── Безопасность и JWT ──
     SECRET_KEY: str
     ALGORITHM: str = "HS256"

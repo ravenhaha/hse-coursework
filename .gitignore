@@ -13,6 +13,9 @@ __pycache__/
 venv/
 *.egg-info/
 .pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
 
 # === IDE ===
 .idea/
@@ -27,6 +30,9 @@ Thumbs.db
 
 # === Logs ===
 *.log
+
+# === Thesis drafts ===
+docs/thesis/
 
 # === Frontend ===
 node_modules/

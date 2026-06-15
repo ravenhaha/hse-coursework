@@ -20,9 +20,9 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [sessionExpired, setSessionExpired] = useState(false); // 🆕 для тоста
 
-  const refreshUser = useCallback(async () => {
+  const refreshUser = useCallback(async (options = {}) => {
     try {
-      const data = await authApi.me();
+      const data = await authApi.me(options);
       const u = normalizeUser(data);
       setUser(u);
       return u;
@@ -33,7 +33,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    refreshUser().finally(() => setLoading(false));
+    refreshUser({ _suppressSessionExpired: true }).finally(() => setLoading(false));
   }, [refreshUser]);
 
   // 🆕 Регистрируем глобальный обработчик "сессия умерла"
