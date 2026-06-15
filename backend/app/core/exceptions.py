@@ -113,7 +113,7 @@ def file_too_large(max_mb: int) -> NoReturn:
     """413 с конкретным лимитом из настроек. Без дефолта намеренно —
     лимит должен приходить из settings, чтобы не дрейфовал между местами."""
     raise HTTPException(
-        status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+        status.HTTP_413_CONTENT_TOO_LARGE,
         f"Файл слишком большой. Максимум: {max_mb} MB",
     )
 
@@ -180,7 +180,7 @@ def conflict(detail: str = "Конфликт") -> NoReturn:
 def payload_too_large(detail: str = "Файл слишком большой") -> NoReturn:
     """Универсальный 413. Для файлов с конкретным лимитом
     лучше использовать file_too_large(max_mb)."""
-    raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail)
+    raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, detail)
 
 
 def server_error(detail: str = "Внутренняя ошибка сервера") -> NoReturn:

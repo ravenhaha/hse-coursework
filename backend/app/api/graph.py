@@ -38,8 +38,6 @@ async def get_graph_tree(
     materials = list(materials_result.scalars().all())
 
     # 3. Теги по материалам — один запрос, группировка в Python.
-    # ⚠️ ВАЖНО: имя переменной НЕ должно совпадать с импортируемой
-    # таблицей material_tags (хоть тут её и нет — это защита в глубину).
     tags_by_material_id = await _get_tags_by_material(db, user.id)
 
     # ── Сборка дерева ──

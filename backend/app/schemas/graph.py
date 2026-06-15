@@ -16,9 +16,8 @@ class GraphNode(BaseModel):
     children: list["GraphNode"] | None = None
 
 
-# Алиас для роута /graph/tree. Сохраняем отдельный класс на случай,
-# когда понадобится добавить мета-поля (generated_at, total_nodes
-# и т. д.) — это будет не breaking change для клиента.
+# Алиас для роута /graph/tree. Отдельный класс на случай,
+# когда понадобится добавить мета-поля
 class GraphTreeResponse(GraphNode):
     pass
 

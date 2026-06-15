@@ -1,17 +1,33 @@
 """Модель Material — текстовая заметка или загруженный файл.
 
-(... твой исходный docstring без изменений ...)
+Материал принадлежит коллекции (collection_id), коллекция — пользователю.
+Доступ к материалу определяется через владение коллекцией.
+
+Два типа источника (source_type):
+    - TEXT: заметка из редактора. Контент в text_content (HTML).
+    - FILE: загруженный файл. Путь в file_path, размер в file_size,
+      извлечённый для поиска текст — в extracted_text.
+
+Целостность типа и контента гарантируется CHECK-констрейнтами на уровне БД
+(source_type_valid и source_content_match).
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from enum import StrEnum
 from datetime import datetime
+from enum import StrEnum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
-    String, DateTime, ForeignKey, Text, Boolean,
-    CheckConstraint, BigInteger, func, Index,
+    BigInteger,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -70,8 +86,6 @@ class Material(Base):
     file_size: Mapped[int | None] = mapped_column(BigInteger, default=None)
     extracted_text: Mapped[str | None] = mapped_column(Text, default=None)
 
-    # 🆕 server_default — чтобы прямые INSERT'ы и старые миграции не падали
-    # с NOT NULL violation. ORM-default остаётся для удобства Python-кода.
     is_important: Mapped[bool] = mapped_column(
         Boolean,
         default=False,

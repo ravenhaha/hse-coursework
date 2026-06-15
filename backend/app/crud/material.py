@@ -5,7 +5,7 @@
 Commit не делаем (агрегирует вызывающий код).
 """
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -61,6 +61,47 @@ async def list_all_user_materials(
     )
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+async def list_user_materials_paginated(
+    db: AsyncSession,
+    user_id: int,
+    *,
+    collection_id: int | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> tuple[list[Material], int]:
+    """Страница материалов юзера + общее количество по фильтру.
+
+    Возвращает кортеж (materials, total):
+        - materials — срез по limit/offset, новые сверху;
+        - total — сколько всего записей подходит под фильтр.
+
+    total считается отдельным COUNT-запросом по тем же условиям, но без
+    limit/offset — иначе клиент не узнает, сколько ещё страниц впереди.
+    """
+    base_filter = (
+        select(Material)
+        .join(Collection, Material.collection_id == Collection.id)
+        .where(Collection.user_id == user_id)
+    )
+    if collection_id is not None:
+        base_filter = base_filter.where(Material.collection_id == collection_id)
+
+    count_stmt = base_filter.with_only_columns(func.count(Material.id))
+    total = (await db.execute(count_stmt)).scalar_one()
+
+    page_stmt = (
+        base_filter
+        .options(selectinload(Material.tags))
+        .order_by(Material.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    result = await db.execute(page_stmt)
+    materials = list(result.scalars().all())
+
+    return materials, total
 
 
 async def search_materials(

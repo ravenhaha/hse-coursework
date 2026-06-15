@@ -10,6 +10,8 @@
     - значения CSS-стилей провалидированы по белому списку.
 """
 
+from __future__ import annotations
+
 import base64
 import logging
 import re
@@ -32,9 +34,6 @@ _HEX_COLOR_RE = re.compile(r"^[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?$")
 _FONT_NAME_RE = re.compile(r"^[A-Za-zА-Яа-я0-9 \-]+$")
 _HEADING_RE = re.compile(r"^heading\s*(\d)", re.IGNORECASE)
 
-# Максимум суммарного размера inline-картинок из одного docx (в байтах).
-# Картинки идут в БД base64 → "сырой" размер ×1.33. Лимит защищает от
-# раздутых рядов в Material.extracted_text и медленного ILIKE-поиска.
 _MAX_INLINE_IMAGES_BYTES = 2 * 1024 * 1024
 
 
@@ -119,7 +118,7 @@ def _parse_txt(path: Path) -> str:
 # PDF
 # ══════════════════════════════════════════
 try:
-    import fitz  # PyMuPDF
+    import fitz
     _PDF_AVAILABLE = True
 except ImportError:
     fitz = None
@@ -166,7 +165,7 @@ def _parse_docx(path: Path) -> str:
     return "\n".join(parts)
 
 
-def _extract_images(doc) -> dict[str, str]:
+def _extract_images(doc: Document) -> dict[str, str]:
     """rId → data:image/...;base64,... — для inline-вставки в <img src>.
 
     Лимит _MAX_INLINE_IMAGES_BYTES: после превышения остальные картинки
@@ -203,6 +202,17 @@ _ALIGN_MAP = {
     WD_ALIGN_PARAGRAPH.JUSTIFY: "justify",
 }
 
+_RUN_STYLE_TAGS: tuple[tuple[str, str], ...] = (
+    ("bold", "strong"),
+    ("italic", "em"),
+    ("underline", "u"),
+)
+_RUN_FONT_STYLE_TAGS: tuple[tuple[str, str], ...] = (
+    ("strike", "s"),
+    ("subscript", "sub"),
+    ("superscript", "sup"),
+)
+
 
 def _render_paragraph(para: Paragraph, images: dict[str, str]) -> str:
     inline_html = _render_runs(para.runs)
@@ -212,10 +222,10 @@ def _render_paragraph(para: Paragraph, images: dict[str, str]) -> str:
         content = "<br>"
 
     heading_level: int | None = None
-    style_name = (para.style.name or "")
-    m = _HEADING_RE.match(style_name)
-    if m:
-        level = int(m.group(1))
+    style_name = para.style.name or ""
+    heading_match = _HEADING_RE.match(style_name)
+    if heading_match:
+        level = int(heading_match.group(1))
         if 1 <= level <= 4:
             heading_level = level
 
@@ -227,7 +237,7 @@ def _render_paragraph(para: Paragraph, images: dict[str, str]) -> str:
     return f"<p{style_attr}>{content}</p>"
 
 
-def _render_runs(runs) -> str:
+def _render_runs(runs: list[Run]) -> str:
     """Текст с инлайновыми стилями (bold/italic/color/...)."""
     parts: list[str] = []
 
@@ -240,12 +250,15 @@ def _render_runs(runs) -> str:
         opens: list[str] = []
         closes: list[str] = []
 
-        if run.bold:               opens.append("<strong>"); closes.insert(0, "</strong>")
-        if run.italic:             opens.append("<em>");     closes.insert(0, "</em>")
-        if run.underline:          opens.append("<u>");      closes.insert(0, "</u>")
-        if run.font.strike:        opens.append("<s>");      closes.insert(0, "</s>")
-        if run.font.subscript:     opens.append("<sub>");    closes.insert(0, "</sub>")
-        if run.font.superscript:   opens.append("<sup>");    closes.insert(0, "</sup>")
+        for attr, html_tag in _RUN_STYLE_TAGS:
+            if getattr(run, attr, None):
+                opens.append(f"<{html_tag}>")
+                closes.insert(0, f"</{html_tag}>")
+
+        for attr, html_tag in _RUN_FONT_STYLE_TAGS:
+            if getattr(run.font, attr, None):
+                opens.append(f"<{html_tag}>")
+                closes.insert(0, f"</{html_tag}>")
 
         styles: list[str] = []
         color = _get_run_color(run)

@@ -13,8 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crud.tag import create_tag, get_tags_by_user
 
-# Порядок намеренно сохранён: так теги отображаются в UI
-# в осмысленной последовательности (от формата до приоритета).
 DEFAULT_TAG_NAMES: tuple[str, ...] = (
     "лекция",
     "семинар",

@@ -223,15 +223,12 @@ async def login_user(
     if not verify_password(payload.password, auth.password_hash):
         invalid_credentials()
 
-    user = auth.user  # уже подгружен через selectinload
+    user = auth.user
     if not user:
-        # Теоретически невозможно (FK с CASCADE), но защищаемся.
         invalid_credentials()
     if not user.is_active:
         user_inactive()
 
-    # Обновления (last_login_at + опциональный rehash) объединены в одну
-    # транзакцию — один commit вместо двух.
     _touch_last_login(auth)
 
     if needs_rehash(auth.password_hash):
@@ -266,14 +263,14 @@ async def refresh_tokens(
         token_invalid()
 
     sub = payload.get("sub") if payload else None
-    if sub is None:  # 0 — валидный id, поэтому именно is None
+    if sub is None:
         token_invalid()
 
     try:
         user_id = int(sub)
     except (TypeError, ValueError):
         token_invalid()
-        raise  # unreachable, но защищает от регрессии если token_invalid поменяется
+        raise
 
     user = await get_user_by_id(db, user_id)
     if not user:
@@ -476,7 +473,7 @@ async def oauth_vk_login(
         2. Берём профиль через users.get (получаем имя/фамилию).
         3. Передаём в get_or_create_oauth_user.
 
-    ⚠️ Требуется VK_CLIENT_SECRET в settings. Пока его нет — функция
+     Требуется VK_CLIENT_SECRET в settings. Пока его нет — функция
     отвечает 501 Not Implemented с понятным сообщением.
     """
     if not getattr(settings, "VK_CLIENT_SECRET", None):

@@ -18,6 +18,11 @@ Cookies:
       ломать UX «вернулся через час → первый запрос упал с 403».
     - oauth_state   (httponly, path=/api/auth,    — короткоживущая, для защиты
                      max_age=600)                   OAuth-flow от Login CSRF.
+
+Rate limiting:
+    На register / login / refresh навешан slowapi-лимит по IP — защита от
+    брутфорса паролей и перебора. Лимитер берётся из core/limiter.py
+    (вынесен в отдельный модуль, чтобы не было циклического импорта с main).
 """
 
 import secrets
@@ -34,6 +39,7 @@ from app.core.dependencies import (
     REFRESH_COOKIE_NAME,
     RefreshToken,
 )
+from app.core.limiter import limiter
 from app.core.security import generate_csrf_token
 from app.models.user import User
 from app.schemas.user import UserLogin, UserRegister, UserResponse
@@ -104,7 +110,7 @@ def _set_auth_cookies(
     response.set_cookie(
         key=CSRF_COOKIE_NAME,
         value=generate_csrf_token(),
-        httponly=False,  # ← намеренно: JS-фронт читает для double-submit.
+        httponly=False,
         secure=settings.COOKIE_SECURE,
         samesite=settings.COOKIE_SAMESITE,
         path="/",
@@ -200,12 +206,20 @@ def _verify_oauth_state(request: Request, state_from_query: str) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 @router.post("/register", status_code=201)
-async def register(data: UserRegister, db: DB) -> JSONResponse:
+@limiter.limit("3/minute")
+async def register(
+    request: Request,
+    data: UserRegister,
+    db: DB,
+) -> JSONResponse:
     """Регистрация + автологин.
 
     В отличие от классической схемы «зарегистрировался → залогинься заново»,
     мы сразу выдаём cookies. UX лучше, а безопасность не страдает: юзер
     только что в этом же запросе подтвердил, что знает пароль.
+
+    Лимит 3/минуту с одного IP — чтобы нельзя было массово создавать аккаунты.
+    Параметр request обязателен для slowapi (по нему берётся IP клиента).
     """
     user, access_token, refresh_token = await register_user(db, data)
     return _auth_response(
@@ -218,18 +232,35 @@ async def register(data: UserRegister, db: DB) -> JSONResponse:
 
 
 @router.post("/login")
-async def login(data: UserLogin, db: DB) -> JSONResponse:
-    """Логин по email+паролю → ставит cookies."""
+@limiter.limit("5/minute")
+async def login(
+    request: Request,
+    data: UserLogin,
+    db: DB,
+) -> JSONResponse:
+    """Логин по email+паролю → ставит cookies.
+
+    Лимит 5/минуту с одного IP — защита от перебора пароля (брутфорса).
+    Параметр request обязателен для slowapi.
+    """
     user, access_token, refresh_token = await login_user(db, data)
     return _auth_response("Успешный вход", user, access_token, refresh_token)
 
 
 @router.post("/refresh")
-async def refresh(db: DB, token: RefreshToken) -> JSONResponse:
+@limiter.limit("10/minute")
+async def refresh(
+    request: Request,
+    db: DB,
+    token: RefreshToken,
+) -> JSONResponse:
     """Перевыпуск пары токенов по валидному refresh-cookie.
 
     Возвращает только сообщение — обновлённый юзер фронту тут не нужен;
     если нужен → дёрнет GET /users/me.
+
+    Лимит 10/минуту — refresh дёргается чаще логина (по истечении access),
+    но всё равно не должен спамиться. Параметр request обязателен для slowapi.
     """
     _user, access_token, new_refresh = await refresh_tokens(db, token)
     response = JSONResponse(content={"message": "Токен обновлён"})

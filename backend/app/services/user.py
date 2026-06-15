@@ -33,8 +33,6 @@ from app.models.material import SourceType
 from app.models.user import User
 from app.schemas.user import UserUpdate
 
-# Для всех поддерживаемых форматов (JPEG/PNG/GIF/WEBP) достаточно 12 байт,
-# берём с запасом — на всякий случай для будущих форматов.
 _IMAGE_MAGIC_PREFIX_BYTES: Final[int] = 16
 
 
@@ -153,8 +151,6 @@ async def update_user_avatar(
     """
     file_content, _mime = await _read_and_validate_avatar_file(uploaded_file)
 
-    # save_avatar сам сгенерирует безопасное имя (uuid + ext по whitelist)
-    # и вернёт относительный путь вида 'avatars/42/abc123.png'.
     new_avatar_path = await save_avatar(
         user_id=user.id,
         original_filename=uploaded_file.filename or "avatar",

@@ -47,11 +47,8 @@ mutating-запросе. Кросс-доменно выставить такой
 # Внутренние whitelists
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Safe-методы по RFC 7231: не должны менять состояние сервера, проверка не нужна.
 _SAFE_METHODS: Final[frozenset[str]] = frozenset({"GET", "HEAD", "OPTIONS"})
 
-# Эндпоинты, на которых cookie с CSRF ещё не выдан (или сценарий не подразумевает
-# наличия активной сессии): требовать токен на них бессмысленно.
 _EXEMPT_PATHS: Final[frozenset[str]] = frozenset({
     f"{settings.API_PREFIX}/auth/register",
     f"{settings.API_PREFIX}/auth/login",
@@ -59,9 +56,6 @@ _EXEMPT_PATHS: Final[frozenset[str]] = frozenset({
     f"{settings.API_PREFIX}/auth/logout",
 })
 
-# OAuth-flow приходит редиректом со стороннего домена — у браузера ещё нет
-# нашей cookie, проверять нечего. Сверяем по префиксу, т.к. эндпоинтов несколько
-# (initiate, callback и т.п.).
 _EXEMPT_PREFIXES: Final[tuple[str, ...]] = (
     f"{settings.API_PREFIX}/auth/vk",
     f"{settings.API_PREFIX}/auth/yandex",

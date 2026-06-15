@@ -2,10 +2,30 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.material import SourceType
 from app.schemas.tag import TagResponse
+
+
+def _strip_required_name(value: str) -> str:
+    """Убирает пробелы по краям; строка из одних пробелов недопустима.
+
+    Аналогично коллекциям и тегам: "  Лекция 1  " → "Лекция 1",
+    а "   " отклоняем сразу, чтобы не сохранять в БД визуально пустое имя.
+    """
+    value = value.strip()
+    if not value:
+        raise ValueError("Название материала не может быть пустым")
+    return value
+
+
+def _strip_optional_name(value: str | None) -> str | None:
+    """Версия для PATCH: None не трогаем (поле не передано),
+    непустую строку триммим, пустую после strip отклоняем."""
+    if value is None:
+        return None
+    return _strip_required_name(value)
 
 
 class MaterialCreateText(BaseModel):
@@ -14,6 +34,11 @@ class MaterialCreateText(BaseModel):
     collection_id: int = Field(..., gt=0)
     material_name: str = Field(..., min_length=1, max_length=255)
     text_content: str = Field(..., min_length=1)
+
+    @field_validator("material_name")
+    @classmethod
+    def _validate_name(cls, value: str) -> str:
+        return _strip_required_name(value)
 
 
 class MaterialUpdate(BaseModel):
@@ -27,6 +52,11 @@ class MaterialUpdate(BaseModel):
         description="Переместить в другую коллекцию",
     )
     is_important: bool | None = None
+
+    @field_validator("material_name")
+    @classmethod
+    def _validate_name(cls, value: str | None) -> str | None:
+        return _strip_optional_name(value)
 
 
 class MaterialRead(BaseModel):

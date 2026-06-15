@@ -38,7 +38,6 @@ TokenType = Literal["access", "refresh"]
 # Единственный инстанс PasswordHasher на весь процесс.
 # Параметры по умолчанию (argon2-cffi 23.x):
 #   time_cost=3, memory_cost=65536 KiB (64 MiB), parallelism=4, hash_len=32, salt_len=16.
-# Это выше минимума OWASP (m≥19 MiB, t≥2, p≥1) — менять не нужно без причины.
 _password_hasher: Final[PasswordHasher] = PasswordHasher()
 
 

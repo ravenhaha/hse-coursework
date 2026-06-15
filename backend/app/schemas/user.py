@@ -81,7 +81,7 @@ class UserLogin(BaseModel):
     @field_validator("email")
     @classmethod
     def _normalize_email(cls, v: str) -> str:
-        return v.strip().lower()  # 🆕
+        return v.strip().lower()
 
 
 class UserUpdate(BaseModel):
@@ -112,7 +112,6 @@ class UserUpdate(BaseModel):
         v = v.strip()
         if not v:
             raise ValueError("Имя не может быть пустым")
-        # Запрещаем любые управляющие символы (категории Cc и аналоги).
         if any(c.isspace() and c != " " for c in v):
             raise ValueError("Имя не должно содержать переносы строк или табуляции")
         if any(ord(c) < 0x20 or ord(c) == 0x7f for c in v):
@@ -158,7 +157,5 @@ class UserResponse(BaseModel):
         """Публичный URL аватара. None = фронт показывает placeholder."""
         if not self.avatar_path:
             return None
-        # Импорт внутри, чтобы избежать циклов и оставить схему чистой
-        # для тестов, которым settings может быть не нужен.
         from app.core.config import settings
         return f"{settings.BACKEND_URL}/uploads/{self.avatar_path}"

@@ -9,8 +9,7 @@
     CRUD-слой делает только flush() (чтобы получить server-generated
     поля типа id и created_at). COMMIT — обязанность сервисного слоя:
     каждая мутирующая публичная функция (create/update/delete) сама
-    вызывает `await db.commit()` после успешного выполнения всех
-    бизнес-проверок.
+    вызывает `await db.commit()` после успешного выполнения проверок.
 """
 
 import logging
@@ -27,6 +26,7 @@ from app.crud.material import (
     get_material_by_id,
     list_all_user_materials,
     list_materials_by_collection,
+    list_user_materials_paginated,
     search_materials as search_materials_query,
     update_material,
 )
@@ -46,12 +46,12 @@ async def get_owned_material(
     user: User,
 ) -> Material:
     """Достаёт материал (с tags) и проверяет доступ через его коллекцию."""
-    mat = await get_material_by_id(db, material_id)
-    if not mat:
+    material = await get_material_by_id(db, material_id)
+    if not material:
         material_not_found()
 
-    await get_owned_collection(db, mat.collection_id, user)
-    return mat
+    await get_owned_collection(db, material.collection_id, user)
+    return material
 
 
 async def _reload_with_tags(db: AsyncSession, material_id: int) -> Material:
@@ -60,10 +60,10 @@ async def _reload_with_tags(db: AsyncSession, material_id: int) -> Material:
     Используется ПОСЛЕ commit'а — чтобы вернуть свежий объект
     с актуальными server-defaults и связями.
     """
-    mat = await get_material_by_id(db, material_id)
-    if not mat:
+    material = await get_material_by_id(db, material_id)
+    if not material:
         material_not_found()
-    return mat
+    return material
 
 
 # ══════════════════════════════════════════════════════════
@@ -81,6 +81,31 @@ async def list_materials(
         return await list_materials_by_collection(db, collection_id)
 
     return await list_all_user_materials(db, user.id)
+
+
+async def list_materials_paginated(
+    db: AsyncSession,
+    user: User,
+    *,
+    collection_id: int | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> tuple[list[Material], int]:
+    """Постраничный список материалов юзера + total.
+
+    Если указана коллекция — проверяем, что она принадлежит юзеру,
+    прежде чем отдавать её содержимое.
+    """
+    if collection_id is not None:
+        await get_owned_collection(db, collection_id, user)
+
+    return await list_user_materials_paginated(
+        db,
+        user.id,
+        collection_id=collection_id,
+        limit=limit,
+        offset=offset,
+    )
 
 
 async def search_materials(
@@ -131,7 +156,7 @@ async def create_text_material(
     """
     await get_owned_collection(db, collection_id, user)
 
-    mat = await create_material(
+    material = await create_material(
         db,
         collection_id=collection_id,
         material_name=material_name,
@@ -139,7 +164,7 @@ async def create_text_material(
         text_content=text_content,
     )
     await db.commit()
-    return await _reload_with_tags(db, mat.id)
+    return await _reload_with_tags(db, material.id)
 
 
 async def create_file_material(
@@ -152,24 +177,24 @@ async def create_file_material(
 ) -> Material:
     """Файловый материал. Парсер текста уходит в thread pool.
 
-    Если парсер упал — логируем и сохраняем материал без
-    extracted_text. Сам факт неудачи парсинга не должен ломать
-    создание материала: файл уже загружен, юзер его видит.
+    Если парсер упал — логируем и сохраняем материал без extracted_text.
+    Сам факт неудачи парсинга не должен ломать создание материала:
+    файл уже загружен, юзер его видит.
     """
     await get_owned_collection(db, collection_id, user)
 
     extracted_text: str | None = None
-    abs_path = get_full_path(file_path)
-    if abs_path:
+    absolute_path = get_full_path(file_path)
+    if absolute_path:
         try:
             extracted_text = await anyio.to_thread.run_sync(
-                extract_text_from_file, abs_path,
+                extract_text_from_file, absolute_path,
             )
         except Exception:
             logger.exception("Failed to extract text from %s", file_path)
             extracted_text = None
 
-    mat = await create_material(
+    material = await create_material(
         db,
         collection_id=collection_id,
         material_name=material_name,
@@ -179,7 +204,7 @@ async def create_file_material(
         extracted_text=extracted_text,
     )
     await db.commit()
-    return await _reload_with_tags(db, mat.id)
+    return await _reload_with_tags(db, material.id)
 
 
 # ══════════════════════════════════════════════════════════
@@ -195,19 +220,18 @@ async def update_existing_material(
     """Частичное обновление материала.
 
     Проверки против невалидных PATCH-полей:
-      - text_content редактируется только у TEXT-материалов
-      - text_content не может быть null (нарушит CheckConstraint в БД)
-      - collection_id не может быть null
-      - is_important не может быть null (NOT NULL в БД)
+      - text_content редактируется только у TEXT-материалов;
+      - text_content не может быть null (нарушит CheckConstraint в БД);
+      - collection_id не может быть null;
+      - is_important не может быть null (NOT NULL в БД).
 
     Commit делаем только если реально что-то меняли —
     нет смысла фиксировать пустую транзакцию.
     """
-    mat = await get_owned_material(db, material_id, user)
+    material = await get_owned_material(db, material_id, user)
 
-    # text_content: только для TEXT и только строка (не null)
     if "text_content" in changes:
-        if mat.source_type != SourceType.TEXT:
+        if material.source_type != SourceType.TEXT:
             bad_request(
                 "text_content можно менять только для текстовых материалов",
             )
@@ -216,27 +240,23 @@ async def update_existing_material(
                 "text_content не может быть null для текстового материала",
             )
 
-    # collection_id: не null, и юзер должен владеть новой коллекцией
     if "collection_id" in changes:
-        new_cid = changes["collection_id"]
-        if new_cid is None:
+        new_collection_id = changes["collection_id"]
+        if new_collection_id is None:
             bad_request(
                 "collection_id не может быть null — "
                 "материал должен быть в коллекции",
             )
-        await get_owned_collection(db, new_cid, user)
+        await get_owned_collection(db, new_collection_id, user)
 
-    # is_important: не null (в БД NOT NULL)
     if "is_important" in changes and changes["is_important"] is None:
         bad_request("is_important не может быть null")
 
     if changes:
-        await update_material(db, mat, **changes)
+        await update_material(db, material, **changes)
         await db.commit()
 
-    # Перечитываем — чтобы tags подгрузились свежим запросом
-    # (особенно важно если меняли collection_id).
-    return await _reload_with_tags(db, mat.id)
+    return await _reload_with_tags(db, material.id)
 
 
 async def delete_existing_material(
@@ -249,6 +269,6 @@ async def delete_existing_material(
     Commit фиксирует удаление; refresh не нужен — объект больше
     не существует в БД.
     """
-    mat = await get_owned_material(db, material_id, user)
-    await delete_material(db, mat)
+    material = await get_owned_material(db, material_id, user)
+    await delete_material(db, material)
     await db.commit()

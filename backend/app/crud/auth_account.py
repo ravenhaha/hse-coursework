@@ -109,7 +109,7 @@ async def create_auth_account(
     """
     account = AuthAccount(
         user_id=user_id,
-        provider_auth=str(provider),  # StrEnum → строка для надёжности
+        provider_auth=str(provider),
         provider_user_id=provider_user_id,
         password_hash=password_hash,
     )

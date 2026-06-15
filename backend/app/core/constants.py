@@ -42,24 +42,20 @@ MATERIAL_TEXT_EXT: Final[frozenset[str]] = frozenset({
 """Простой текст — редактируется в TipTap, превью = HTML."""
 
 MATERIAL_DOC_EXT: Final[frozenset[str]] = frozenset({
-    ".pdf", ".docx", ".rtf",
+    ".pdf", ".docx",
 })
-"""Документы — превью (PDF через PDF.js, DOCX/RTF через парсер) + скачивание."""
-
-MATERIAL_TABLE_EXT: Final[frozenset[str]] = frozenset({
-    ".xlsx", ".csv",
-})
-"""Таблицы — превью первого листа как HTML-таблица + скачивание."""
+"""Документы — превью (PDF через PDF.js, DOCX через парсер python-docx)
++ скачивание. RTF не поддерживается: парсера нет, формат вынесен в backlog."""
 
 MATERIAL_IMAGE_EXT: Final[frozenset[str]] = frozenset({
     ".jpg", ".jpeg", ".png",
 })
-"""Картинки — превью <img> + скачивание (зум на фронте)."""
+"""Картинки — превью <img> + скачивание (зум на фронте).
+Текст из картинок не извлекается (OCR не реализован)."""
 
 ALLOWED_MATERIAL_EXTENSIONS: Final[frozenset[str]] = (
     MATERIAL_TEXT_EXT
     | MATERIAL_DOC_EXT
-    | MATERIAL_TABLE_EXT
     | MATERIAL_IMAGE_EXT
 )
 

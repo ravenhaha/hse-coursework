@@ -4,7 +4,7 @@
 import re
 from pathlib import Path
 
-from fastapi import APIRouter, File, Form, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from fastapi.responses import FileResponse, StreamingResponse
 from starlette.background import BackgroundTask
 
@@ -19,6 +19,7 @@ from app.core.exceptions import (
 )
 from app.core.file_storage import delete_file, get_full_path, save_material
 from app.models.material import SourceType
+from app.schemas.common import Page, PaginationParams
 from app.schemas.material import (
     MaterialCreateText,
     MaterialRead,
@@ -31,6 +32,7 @@ from app.services.material import (
     delete_existing_material,
     get_material,
     list_materials,
+    list_materials_paginated,
     search_materials,
     update_existing_material,
 )
@@ -127,6 +129,10 @@ async def create_file(
     file: UploadFile = File(...),
 ):
     """Загрузить файл и создать материал."""
+    material_name = material_name.strip()
+    if not material_name:
+        bad_request("Название материала не может быть пустым")
+
     ext = Path(file.filename or "").suffix.lower()
     if ext not in ALLOWED_MATERIAL_EXTENSIONS:
         unsupported_media_type(f"Расширение {ext!r} не поддерживается")
@@ -163,8 +169,35 @@ async def list_(
     user: CurrentUser,
     collection_id: int | None = Query(None),
 ):
-    """Материалы юзера."""
+    """Материалы юзера (плоский список, без пагинации)."""
     return await list_materials(db, user=user, collection_id=collection_id)
+
+
+@router.get("/paginated", response_model=Page[MaterialRead])
+async def list_paginated(
+    db: DB,
+    user: CurrentUser,
+    collection_id: int | None = Query(None),
+    pagination: PaginationParams = Depends(),
+):
+    """Постраничный список материалов юзера.
+
+    Возвращает обёртку Page с полями items / total / limit / offset / has_more.
+    Старый GET /materials оставлен без изменений для обратной совместимости.
+    """
+    materials, total = await list_materials_paginated(
+        db,
+        user=user,
+        collection_id=collection_id,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
+    return Page.build(
+        items=materials,
+        total=total,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
 
 
 @router.get("/search", response_model=list[MaterialRead])
@@ -220,13 +253,10 @@ async def export_csv(
         collection_id=collection_id,
         tag_ids=tag_ids or None,
     )
-
     return StreamingResponse(
         generator,
         media_type="text/csv; charset=utf-8",
-        headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
-        },
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 
@@ -238,11 +268,8 @@ async def export_files_zip(
 ):
     """Скачать ZIP со всеми файловыми материалами выбранной коллекции."""
     archive_path, filename = await build_collection_files_zip(
-        db,
-        user,
-        collection_id=collection_id,
+        db, user, collection_id=collection_id,
     )
-
     return FileResponse(
         path=archive_path,
         media_type="application/zip",
@@ -264,12 +291,8 @@ async def import_csv(
         bad_request("Нужен CSV-файл с расширением .csv")
 
     content = await _read_upload_with_limit(file, settings.MAX_MATERIAL_FILE_SIZE)
-
     return await import_texts_from_csv(
-        db,
-        user,
-        collection_id=collection_id,
-        file_bytes=content,
+        db, user, collection_id=collection_id, file_bytes=content,
     )
 
 
@@ -292,12 +315,8 @@ async def update(
 ):
     """Частичное обновление материала."""
     changes = body.model_dump(include=body.model_fields_set)
-
     return await update_existing_material(
-        db,
-        material_id=material_id,
-        user=user,
-        changes=changes,
+        db, material_id=material_id, user=user, changes=changes,
     )
 
 
@@ -306,7 +325,6 @@ async def delete(material_id: int, db: DB, user: CurrentUser):
     """Удалить материал. Если есть файл — удаляем и его с диска."""
     mat = await get_material(db, material_id=material_id, user=user)
     file_path = mat.file_path
-
     await delete_existing_material(db, material_id=material_id, user=user)
     if file_path:
         await delete_file(file_path)
@@ -320,7 +338,6 @@ async def delete(material_id: int, db: DB, user: CurrentUser):
 async def download_file(material_id: int, db: DB, user: CurrentUser):
     """Отдать файл материала с правильным именем."""
     mat = await get_material(db, material_id=material_id, user=user)
-
     if mat.source_type != SourceType.FILE or not mat.file_path:
         bad_request("У этого материала нет файла")
 

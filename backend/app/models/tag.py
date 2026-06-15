@@ -40,10 +40,6 @@ if TYPE_CHECKING:
 class Tag(Base):
     __tablename__ = "tags"
 
-    # UniqueConstraint здесь НЕ объявляем намеренно — уникальность
-    # обеспечивается функциональным индексом lower(tag_name) в миграции.
-    # См. alembic/versions/<...>_tag_name_case_insensitive_unique.py.
-
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -59,4 +55,5 @@ class Tag(Base):
     materials: Mapped[list[Material]] = relationship(
         secondary="material_tags",
         back_populates="tags",
+        lazy="selectin",
     )

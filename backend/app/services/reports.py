@@ -483,7 +483,7 @@ async def import_texts_from_csv(
     errors: list[dict[str, Any]] = []
     tags_cache: dict[str, int] = {}
 
-    line_no = 1  # header
+    line_no = 1
 
     for row in reader:
         line_no += 1

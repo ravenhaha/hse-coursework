@@ -56,13 +56,13 @@ class CollectionBase(BaseModel):
 
     @field_validator("name")
     @classmethod
-    def _v_name(cls, v: str) -> str:
-        return _strip_required_name(v)
+    def _validate_name(cls, value: str) -> str:
+        return _strip_required_name(value)
 
     @field_validator("icon")
     @classmethod
-    def _v_icon(cls, v: str | None) -> str | None:
-        return _strip_icon(v)
+    def _validate_icon(cls, value: str | None) -> str | None:
+        return _strip_icon(value)
 
 
 class CollectionCreate(CollectionBase):
@@ -92,13 +92,13 @@ class CollectionUpdate(BaseModel):
 
     @field_validator("name")
     @classmethod
-    def _v_name(cls, v: str | None) -> str | None:
-        return _strip_optional_name(v)
+    def _validate_name(cls, value: str | None) -> str | None:
+        return _strip_optional_name(value)
 
     @field_validator("icon")
     @classmethod
-    def _v_icon(cls, v: str | None) -> str | None:
-        return _strip_icon(v)
+    def _validate_icon(cls, value: str | None) -> str | None:
+        return _strip_icon(value)
 
 
 class CollectionResponse(BaseModel):

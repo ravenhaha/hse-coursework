@@ -95,7 +95,7 @@ logger = logging.getLogger(__name__)
 _MATERIAL_SAFE_EXTENSIONS: frozenset[str] = frozenset(ALLOWED_MATERIAL_EXTENSIONS)
 
 _AVATAR_SAFE_EXTENSIONS: frozenset[str] = frozenset({
-    ".png", ".jpg", ".jpeg", ".webp",
+    ".png", ".jpg", ".jpeg",
 })
 
 
