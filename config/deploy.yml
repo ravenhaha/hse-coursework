@@ -76,6 +76,6 @@ accessories:
 
 ssh:
   user: deploy
-  key_data:
-    - SSH_PRIVATE_KEY
+  keys:
+    - ~/.ssh/yandex_pencieve_kamal
   keys_only: true

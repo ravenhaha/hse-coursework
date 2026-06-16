@@ -52,8 +52,9 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
+          printf '%s' "${{ secrets.SSH_PRIVATE_KEY }}" | tr -d '\r' > ~/.ssh/yandex_pencieve_kamal
+          chmod 600 ~/.ssh/yandex_pencieve_kamal
+          ssh-keygen -y -f ~/.ssh/yandex_pencieve_kamal > /dev/null
           ssh-keyscan -H "${{ secrets.VDS_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Kamal deploy (frontend + proxy)
