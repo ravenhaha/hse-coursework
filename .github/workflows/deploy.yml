@@ -65,4 +65,4 @@ jobs:
         run: kamal deploy
 
       - name: Kamal update backend accessory
-        run: kamal accessory reboot backend -y
+        run: kamal accessory reboot backend
