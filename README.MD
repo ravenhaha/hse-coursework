@@ -70,17 +70,22 @@ npm run dev
 
 ```bash
 scripts/devops/smoke-local.sh
+scripts/devops/smoke-frontend-auth.sh
 scripts/devops/backup-check.sh
-BASE_URL=https://<domain> scripts/devops/smoke-prod.sh
+BASE_URL=https://<domain> SERVER_HOST=<ip> SSH_KEY=~/.ssh/yandex_pencieve_kamal scripts/devops/smoke-prod.sh
 ```
 
 `smoke-local.sh` поднимает локальный Docker-стек и проверяет frontend, backend,
-маршрут `/api/users/me`, uploads-маршрут и подключение к PostgreSQL.
+страницу авторизации, маршрут `/api/users/me`, uploads-маршрут и подключение к PostgreSQL.
+
+`smoke-frontend-auth.sh` проверяет страницу авторизации: VK оставлен как
+неактивная заглушка, а вход через Яндекс остаётся доступным.
 
 `backup-check.sh` создаёт дамп PostgreSQL через `pg_dump`.
 
 `smoke-prod.sh` нужен после развёртывания на VDS. Он проверяет HTTPS-доступ,
-маршрут `/api/users/me` и uploads-маршрут через proxy.
+маршрут `/api/users/me`, uploads-маршрут через proxy и то, что PostgreSQL
+не опубликован наружу как Docker port mapping или host listener.
 
 Подробнее:
 

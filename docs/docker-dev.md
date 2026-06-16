@@ -132,6 +132,15 @@ curl -I http://localhost:3000
 HTTP/1.1 200 OK
 ```
 
+Проверить страницу авторизации:
+
+```bash
+scripts/devops/smoke-frontend-auth.sh
+```
+
+Скрипт проверяет, что `/auth` отдаётся через frontend/nginx, кнопка VK
+оставлена как неактивная заглушка, а маршрут входа через Яндекс присутствует.
+
 Проверить, что frontend проксирует API в backend:
 
 ```bash

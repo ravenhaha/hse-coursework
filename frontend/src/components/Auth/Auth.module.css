@@ -257,6 +257,7 @@
     border: 1px solid #23516c;
     background: #0d2f44;
     color: #c6e8f2;
+    cursor: pointer;
     transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
@@ -265,9 +266,14 @@
     height: 22px;
 }
 
-.oauthButton:hover {
+.oauthButton:hover:not(:disabled) {
     border-color: #43d9dc;
     transform: translateY(-1px);
+}
+
+.oauthButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
 }
 
 .submitButton {

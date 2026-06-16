@@ -14,10 +14,13 @@ jobs:
       contents: read
       packages: write
     env:
-      KAMAL_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+      IMAGE_OWNER: liaiv
+      KAMAL_REGISTRY_USERNAME: ${{ secrets.KAMAL_REGISTRY_USERNAME }}
+      KAMAL_REGISTRY_PASSWORD: ${{ secrets.KAMAL_REGISTRY_PASSWORD }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       SECRET_KEY: ${{ secrets.SECRET_KEY }}
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-      VK_CLIENT_SECRET: ${{ secrets.VK_CLIENT_SECRET }}
+      YANDEX_CLIENT_ID: ${{ secrets.YANDEX_CLIENT_ID }}
       YANDEX_CLIENT_SECRET: ${{ secrets.YANDEX_CLIENT_SECRET }}
     steps:
       - uses: actions/checkout@v4
@@ -33,17 +36,18 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.KAMAL_REGISTRY_USERNAME }}
+          password: ${{ secrets.KAMAL_REGISTRY_PASSWORD }}
 
       - name: Build & push backend image
         uses: docker/build-push-action@v6
         with:
           context: ./backend
+          platforms: linux/amd64
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/pencieve-backend:latest
-            ghcr.io/${{ github.repository_owner }}/pencieve-backend:${{ github.sha }}
+            ghcr.io/${{ env.IMAGE_OWNER }}/pencieve-backend:latest
+            ghcr.io/${{ env.IMAGE_OWNER }}/pencieve-backend:${{ github.sha }}
 
       - name: Setup SSH
         run: |

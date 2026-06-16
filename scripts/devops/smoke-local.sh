@@ -86,6 +86,9 @@ info "Checking frontend"
 frontend_status="$(http_status "$FRONTEND_URL")"
 [ "$frontend_status" = "200" ] || fail "Expected frontend HTTP 200, got $frontend_status"
 
+info "Checking frontend auth page"
+BASE_URL="$FRONTEND_URL" scripts/devops/smoke-frontend-auth.sh
+
 info "Checking API proxy through frontend/nginx"
 api_status="$(http_status "$API_CHECK_URL")"
 [ "$api_status" = "401" ] || fail "Expected API HTTP 401 without auth, got $api_status"

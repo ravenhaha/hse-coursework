@@ -90,9 +90,10 @@ export default function AuthForm({
 
       <div className={styles.oauthRow}>
         <button
-          aria-label="Войти через VK"
+          aria-label="Вход через VK пока недоступен"
           className={styles.oauthButton}
-          onClick={() => { window.location.href = `${API_BASE}/auth/vk`; }}
+          disabled
+          title="Вход через VK будет доступен позже"
           type="button"
         >
           <FaVk />

@@ -1,14 +1,14 @@
 service: pencieve
 
-image: ravenhaha/pencieve-frontend
+image: liaiv/pencieve-frontend
 
 servers:
   web:
-    - 203.0.113.10
+    - 81.26.191.237
 
 proxy:
   ssl: true
-  host: 203-0-113-10.sslip.io
+  host: 81-26-191-237.sslip.io
   app_port: 80
   healthcheck:
     path: /
@@ -17,13 +17,15 @@ proxy:
 
 registry:
   server: ghcr.io
-  username: ravenhaha
+  username:
+    - KAMAL_REGISTRY_USERNAME
   password:
     - KAMAL_REGISTRY_PASSWORD
 
 builder:
   arch: amd64
   context: ./frontend
+  dockerfile: ./frontend/Dockerfile
   args:
     VITE_API_BASE_URL: /api
     VITE_API_URL: /api
@@ -34,8 +36,8 @@ env:
 
 accessories:
   backend:
-    image: ghcr.io/ravenhaha/pencieve-backend:latest
-    host: 203.0.113.10
+    image: ghcr.io/liaiv/pencieve-backend:latest
+    host: 81.26.191.237
     env:
       clear:
         POSTGRES_HOST: pencieve-db
@@ -46,23 +48,23 @@ accessories:
         CSRF_ENABLED: "true"
         WEB_CONCURRENCY: "2"
         API_PREFIX: /api
-        FRONTEND_URL: https://203-0-113-10.sslip.io
-        BACKEND_URL: https://203-0-113-10.sslip.io
+        FRONTEND_URL: https://81-26-191-237.sslip.io
+        BACKEND_URL: https://81-26-191-237.sslip.io
         VK_CLIENT_ID: ""
-        VK_REDIRECT_URI: https://203-0-113-10.sslip.io/api/auth/vk/callback
-        YANDEX_CLIENT_ID: ""
-        YANDEX_REDIRECT_URI: https://203-0-113-10.sslip.io/api/auth/yandex/callback
+        VK_CLIENT_SECRET: ""
+        VK_REDIRECT_URI: https://81-26-191-237.sslip.io/api/auth/vk/callback
+        YANDEX_REDIRECT_URI: https://81-26-191-237.sslip.io/api/auth/yandex/callback
       secret:
         - SECRET_KEY
         - POSTGRES_PASSWORD
-        - VK_CLIENT_SECRET
+        - YANDEX_CLIENT_ID
         - YANDEX_CLIENT_SECRET
     volumes:
       - pencieve_uploads:/app/uploads
 
   db:
     image: postgres:17
-    host: 203.0.113.10
+    host: 81.26.191.237
     env:
       clear:
         POSTGRES_DB: pencieve
@@ -74,3 +76,6 @@ accessories:
 
 ssh:
   user: deploy
+  key_data:
+    - SSH_PRIVATE_KEY
+  keys_only: true

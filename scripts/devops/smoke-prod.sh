@@ -3,6 +3,8 @@ set -eu
 
 BASE_URL="${BASE_URL:-${1:-}}"
 SERVER_HOST="${SERVER_HOST:-}"
+SSH_USER="${SSH_USER:-deploy}"
+SSH_KEY="${SSH_KEY:-}"
 
 info() {
   printf '\n[smoke-prod] %s\n' "$1"
@@ -45,10 +47,24 @@ case "$uploads_status" in
 esac
 
 if [ -n "$SERVER_HOST" ]; then
-  need_cmd nc
-  info "Checking that PostgreSQL is not public on $SERVER_HOST:5432"
-  if nc -z -w 3 "$SERVER_HOST" 5432 >/dev/null 2>&1; then
-    fail "PostgreSQL port 5432 is reachable from outside"
+  if [ -n "$SSH_KEY" ]; then
+    need_cmd ssh
+    info "Checking PostgreSQL exposure on $SERVER_HOST through SSH"
+    ssh -i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout=8 "$SSH_USER@$SERVER_HOST" '
+      set -eu
+      if docker ps --format "{{.Names}} {{.Ports}}" | grep -E "pencieve-db.*0\.0\.0\.0:5432|pencieve-db.*:::5432" >/dev/null; then
+        exit 11
+      fi
+      if ss -ltnH | awk "{print \$4}" | grep -E "(^|:|\])5432$" >/dev/null; then
+        exit 12
+      fi
+    ' || fail "PostgreSQL is exposed by Docker port mapping or host listener"
+  else
+    need_cmd nc
+    info "Checking that PostgreSQL is not public on $SERVER_HOST:5432"
+    if nc -z -w 3 "$SERVER_HOST" 5432 >/dev/null 2>&1; then
+      fail "PostgreSQL port 5432 is reachable from outside"
+    fi
   fi
 fi
 

@@ -15,7 +15,7 @@ export const collectionsApi = {
     apiFetch(`/collections/search?q=${encodeURIComponent(query)}`),
 
   create: (name, parentId = null, icon = null) =>
-    apiFetch('/collections/', {
+    apiFetch('/collections', {
       method: 'POST',
       body: { name, icon, parent_id: parentId },
     }),
