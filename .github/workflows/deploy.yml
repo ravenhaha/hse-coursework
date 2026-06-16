@@ -30,7 +30,9 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"
-      - run: gem install kamal -v "~> 2.0"
+      - run: |
+          gem install kamal -v "~> 2.0"
+          gem install ed25519 bcrypt_pbkdf
 
       - name: Login to GHCR
         uses: docker/login-action@v3
